@@ -52,6 +52,9 @@ def create_app() -> FastAPI:
     app.include_router(users_router, prefix="/users", tags=["users"])
     app.include_router(audit_router)
 
+    from app.service_accounts import service_accounts_router
+    app.include_router(service_accounts_router)
+
     @app.get("/health")
     async def health():
         return {"status": "ok", "version": "0.1.0"}
