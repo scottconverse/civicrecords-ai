@@ -70,7 +70,7 @@ All decisions documented below were evaluated against the constraint: 1-2 person
 | Ingestion | Two-track pipeline | Fast track: lightweight Python parsers for structured docs (DOCX, CSV, email, text). LLM track: Gemma 4 multimodal for scanned PDFs, images, handwriting. Tesseract fallback for non-multimodal models. |
 | Licensing | Apache 2.0 (project) | All dependencies must be permissive (MIT, Apache 2.0, BSD) or weak-copyleft (LGPL, MPL, EPL). No AGPL, SSPL, or BSL dependencies. |
 | Multi-tenancy | Flat city-wide knowledge base (Phase 1) | Department-level access controls deferred to Phase 2. Single knowledge base is simpler and sufficient for MVP. |
-| Deployment | Docker Compose on Ubuntu 24.04 LTS | 5 services: postgres, redis, api, worker, ollama. Frontend served by API or nginx. |
+| Deployment | Docker Compose (Windows, macOS, Linux) | 6 services: postgres, redis, api, worker, ollama, frontend. Cross-platform via Docker Desktop. |
 
 ---
 
@@ -280,13 +280,15 @@ Based on the 50-state regulatory analysis, these features are hard requirements 
 
 | Component | Minimum Spec | Recommended Spec |
 |---|---|---|
-| CPU | AMD Ryzen 7 (8-core) | AMD Ryzen 9 (12-16 core) |
-| RAM | 32 GB DDR4/DDR5 | 64 GB DDR5 |
+| CPU | 8-core x86_64 (Intel or AMD) | 12-16 core (Ryzen 9, Core i9, Apple M3 Pro+) |
+| RAM | 32 GB | 64 GB |
 | Storage | 1 TB NVMe SSD | 2 TB NVMe SSD |
 | GPU | Integrated (CPU inference) | Discrete with 8+ GB VRAM |
 | Network | Gigabit Ethernet | Gigabit Ethernet |
-| OS | Ubuntu 24.04 LTS | Ubuntu 24.04 LTS |
+| OS | Windows 10/11, macOS 13+, Ubuntu 22.04+ | Any with Docker Desktop |
 | Total Cost | ~$800 | ~$1,200 |
+
+**Supported Platforms:** Windows 10/11 (Docker Desktop), macOS 13+ (Docker Desktop), Linux (Docker Engine or Docker Desktop). All platforms use identical Docker containers — the application runs in Linux containers regardless of host OS.
 
 **Performance target:** Under 30 seconds for a typical query-and-retrieve cycle on minimum spec without discrete GPU.
 

@@ -2,7 +2,9 @@ import uuid
 from collections.abc import AsyncGenerator
 
 import pytest
+import sqlalchemy as sa
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import app.database
@@ -11,19 +13,29 @@ from app.database import get_async_session
 from app.main import create_app
 from app.models.user import Base
 
-TEST_DATABASE_URL = settings.database_url.replace("/civicrecords", "/civicrecords_test")
+# Build test database URL — replace only the database name (last segment)
+_base = settings.database_url.rsplit("/", 1)[0]
+TEST_DATABASE_URL = f"{_base}/civicrecords_test"
 
+# Sync URL for schema setup/teardown (avoids async concurrency issues)
+_sync_url = TEST_DATABASE_URL.replace("postgresql+asyncpg", "postgresql+psycopg2")
+
+# Async engine/session for test queries
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 test_session_maker = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
 
 
 @pytest.fixture
-async def setup_db():
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+def setup_db():
+    """Create and drop tables using sync engine to avoid async conflicts."""
+    sync_engine = create_engine(_sync_url, echo=False)
+    with sync_engine.connect() as conn:
+        conn.execute(sa.text("CREATE EXTENSION IF NOT EXISTS vector"))
+        conn.commit()
+    Base.metadata.create_all(sync_engine)
     yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+    Base.metadata.drop_all(sync_engine)
+    sync_engine.dispose()
 
 
 async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
@@ -44,6 +56,7 @@ async def client(setup_db) -> AsyncGenerator[AsyncClient, None]:
         yield ac
 
     app.database.async_session_maker = original_session_maker
+    await test_engine.dispose()
 
 
 @pytest.fixture

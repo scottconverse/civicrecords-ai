@@ -64,10 +64,8 @@ async def test_unauthenticated_rejected(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_role_enforcement_rejects_insufficient_role(client: AsyncClient, staff_token: str):
     """Staff user should get 403 on admin-only endpoints."""
-    # The /users endpoint (listing all users) requires is_superuser in fastapi-users
     resp = await client.get(
-        "/users",
+        "/admin/status",
         headers={"Authorization": f"Bearer {staff_token}"},
     )
-    # fastapi-users returns 403 for non-superuser accessing user list
     assert resp.status_code == 403
