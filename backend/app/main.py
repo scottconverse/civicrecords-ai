@@ -72,6 +72,9 @@ def create_app() -> FastAPI:
     from app.exemptions.router import router as exemptions_router
     app.include_router(exemptions_router)
 
+    from app.analytics.router import router as analytics_router
+    app.include_router(analytics_router)
+
     @app.get("/health")
     async def health():
         return {"status": "ok", "version": "0.1.0"}
