@@ -1,0 +1,166 @@
+<h2>CivicRecords AI — System Architecture</h2>
+<p class="subtitle">Section 1: How the pieces fit together</p>
+
+<div style="background: #1a1a2e; border-radius: 12px; padding: 28px; margin: 20px 0; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; line-height: 1.5;">
+
+  <!-- Browser Layer -->
+  <div style="text-align: center; margin-bottom: 12px; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">Staff Workstation (Browser)</div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+    <div style="background: #0d47a1; border-radius: 8px; padding: 14px; text-align: center;">
+      <div style="color: #fff; font-weight: bold; font-size: 14px;">Search UI</div>
+      <div style="color: #90caf9; font-size: 11px; margin-top: 4px;">React + shadcn/ui</div>
+      <div style="color: #64b5f6; font-size: 11px;">Natural language search, filters, source attribution</div>
+    </div>
+    <div style="background: #0d47a1; border-radius: 8px; padding: 14px; text-align: center;">
+      <div style="color: #fff; font-weight: bold; font-size: 14px;">Request Tracker</div>
+      <div style="color: #90caf9; font-size: 11px; margin-top: 4px;">React + shadcn/ui</div>
+      <div style="color: #64b5f6; font-size: 11px;">Case management, deadlines, document association</div>
+    </div>
+    <div style="background: #0d47a1; border-radius: 8px; padding: 14px; text-align: center;">
+      <div style="color: #fff; font-weight: bold; font-size: 14px;">Admin Panel</div>
+      <div style="color: #90caf9; font-size: 11px; margin-top: 4px;">React + shadcn/ui</div>
+      <div style="color: #64b5f6; font-size: 11px;">Data sources, users, model config, audit logs</div>
+    </div>
+  </div>
+
+  <!-- Arrow -->
+  <div style="text-align: center; color: #4ecca3; font-size: 18px; margin: 8px 0;">&#8595; HTTPS (TLS) &#8595;</div>
+
+  <!-- API Layer -->
+  <div style="text-align: center; margin: 12px 0 8px; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">Application Server</div>
+  <div style="background: #1b5e20; border-radius: 8px; padding: 18px; margin-bottom: 16px;">
+    <div style="text-align: center; color: #fff; font-weight: bold; font-size: 15px; margin-bottom: 10px;">FastAPI (Python)</div>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+      <div style="background: #2e7d32; border-radius: 6px; padding: 10px; text-align: center;">
+        <div style="color: #c8e6c9; font-weight: bold; font-size: 12px;">Auth</div>
+        <div style="color: #a5d6a7; font-size: 10px;">fastapi-users<br>JWT + RBAC</div>
+      </div>
+      <div style="background: #2e7d32; border-radius: 6px; padding: 10px; text-align: center;">
+        <div style="color: #c8e6c9; font-weight: bold; font-size: 12px;">Search API</div>
+        <div style="color: #a5d6a7; font-size: 10px;">RAG queries<br>Hybrid retrieval</div>
+      </div>
+      <div style="background: #2e7d32; border-radius: 6px; padding: 10px; text-align: center;">
+        <div style="color: #c8e6c9; font-weight: bold; font-size: 12px;">Workflow API</div>
+        <div style="color: #a5d6a7; font-size: 10px;">Requests, cases<br>Deadlines</div>
+      </div>
+      <div style="background: #2e7d32; border-radius: 6px; padding: 10px; text-align: center;">
+        <div style="color: #c8e6c9; font-weight: bold; font-size: 12px;">Audit Logger</div>
+        <div style="color: #a5d6a7; font-size: 10px;">Hash-chained<br>Append-only</div>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px;">
+      <div style="background: #2e7d32; border-radius: 6px; padding: 10px; text-align: center;">
+        <div style="color: #c8e6c9; font-weight: bold; font-size: 12px;">LLM Abstraction</div>
+        <div style="color: #a5d6a7; font-size: 10px;">Model-agnostic interface<br>Ollama default</div>
+      </div>
+      <div style="background: #2e7d32; border-radius: 6px; padding: 10px; text-align: center;">
+        <div style="color: #c8e6c9; font-weight: bold; font-size: 12px;">Exemption Engine</div>
+        <div style="color: #a5d6a7; font-size: 10px;">Rules primary<br>LLM secondary</div>
+      </div>
+      <div style="background: #2e7d32; border-radius: 6px; padding: 10px; text-align: center;">
+        <div style="color: #c8e6c9; font-weight: bold; font-size: 12px;">Federation API</div>
+        <div style="color: #a5d6a7; font-size: 10px;">REST endpoints<br>Service accounts</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Layer -->
+  <div style="text-align: center; color: #4ecca3; font-size: 18px; margin: 8px 0;">&#8595;</div>
+  <div style="text-align: center; margin: 8px 0 8px; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">Data & AI Layer</div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+    <div style="background: #4a148c; border-radius: 8px; padding: 16px; text-align: center;">
+      <div style="color: #fff; font-weight: bold; font-size: 14px;">PostgreSQL</div>
+      <div style="color: #ce93d8; font-size: 11px; margin-top: 4px;">+ pgvector extension</div>
+      <div style="color: #ba68c8; font-size: 10px; margin-top: 6px;">App data, user accounts, request records, audit logs, vector embeddings — all in one DB</div>
+    </div>
+    <div style="background: #4a148c; border-radius: 8px; padding: 16px; text-align: center;">
+      <div style="color: #fff; font-weight: bold; font-size: 14px;">Ollama</div>
+      <div style="color: #ce93d8; font-size: 11px; margin-top: 4px;">Local LLM Runtime</div>
+      <div style="color: #ba68c8; font-size: 10px; margin-top: 6px;">Gemma 4 (default)<br>nomic-embed-text<br>Swappable models</div>
+    </div>
+    <div style="background: #4a148c; border-radius: 8px; padding: 16px; text-align: center;">
+      <div style="color: #fff; font-weight: bold; font-size: 14px;">Redis</div>
+      <div style="color: #ce93d8; font-size: 11px; margin-top: 4px;">Task Queue</div>
+      <div style="color: #ba68c8; font-size: 10px; margin-top: 6px;">Celery workers for async ingestion, embedding, LLM jobs</div>
+    </div>
+  </div>
+
+  <!-- Ingestion -->
+  <div style="text-align: center; color: #4ecca3; font-size: 18px; margin: 8px 0;">&#8595;</div>
+  <div style="text-align: center; margin: 8px 0 8px; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">Ingestion Pipeline (Two-Track)</div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+    <div style="background: #bf360c; border-radius: 8px; padding: 16px;">
+      <div style="color: #fff; font-weight: bold; font-size: 13px; text-align: center;">Fast Track (Structured Docs)</div>
+      <div style="color: #ffab91; font-size: 11px; margin-top: 8px;">
+        <div style="margin-bottom: 4px;">&#8226; python-docx (MIT) &rarr; DOCX</div>
+        <div style="margin-bottom: 4px;">&#8226; openpyxl (MIT) &rarr; XLSX</div>
+        <div style="margin-bottom: 4px;">&#8226; pdfplumber (MIT) &rarr; text PDFs</div>
+        <div style="margin-bottom: 4px;">&#8226; email/mailbox (stdlib) &rarr; EML/MBOX</div>
+        <div style="margin-bottom: 4px;">&#8226; csv (stdlib) &rarr; CSV</div>
+        <div>&#8226; beautifulsoup4 (MIT) &rarr; HTML</div>
+      </div>
+      <div style="color: #ff8a65; font-size: 10px; margin-top: 8px;">Text &rarr; chunk &rarr; embed &rarr; pgvector</div>
+    </div>
+    <div style="background: #bf360c; border-radius: 8px; padding: 16px;">
+      <div style="color: #fff; font-weight: bold; font-size: 13px; text-align: center;">LLM Track (Scanned/Image Docs)</div>
+      <div style="color: #ffab91; font-size: 11px; margin-top: 8px;">
+        <div style="margin-bottom: 4px;">&#8226; Scanned PDFs (image-only)</div>
+        <div style="margin-bottom: 4px;">&#8226; JPEG, PNG, TIFF images</div>
+        <div style="margin-bottom: 4px;">&#8226; Handwritten documents</div>
+        <div style="margin-bottom: 4px;">&#8226; Charts and diagrams</div>
+        <div>&#8226; Mixed text+image documents</div>
+      </div>
+      <div style="color: #ff8a65; font-size: 10px; margin-top: 8px;">Image &rarr; Gemma 4 multimodal &rarr; extracted text &rarr; chunk &rarr; embed &rarr; pgvector</div>
+      <div style="color: #ffcc80; font-size: 10px; margin-top: 4px;">Fallback: Tesseract OCR if non-multimodal model</div>
+    </div>
+  </div>
+
+  <!-- Data Sources -->
+  <div style="text-align: center; color: #4ecca3; font-size: 18px; margin: 8px 0;">&#8593;</div>
+  <div style="text-align: center; margin: 8px 0 8px; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">City Data Sources</div>
+  <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+    <div style="background: #37474f; border-radius: 6px; padding: 8px 14px; color: #b0bec5; font-size: 12px;">File Shares</div>
+    <div style="background: #37474f; border-radius: 6px; padding: 8px 14px; color: #b0bec5; font-size: 12px;">Email Server</div>
+    <div style="background: #37474f; border-radius: 6px; padding: 8px 14px; color: #b0bec5; font-size: 12px;">SQL Databases</div>
+    <div style="background: #37474f; border-radius: 6px; padding: 8px 14px; color: #b0bec5; font-size: 12px;">SharePoint</div>
+    <div style="background: #37474f; border-radius: 6px; padding: 8px 14px; color: #b0bec5; font-size: 12px;">REST APIs</div>
+    <div style="background: #37474f; border-radius: 6px; padding: 8px 14px; color: #b0bec5; font-size: 12px;">Uploaded Files</div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>Key Architecture Decisions</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px;">
+    <div>
+      <div class="label">Single Database</div>
+      <p>PostgreSQL + pgvector handles everything: app data, vectors, audit logs, user accounts. One backup, one restore, one connection pool.</p>
+    </div>
+    <div>
+      <div class="label">Model Abstraction</div>
+      <p>LLM interface abstracts Ollama. Swap models (Gemma 4, Llama, Mistral) without touching app code. Embedding model also swappable.</p>
+    </div>
+    <div>
+      <div class="label">Federation-Ready API</div>
+      <p>REST API supports both human users (JWT) and service accounts (API keys). Another CivicRecords AI instance can query this one.</p>
+    </div>
+    <div>
+      <div class="label">Compliance by Default</div>
+      <p>Audit logging, human-in-the-loop enforcement, and AI content labeling are in the API layer, not the UI. Can't be bypassed.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>Docker Compose Stack (5 services)</h3>
+  <div style="font-family: monospace; background: #1a1a2e; border-radius: 8px; padding: 16px; font-size: 12px; color: #e0e0e0; line-height: 1.8;">
+    <span style="color: #4ecca3;">1.</span> <strong>postgres</strong> — PostgreSQL 16 + pgvector (data, vectors, audit) <br>
+    <span style="color: #4ecca3;">2.</span> <strong>redis</strong> — Task queue broker<br>
+    <span style="color: #4ecca3;">3.</span> <strong>api</strong> — FastAPI application server<br>
+    <span style="color: #4ecca3;">4.</span> <strong>worker</strong> — Celery worker(s) for async ingestion/embedding<br>
+    <span style="color: #4ecca3;">5.</span> <strong>ollama</strong> — Local LLM runtime (Gemma 4 + nomic-embed-text)<br>
+    <span style="color: #888;">+</span> <span style="color: #888;">frontend</span> — React build served by api (or nginx in production)
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top: 20px;">Does this architecture look right? Any components missing or misplaced?</p>
