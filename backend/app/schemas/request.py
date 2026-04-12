@@ -127,3 +127,29 @@ class FeeLineItemRead(BaseModel):
     total: float
     status: str
     created_at: datetime
+
+
+# --- Response Letter schemas ---
+
+
+class ResponseLetterCreate(BaseModel):
+    template_id: uuid.UUID | None = None
+
+
+class ResponseLetterRead(BaseModel):
+    model_config = {"from_attributes": True}
+    id: uuid.UUID
+    request_id: uuid.UUID
+    template_id: uuid.UUID | None
+    generated_content: str
+    edited_content: str | None
+    status: str
+    generated_by: uuid.UUID | None
+    approved_by: uuid.UUID | None
+    sent_at: datetime | None
+    created_at: datetime
+
+
+class ResponseLetterUpdate(BaseModel):
+    edited_content: str | None = None
+    status: str | None = None  # draft/approved/sent
