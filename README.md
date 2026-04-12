@@ -12,11 +12,17 @@ No open-source tool exists for the **responder side** of open records at the mun
 
 ## Key Features
 
-- **AI-Powered Search** — Natural language hybrid search (semantic + keyword) across all ingested city documents with source attribution and confidence scores
+- **AI-Powered Search** — Natural language hybrid search (semantic + keyword) across all ingested city documents with source attribution, normalized relevance scores, and optional AI-generated summaries
 - **Document Ingestion** — Automatic parsing of PDF, DOCX, XLSX, CSV, email, HTML, and text files. Scanned documents processed via multimodal AI (Gemma 4) with Tesseract OCR fallback
-- **Exemption Detection** — Rules-based PII detection (SSN, phone, email, credit card) plus per-state statutory keyword matching. Optional LLM secondary review. All flags require human confirmation
-- **Request Management** — Full lifecycle tracking: intake, search, document attachment, review, approval, response. Deadline alerts for approaching and overdue requests
-- **Compliance by Design** — Hash-chained audit logs, human-in-the-loop enforcement, AI content labeling, data sovereignty verification. Designed for Colorado CAIA and 50-state regulatory compliance
+- **Exemption Detection** — Tier 1 PII detection (SSN, credit card with Luhn validation, phone, email, bank accounts, state-specific driver's licenses) plus per-state statutory keyword matching. Optional LLM secondary review. All flags require human confirmation
+- **Request Management** — Full lifecycle tracking with 11 statuses: intake, clarification, assignment, search, review, drafting, approval, fulfillment, closure. Timeline, messaging, fee tracking, and response letter generation
+- **Guided Onboarding** — 3-phase wizard helps cities configure their profile, identify data systems across 12 municipal domains, and surface coverage gaps
+- **Municipal Systems Catalog** — Curated knowledge base of 25+ municipal software vendors across 12 functional domains (finance, public safety, permitting, HR, etc.) with discovery hints and connector templates
+- **Universal Connector Framework** — Standardized protocol (authenticate/discover/fetch/health_check) for connecting to city data sources. File system connector included; email, REST API, and ODBC connectors planned
+- **Operational Analytics** — Real-time metrics: average response time, deadline compliance rate, overdue requests, status breakdown
+- **Notification Service** — Template-based notification system for request lifecycle events
+- **Compliance by Design** — Hash-chained audit logs, human-in-the-loop enforcement, AI content labeling, data sovereignty verification. Designed for Colorado CAIA and 50-state regulatory compliance. CJIS compliance gate for public safety connectors
+- **Civic Design System** — Professional UI built with shadcn/ui, civic blue design tokens, sidebar navigation, WCAG 2.2 AA accessibility (44px touch targets, skip navigation, icon+color status badges)
 - **Federation-Ready** — REST API with service accounts enables future cross-jurisdiction record discovery between CivicRecords AI instances
 
 ## Quick Start
@@ -74,7 +80,7 @@ bash install.sh
 
 **7 Docker services:** PostgreSQL 17 + pgvector, Redis 7.2, Ollama, FastAPI, Celery worker, Celery beat, nginx frontend.
 
-**Tech stack:** Python 3.12, FastAPI, SQLAlchemy 2.0, React 18, Tailwind CSS, Alembic, Celery, pgvector, nomic-embed-text, Gemma 4 (recommended).
+**Tech stack:** Python 3.12, FastAPI, SQLAlchemy 2.0, React 18, shadcn/ui, Tailwind CSS, Alembic, Celery, pgvector, nomic-embed-text, Gemma 4 (recommended).
 
 ## Configuration
 
@@ -89,15 +95,6 @@ All configuration is via environment variables in `.env`:
 | `OLLAMA_BASE_URL` | Ollama API endpoint | `http://ollama:11434` |
 | `REDIS_URL` | Redis connection string | `redis://redis:6379/0` |
 | `AUDIT_RETENTION_DAYS` | Audit log retention period | `1095` (3 years) |
-
-## User Roles
-
-| Role | Permissions |
-|------|-------------|
-| **Admin** | Full access: user management, system config, rule management, audit logs |
-| **Staff** | Search, create requests, attach documents, scan for exemptions, review flags |
-| **Reviewer** | Everything Staff can do + approve/reject responses |
-| **Read-Only** | View search results and request status only |
 
 ## Supported Platforms
 
@@ -126,14 +123,28 @@ All dependencies use permissive (MIT, Apache 2.0, BSD) or weak-copyleft (LGPL, M
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, and how to submit changes.
 
+## User Roles
+
+| Role | Permissions |
+|------|-------------|
+| **Admin** | Full access: user management, system config, rule management, audit logs, onboarding |
+| **Staff** | Search, create requests, attach documents, scan for exemptions, review flags, manage fees |
+| **Reviewer** | Everything Staff can do + approve/reject responses and exemption flags |
+| **Read-Only** | View search results and request status only |
+| **Liaison** *(v1.1)* | Scoped to assigned department, attach documents and add notes |
+
 ## Status
 
-**v0.1.0** — Feature-complete initial release. All 5 sub-projects implemented:
+**v1.0.0** — Production-ready release with civic design system and full request lifecycle.
 
-1. Foundation (Docker, auth, audit logging)
-2. Ingestion Pipeline (7 parsers, chunking, embeddings)
-3. RAG Search Engine (hybrid search, LLM synthesis)
-4. Request Tracking (workflow, deadlines, document caching)
-5. Exemption Detection (rules engine, LLM suggestions, compliance templates)
+- 11 staff workbench pages with shadcn/ui design system
+- 29 database tables, ~25 API endpoints
+- 80+ automated tests passing
+- Guided onboarding, systems catalog, connector framework
+- Request timeline, messaging, fee tracking, response letter generation
+- Operational analytics and notification service
+- Tested on Windows 11 with Docker Desktop
 
-80 automated tests passing. Tested on Windows 11 with Docker Desktop.
+**Roadmap:**
+- **v1.1** — Public portal, network discovery engine, REST API/ODBC connectors, Tier 2 NER redaction
+- **v2.0** — Open records library, visual AI (face/plate blurring), RPA bridge, federation

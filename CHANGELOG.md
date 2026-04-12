@@ -5,6 +5,52 @@ All notable changes to CivicRecords AI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-04-12
+
+### Added
+- **Design System:** shadcn/ui component library with civic design tokens (#1F5A84 primary), Inter typography scale, sidebar layout shell
+- **Sidebar Navigation:** Grouped navigation (Workflow / Setup / Administration) replacing top nav bar, 44px touch targets, active page indicator
+- **11 Pages:** Dashboard, Search, Requests, Request Detail, Exemptions, Sources, Ingestion, Users, Onboarding Interview, City Profile, Discovery Dashboard
+- **Onboarding Interview:** 3-phase wizard (City Profile, System Identification, Gap Map) for first-time city deployment
+- **City Profile API:** GET/POST/PATCH /city-profile for persistent city configuration with gap map
+- **Municipal Systems Catalog:** 12 functional domains, 25+ vendor systems in bundled JSON with auto-loader on startup
+- **Request Timeline:** Event history on every request with automatic logging on status transitions
+- **Request Messages:** Internal/external messaging thread on each request
+- **Fee Tracking:** Fee line items per request with automatic total calculation
+- **Response Letter Generation:** LLM-assisted draft letters with template fallback, labeled as AI-generated draft
+- **Notification Service:** Template-based notification system with queue_notification() helper, template CRUD API
+- **Operational Analytics:** GET /analytics/operational with response time, deadline compliance, overdue count, status breakdown
+- **Connector Framework:** Universal connector protocol (authenticate/discover/fetch/health_check) with file system implementation
+- **Tier 1 PII Expansion:** Credit card (Luhn-validated), bank routing/account numbers, state-specific driver's license patterns (CO, CA, TX, NY, FL)
+- **Context Manager:** Token budgeting for local LLM calls with priority-based context assembly
+- **11 Request Statuses:** received, clarification_needed, assigned, searching, in_review, ready_for_release, drafted, approved, fulfilled, closed
+- **StatusBadge Component:** Color+icon mapping for all statuses across request, document, and exemption domains (colorblind accessible)
+- **StatCard, PageHeader, EmptyState, DataTable:** Reusable design system components with loading, empty, and error states
+- **Skip-to-content Link:** Screen reader accessibility (WCAG 2.4.1)
+- **Discovery Dashboard Shell:** v1.1 preview page with feature explanation
+
+### Changed
+- **UI Redesign:** All pages migrated from raw Tailwind to shadcn/ui design system with civic color tokens
+- **Ingestion Filenames:** UUID prefixes stripped from display — original filenames shown
+- **Timestamps:** Relative display ("3 hours ago") alongside absolute dates
+- **Search Scores:** RRF scores normalized to 0-100% with visual progress bar
+- **Empty States:** Smart contextual guidance instead of blank screens ("No flags reviewed yet" instead of "0.0%")
+- **Request Forms:** Collapsible inline forms replaced with Dialog modals
+- **Status Badges:** Color-only badges replaced with icon+color badges for accessibility
+- **Navigation:** Top nav bar replaced with sidebar layout (240px fixed, 56px header)
+
+### Fixed
+- **Dockerfile.backend:** Added missing `data/` directory copy for systems catalog
+- **Catalog Loader:** Graceful handling when systems_catalog.json not found (no crash on startup)
+- **Sidebar Footer:** Shows user email instead of UUID (via /users/me endpoint)
+
+### Security
+- All new endpoints require role-based authentication
+- All mutations audit-logged
+- Notification credentials never logged or displayed after entry
+- Response letters labeled as "AI-GENERATED DRAFT — REQUIRES HUMAN REVIEW"
+- CJIS compliance gate designed for public safety connectors (Section 12)
+
 ## [0.1.0] - 2026-04-12
 
 ### Added
