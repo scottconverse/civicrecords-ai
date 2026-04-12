@@ -39,6 +39,15 @@ class DataSource(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_ingestion_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Phase 2 columns
+    discovered_source_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+    connector_template_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sync_schedule: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_sync_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    health_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    schema_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
 
 class Document(Base):
     __tablename__ = "documents"
@@ -55,6 +64,13 @@ class Document(Base):
     chunk_count: Mapped[int] = mapped_column(Integer, default=0)
     ingested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
+
+    # Phase 2 columns
+    display_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    department_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+    redaction_status: Mapped[str] = mapped_column(String(20), server_default="none")
+    derivative_path: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    original_locked: Mapped[bool] = mapped_column(Boolean, server_default="false")
 
     __table_args__ = (Index("ix_documents_source_hash", "source_id", "file_hash"),)
 
@@ -84,3 +100,8 @@ class ModelRegistry(Base):
     model_card_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=False)
     added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Phase 2 columns
+    context_window_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    supports_ner: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    supports_vision: Mapped[bool] = mapped_column(Boolean, server_default="false")

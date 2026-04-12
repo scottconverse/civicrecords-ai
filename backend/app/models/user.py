@@ -1,8 +1,9 @@
 import enum
+import uuid
 from datetime import datetime
 
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import DateTime, Enum, func
+from sqlalchemy import DateTime, Enum, ForeignKey, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -30,4 +31,9 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     )
     last_login: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+    # Phase 2 columns
+    department_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("departments.id"), nullable=True
     )

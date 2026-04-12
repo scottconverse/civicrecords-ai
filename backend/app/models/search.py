@@ -36,3 +36,6 @@ class SearchResult(Base):
     chunk_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("document_chunks.id"), index=True)
     similarity_score: Mapped[float] = mapped_column(Float)
     rank: Mapped[int] = mapped_column(Integer)
+
+    # Phase 2 columns
+    normalized_score: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -57,6 +57,12 @@ class ExemptionFlag(Base):
     review_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    # Phase 2 columns
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    detection_tier: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    detection_method: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    auto_detected: Mapped[bool] = mapped_column(Boolean, server_default="false")
+
 
 class DisclosureTemplate(Base):
     __tablename__ = "disclosure_templates"

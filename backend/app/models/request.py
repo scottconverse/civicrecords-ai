@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,6 +42,18 @@ class RecordsRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     response_draft: Mapped[str | None] = mapped_column(Text, nullable=True)
     review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Phase 2 columns
+    requester_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    requester_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    scope_assessment: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    department_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+    estimated_fee: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    fee_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    fee_waiver_requested: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    priority: Mapped[str] = mapped_column(String(20), server_default="normal")
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closure_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
 class RequestDocument(Base):
