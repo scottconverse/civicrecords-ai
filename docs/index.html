@@ -429,7 +429,7 @@
 
 <!-- HERO -->
 <header class="hero">
-  <div class="hero-badge">v0.1.0 &nbsp;·&nbsp; Apache 2.0 &nbsp;·&nbsp; Open Source</div>
+  <div class="hero-badge">v1.0.0 &nbsp;·&nbsp; Apache 2.0 &nbsp;·&nbsp; Open Source</div>
   <h1>Civic<span>Records AI</span></h1>
   <p class="hero-tagline">Open-source AI for municipal open records</p>
 
@@ -493,20 +493,20 @@
 <!-- STATS BAR -->
 <div class="stats-bar">
   <div class="stat">
-    <div class="stat-num">80</div>
-    <div class="stat-label">Automated Tests</div>
+    <div class="stat-num">14</div>
+    <div class="stat-label">Core Features</div>
   </div>
   <div class="stat">
-    <div class="stat-num">7</div>
+    <div class="stat-num">6</div>
     <div class="stat-label">Docker Services</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num">10</div>
-    <div class="stat-label">Database Tables</div>
   </div>
   <div class="stat">
     <div class="stat-num">50</div>
     <div class="stat-label">States Supported</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">1.0.0</div>
+    <div class="stat-label">Stable Release</div>
   </div>
 </div>
 
@@ -514,7 +514,7 @@
 <section class="features" id="features">
   <div class="container">
     <h2 class="section-title">What it does</h2>
-    <p class="section-sub">Six integrated capabilities — all running locally, all under your control.</p>
+    <p class="section-sub">Fourteen integrated capabilities — all running locally, all under your control.</p>
     <div class="grid-6">
 
       <div class="card">
@@ -553,6 +553,54 @@
         <p>Service account API keys (hashed before storage) enable authenticated REST access between CivicRecords AI instances. The foundation for cross-jurisdiction record discovery — a single staff member can query cooperating cities without leaving their own system.</p>
       </div>
 
+      <div class="card">
+        <div class="card-icon">&#128640;</div>
+        <h3>Guided Onboarding</h3>
+        <p>Step-by-step setup wizard walks administrators through initial configuration — LLM model selection, department setup, user creation, and first document ingestion — so the system is production-ready in under an hour.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">&#128193;</div>
+        <h3>Systems Catalog</h3>
+        <p>Structured registry of every record system your jurisdiction operates — file shares, databases, email archives, cloud drives. Each system tracks location, retention schedule, and responsible department, forming the backbone of responsive search.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">&#128268;</div>
+        <h3>Connector Framework</h3>
+        <p>Pluggable adapter architecture lets administrators connect CivicRecords AI directly to live record sources. Built-in connectors for local file shares, SharePoint, and network drives. Custom connectors can be added without modifying core code.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">&#128200;</div>
+        <h3>Analytics Dashboard</h3>
+        <p>Real-time metrics on request volume, average response time, exemption rates by category, and staff workload. Exportable reports help demonstrate statutory compliance and identify process bottlenecks before they become deadline violations.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">&#9993;</div>
+        <h3>Response Letter Generation</h3>
+        <p>AI-drafted response letters pre-populated with request details, responsive documents, and statutory exemption citations. Staff review and approve every letter before it leaves the system — the AI drafts, humans decide.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">&#128276;</div>
+        <h3>Notification Service</h3>
+        <p>Configurable email and in-app alerts for deadline approach, assignment changes, and requester follow-ups. Notification rules are set per department so each team gets the alerts that matter to them — no noise, no missed deadlines.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">&#127775;</div>
+        <h3>Design System</h3>
+        <p>Built on shadcn/ui with a consistent component library — accessible, keyboard-navigable, and WCAG 2.1 AA compliant. Every screen follows the same visual language so staff spend zero time learning a new UI paradigm.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">&#128337;</div>
+        <h3>Request Timeline &amp; Messaging</h3>
+        <p>Every request carries a full chronological timeline — intake, assignment, search queries, review actions, approvals, and response. Built-in secure messaging lets staff communicate with requesters and internal reviewers from within the request record.</p>
+      </div>
+
     </div>
   </div>
 </section>
@@ -573,7 +621,7 @@
       <div class="tech-card">
         <div class="label">Frontend</div>
         <div class="value">React 18</div>
-        <div class="detail">Tailwind CSS, shadcn/ui — 8 admin pages</div>
+        <div class="detail">Tailwind CSS, shadcn/ui — 14 admin pages</div>
       </div>
       <div class="tech-card">
         <div class="label">Database</div>
