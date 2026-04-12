@@ -5,6 +5,8 @@ import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/api";
 import {
   Building2,
   Mail,
@@ -17,6 +19,23 @@ import {
   Shield,
 } from "lucide-react";
 
+interface CityProfileRead {
+  id: string;
+  city_name: string;
+  state: string;
+  county: string | null;
+  population_band: string | null;
+  email_platform: string | null;
+  has_dedicated_it: boolean | null;
+  monthly_request_volume: string | null;
+  onboarding_status: string;
+  profile_data: Record<string, unknown> | null;
+  gap_map: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Local shape used for rendering
 interface CityProfile {
   cityName: string;
   state: string;
@@ -26,6 +45,20 @@ interface CityProfile {
   hasDedicatedIT: string;
   monthlyRequestVolume: string;
   systems: Record<string, { vendor: string; notes: string }>;
+}
+
+function mapApiProfile(api: CityProfileRead): CityProfile {
+  const systems = (api.gap_map as Record<string, { vendor: string; notes: string }>) ?? {};
+  return {
+    cityName: api.city_name,
+    state: api.state,
+    county: api.county ?? "",
+    populationBand: api.population_band ?? "",
+    emailPlatform: api.email_platform ?? "",
+    hasDedicatedIT: api.has_dedicated_it === true ? "yes" : api.has_dedicated_it === false ? "no" : "",
+    monthlyRequestVolume: api.monthly_request_volume ?? "",
+    systems,
+  };
 }
 
 const DOMAIN_LABELS: Record<string, string> = {
@@ -48,18 +81,45 @@ const EMAIL_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-export default function CityProfile({ token: _token }: { token: string }) {
+export default function CityProfile({ token }: { token: string }) {
   const [profile, setProfile] = useState<CityProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("civicrecords_city_profile");
-      if (saved) setProfile(JSON.parse(saved));
-    } catch {}
-  }, []);
+    let cancelled = false;
+    setLoading(true);
+    apiFetch<CityProfileRead | null>("/city-profile", { token })
+      .then((data) => {
+        if (!cancelled) {
+          setProfile(data ? mapApiProfile(data) : null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setProfile(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [token]);
 
-  if (!profile || !localStorage.getItem("civicrecords_onboarding_complete")) {
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="City Profile" />
+        <Card className="shadow-none">
+          <CardContent className="pt-6 space-y-4">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-4 w-2/5" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!profile) {
     return (
       <div className="space-y-6">
         <PageHeader title="City Profile" />
