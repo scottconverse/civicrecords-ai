@@ -397,3 +397,47 @@ async def add_timeline_event(
         details={"event_type": event.event_type},
     )
     return entry
+
+
+@router.get("/{request_id}/messages", response_model=list[MessageRead])
+async def get_messages(
+    request_id: uuid.UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.STAFF)),
+):
+    result = await session.execute(
+        select(RequestMessage)
+        .where(RequestMessage.request_id == request_id)
+        .order_by(RequestMessage.created_at.asc())
+    )
+    return result.scalars().all()
+
+
+@router.post("/{request_id}/messages", response_model=MessageRead, status_code=201)
+async def add_message(
+    request_id: uuid.UUID,
+    msg: MessageCreate,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.STAFF)),
+):
+    req = await session.get(RecordsRequest, request_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    message = RequestMessage(
+        request_id=request_id,
+        sender_type="staff",
+        sender_id=user.id,
+        message_text=msg.message_text,
+        is_internal=msg.is_internal,
+    )
+    session.add(message)
+    await session.commit()
+    await session.refresh(message)
+
+    await write_audit_log(
+        session=session, action="message_added", resource_type="request",
+        resource_id=str(request_id), user_id=user.id,
+        details={"is_internal": msg.is_internal},
+    )
+    return message
