@@ -32,7 +32,7 @@ export default function Users({ token }: Props) {
   const [formSubmitting, setFormSubmitting] = useState(false);
 
   const loadUsers = () => {
-    apiFetch<User[]>("/users", { token })
+    apiFetch<User[]>("/admin/users", { token })
       .then(setUsers)
       .catch((e) => setError(e.message));
   };
