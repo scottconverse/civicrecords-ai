@@ -26,3 +26,4 @@ def health_check():
 
 # Import tasks so Celery discovers them
 import app.ingestion.tasks  # noqa: F401, E402
+import app.ingestion.scheduler  # noqa: F401, E402

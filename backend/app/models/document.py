@@ -13,6 +13,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.user import Base
 
 
+
 class SourceType(str, enum.Enum):
     UPLOAD = "upload"
     DIRECTORY = "directory"
@@ -70,3 +71,16 @@ class DocumentChunk(Base):
     page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (Index("ix_chunks_doc_index", "document_id", "chunk_index"),)
+
+
+class ModelRegistry(Base):
+    __tablename__ = "model_registry"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    model_name: Mapped[str] = mapped_column(String(255))
+    model_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    parameter_count: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    license: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    model_card_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -66,9 +66,13 @@ for i in $(seq 1 30); do
     sleep 5
 done
 
-# Pull recommended Ollama model
-echo ">>> Pulling recommended LLM model (this may take a while)..."
-docker compose exec ollama ollama pull gemma3:4b-it-qf4_0 || echo "Model pull failed — you can retry later with: docker compose exec ollama ollama pull <model>"
+# Pull embedding model (required for search)
+docker compose exec ollama ollama pull nomic-embed-text || echo "Embedding model pull failed — retry with: docker compose exec ollama ollama pull nomic-embed-text"
+
+# Pull recommended LLM (optional, large download)
+echo ">>> To enable AI-powered search and document understanding, pull a language model:"
+echo "    docker compose exec ollama ollama pull gemma4:26b    (recommended, ~15GB)"
+echo "    docker compose exec ollama ollama pull gemma3:4b     (lighter alternative, ~2.5GB)"
 
 echo ""
 echo "============================================"

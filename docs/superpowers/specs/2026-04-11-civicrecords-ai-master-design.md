@@ -60,7 +60,7 @@ All decisions documented below were evaluated against the constraint: 1-2 person
 | LLM Runtime | Ollama | Simple, well-documented, good model library. Model management UX suitable for municipal IT. |
 | LLM Model | Gemma 4 (recommended default) | Apache 2.0. 26B MoE (~4B active params) runs on target hardware. Native multimodal (OCR, document parsing). 256K context. Architecture is model-agnostic — works with any Ollama-compatible model. |
 | Embedding Model | nomic-embed-text via Ollama | Apache 2.0. Runs natively in Ollama (one less dependency). Swappable via admin panel. |
-| Database | PostgreSQL 16 + pgvector | Single database for everything: app data, vector embeddings, audit logs, user accounts. One backup, one restore, one connection pool. Eliminates separate vector DB dependency. |
+| Database | PostgreSQL 17 + pgvector | Single database for everything: app data, vector embeddings, audit logs, user accounts. One backup, one restore, one connection pool. Eliminates separate vector DB dependency. |
 | Frontend | React + shadcn/ui + Tailwind | 50+ pre-built components. Admin dashboard templates exist. Professional UX out of the box. ~70-80% of needed UI available as copy-paste components. |
 | Auth | Built-in (fastapi-users + JWT + RBAC in Postgres) | No separate auth service. Covers 4 roles (Admin, Staff, Reviewer, Read-Only) + service accounts for federation. LDAP/AD can be added as a connector. |
 | Task Queue | Celery + Redis | Async ingestion, embedding, and LLM jobs. Well-proven Python ecosystem. |
@@ -80,7 +80,7 @@ All decisions documented below were evaluated against the constraint: 1-2 person
 
 ```
 Services:
-  1. postgres    — PostgreSQL 16 + pgvector (data, vectors, audit)
+  1. postgres    — PostgreSQL 17 + pgvector (data, vectors, audit)
   2. redis       — Task queue broker
   3. api         — FastAPI application server
   4. worker      — Celery worker(s) for async ingestion/embedding
