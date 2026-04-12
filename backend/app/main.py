@@ -75,6 +75,9 @@ def create_app() -> FastAPI:
     from app.analytics.router import router as analytics_router
     app.include_router(analytics_router)
 
+    from app.city_profile.router import router as city_profile_router
+    app.include_router(city_profile_router)
+
     @app.get("/health")
     async def health():
         return {"status": "ok", "version": "0.1.0"}
