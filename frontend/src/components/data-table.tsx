@@ -11,14 +11,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export interface Column<T> {
+export interface Column<T extends object> {
   key: string;
   header: string;
   render?: (row: T) => React.ReactNode;
   className?: string;
 }
 
-interface DataTableProps<T> {
+interface DataTableProps<T extends object> {
   columns: Column<T>[];
   data: T[];
   loading?: boolean;
@@ -35,7 +35,7 @@ interface DataTableProps<T> {
   className?: string;
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T extends object>({
   columns,
   data,
   loading,
@@ -93,7 +93,7 @@ export function DataTable<T extends Record<string, unknown>>({
                   <TableCell key={col.key} className={col.className}>
                     {col.render
                       ? col.render(row)
-                      : String(row[col.key] ?? "")}
+                      : String((row as Record<string, unknown>)[col.key] ?? "")}
                   </TableCell>
                 ))}
               </TableRow>
