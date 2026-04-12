@@ -1,0 +1,88 @@
+{
+  "catalog_version": "1.0.0",
+  "domains": [
+    {
+      "domain": "Finance & Budgeting",
+      "systems": [
+        {"vendor_name": "Tyler Munis", "access_protocol": "rest_api", "data_shape": "structured", "common_record_types": ["purchase_orders", "vendor_payments", "budget_reports", "payroll"], "redaction_tier": 1, "discovery_hints": {"ports": [8080, 443], "db_patterns": ["MUN_*", "TYLER_*"]}},
+        {"vendor_name": "Caselle", "access_protocol": "odbc", "data_shape": "structured", "common_record_types": ["purchase_orders", "vendor_payments", "budget_reports"], "redaction_tier": 1, "discovery_hints": {"ports": [1433], "db_patterns": ["CASELLE*"]}},
+        {"vendor_name": "OpenGov", "access_protocol": "rest_api", "data_shape": "structured", "common_record_types": ["budget_reports", "financial_transparency"], "redaction_tier": 1, "discovery_hints": {}}
+      ]
+    },
+    {
+      "domain": "Public Safety",
+      "systems": [
+        {"vendor_name": "Mark43", "access_protocol": "rest_api", "data_shape": "mixed", "common_record_types": ["incident_reports", "arrest_records", "cad_logs"], "redaction_tier": 2, "discovery_hints": {"ports": [443]}},
+        {"vendor_name": "Axon", "access_protocol": "vendor_sdk", "data_shape": "media", "common_record_types": ["body_camera", "evidence"], "redaction_tier": 3, "discovery_hints": {}},
+        {"vendor_name": "Tyler New World", "access_protocol": "odbc", "data_shape": "structured", "common_record_types": ["incident_reports", "cad_logs"], "redaction_tier": 2, "discovery_hints": {"db_patterns": ["NW_*"]}}
+      ]
+    },
+    {
+      "domain": "Land Use & Permitting",
+      "systems": [
+        {"vendor_name": "Accela", "access_protocol": "rest_api", "data_shape": "structured", "common_record_types": ["building_permits", "inspections", "code_violations"], "redaction_tier": 1, "discovery_hints": {"ports": [443]}},
+        {"vendor_name": "CityWorks", "access_protocol": "rest_api", "data_shape": "structured", "common_record_types": ["work_orders", "inspections"], "redaction_tier": 1, "discovery_hints": {}}
+      ]
+    },
+    {
+      "domain": "Human Resources",
+      "systems": [
+        {"vendor_name": "NEOGOV", "access_protocol": "rest_api", "data_shape": "structured", "common_record_types": ["job_postings", "hiring_records", "salary_data"], "redaction_tier": 2, "discovery_hints": {}},
+        {"vendor_name": "ADP", "access_protocol": "rest_api", "data_shape": "structured", "common_record_types": ["payroll", "benefits"], "redaction_tier": 2, "discovery_hints": {}}
+      ]
+    },
+    {
+      "domain": "Document Management",
+      "systems": [
+        {"vendor_name": "Laserfiche", "access_protocol": "rest_api", "data_shape": "documents", "common_record_types": ["meeting_minutes", "ordinances", "contracts", "resolutions"], "redaction_tier": 1, "discovery_hints": {"service_accounts": ["svc_laserfiche"], "db_patterns": ["LASER*"]}},
+        {"vendor_name": "OnBase", "access_protocol": "odbc", "data_shape": "documents", "common_record_types": ["scanned_documents", "forms"], "redaction_tier": 1, "discovery_hints": {"db_patterns": ["ONBASE*"]}}
+      ]
+    },
+    {
+      "domain": "Email & Communication",
+      "systems": [
+        {"vendor_name": "Microsoft 365", "access_protocol": "rest_api", "data_shape": "documents", "common_record_types": ["email", "calendar", "teams_messages"], "redaction_tier": 1, "discovery_hints": {}},
+        {"vendor_name": "Google Workspace", "access_protocol": "rest_api", "data_shape": "documents", "common_record_types": ["email", "calendar", "drive_files"], "redaction_tier": 1, "discovery_hints": {}}
+      ]
+    },
+    {
+      "domain": "Utilities & Public Works",
+      "systems": [
+        {"vendor_name": "CIS Infinity", "access_protocol": "odbc", "data_shape": "structured", "common_record_types": ["utility_billing", "meter_data"], "redaction_tier": 1, "discovery_hints": {"db_patterns": ["CIS*"]}},
+        {"vendor_name": "Cartegraph", "access_protocol": "rest_api", "data_shape": "structured", "common_record_types": ["work_orders", "maintenance_logs"], "redaction_tier": 1, "discovery_hints": {}}
+      ]
+    },
+    {
+      "domain": "Courts & Legal",
+      "systems": [
+        {"vendor_name": "Tyler Odyssey", "access_protocol": "odbc", "data_shape": "structured", "common_record_types": ["court_dockets", "case_filings"], "redaction_tier": 2, "discovery_hints": {"db_patterns": ["ODYSSEY*"]}}
+      ]
+    },
+    {
+      "domain": "Parks & Recreation",
+      "systems": [
+        {"vendor_name": "RecTrac", "access_protocol": "odbc", "data_shape": "structured", "common_record_types": ["facility_reservations", "program_registrations"], "redaction_tier": 1, "discovery_hints": {}},
+        {"vendor_name": "CivicRec", "access_protocol": "rest_api", "data_shape": "structured", "common_record_types": ["facility_reservations", "rental_agreements"], "redaction_tier": 1, "discovery_hints": {}}
+      ]
+    },
+    {
+      "domain": "Asset & Fleet Management",
+      "systems": [
+        {"vendor_name": "Samsara", "access_protocol": "rest_api", "data_shape": "structured", "common_record_types": ["vehicle_gps", "maintenance_records", "fuel_purchases"], "redaction_tier": 1, "discovery_hints": {}}
+      ]
+    },
+    {
+      "domain": "Geographic Information",
+      "systems": [
+        {"vendor_name": "Esri ArcGIS", "access_protocol": "rest_api", "data_shape": "spatial", "common_record_types": ["property_boundaries", "zoning_maps", "infrastructure"], "redaction_tier": 1, "discovery_hints": {"ports": [6443, 443]}}
+      ]
+    },
+    {
+      "domain": "Legacy & Custom",
+      "systems": [
+        {"vendor_name": "Generic ODBC", "access_protocol": "odbc", "data_shape": "structured", "common_record_types": ["historical_records"], "redaction_tier": 1, "discovery_hints": {}},
+        {"vendor_name": "File Export", "access_protocol": "file_system", "data_shape": "documents", "common_record_types": ["exported_reports", "scanned_archives"], "redaction_tier": 1, "discovery_hints": {}}
+      ]
+    }
+  ]
+}

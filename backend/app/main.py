@@ -33,6 +33,15 @@ async def lifespan(app: FastAPI):
                 is_verified=True,
             )
             await manager.create(user_create)
+
+    # Auto-load systems catalog on startup
+    from app.catalog.loader import load_catalog
+
+    async with async_session_maker() as session:
+        count = await load_catalog(session)
+        if count > 0:
+            print(f"Loaded {count} systems catalog entries")
+
     yield
     await engine.dispose()
 
@@ -77,6 +86,9 @@ def create_app() -> FastAPI:
 
     from app.city_profile.router import router as city_profile_router
     app.include_router(city_profile_router)
+
+    from app.catalog.router import router as catalog_router
+    app.include_router(catalog_router)
 
     @app.get("/health")
     async def health():
