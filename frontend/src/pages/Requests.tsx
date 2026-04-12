@@ -1,11 +1,35 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
+import { PageHeader } from "@/components/page-header";
+import { StatCard } from "@/components/stat-card";
+import { StatusBadge } from "@/components/status-badge";
+import { DataTable, type Column } from "@/components/data-table";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, FileText, AlertTriangle, Clock } from "lucide-react";
 
 interface Request {
   id: string;
   requester_name: string;
-  requester_email: string | null;
+  requester_email: string;
   description: string;
   status: string;
   statutory_deadline: string | null;
@@ -20,144 +44,236 @@ interface Stats {
   overdue: number;
 }
 
-interface Props { token: string; }
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return "No deadline set";
+  return new Date(dateStr).toLocaleDateString();
+}
 
-const STATUS_COLORS: Record<string, string> = {
-  received: "bg-gray-100 text-gray-700",
-  searching: "bg-blue-100 text-blue-700",
-  in_review: "bg-yellow-100 text-yellow-700",
-  drafted: "bg-purple-100 text-purple-700",
-  approved: "bg-green-100 text-green-700",
-  sent: "bg-emerald-100 text-emerald-700",
-};
+function formatRelativeDeadline(dateStr: string | null): string {
+  if (!dateStr) return "No deadline";
+  const days = Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return `${Math.abs(days)} days overdue`;
+  if (days === 0) return "Due today";
+  if (days <= 3) return `${days} days left`;
+  return formatDate(dateStr);
+}
 
-export default function Requests({ token }: Props) {
+export default function Requests({ token }: { token: string }) {
   const [requests, setRequests] = useState<Request[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [loadingData, setLoadingData] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [desc, setDesc] = useState("");
-  const [deadline, setDeadline] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [formData, setFormData] = useState({ name: "", email: "", description: "", deadline: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
 
-  const load = () => {
-    setLoadingData(true);
-    Promise.all([
-      apiFetch<Request[]>("/requests/", { token }).then(setRequests).catch((e: unknown) => setError(e instanceof Error ? e.message : String(e))),
-      apiFetch<Stats>("/requests/stats", { token }).then(setStats).catch(() => {}),
-    ]).finally(() => setLoadingData(false));
-  };
-
-  useEffect(load, [token]);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const loadData = async () => {
     try {
-      const body: Record<string, unknown> = { requester_name: name, description: desc };
-      if (email) body.requester_email = email;
-      if (deadline) body.statutory_deadline = new Date(deadline).toISOString();
-      await apiFetch("/requests/", { token, method: "POST", body: JSON.stringify(body) });
-      setName(""); setEmail(""); setDesc(""); setDeadline(""); setShowForm(false); load();
-    } catch (err: unknown) { setError(err instanceof Error ? err.message : String(err)); }
+      const [reqData, statsData] = await Promise.all([
+        apiFetch<Request[]>("/requests/", { token }),
+        apiFetch<Stats>("/requests/stats", { token }),
+      ]);
+      setRequests(reqData);
+      setStats(statsData);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const isOverdue = (d: string | null) => d && new Date(d) < new Date();
-  const isApproaching = (d: string | null) => {
-    if (!d) return false;
-    const dl = new Date(d);
-    const now = new Date();
-    const diff = (dl.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-    return diff > 0 && diff <= 3;
+  useEffect(() => { loadData(); }, [token]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const body: Record<string, string> = {
+        requester_name: formData.name,
+        description: formData.description,
+      };
+      if (formData.email) body.requester_email = formData.email;
+      if (formData.deadline) body.statutory_deadline = formData.deadline;
+
+      await apiFetch("/requests/", {
+        token,
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      setShowForm(false);
+      setFormData({ name: "", email: "", description: "", deadline: "" });
+      await loadData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create");
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  const filtered = statusFilter === "all"
+    ? requests
+    : requests.filter(r => r.status === statusFilter);
+
+  const columns: Column<Request & Record<string, unknown>>[] = [
+    { key: "requester_name", header: "Requester" },
+    {
+      key: "description",
+      header: "Description",
+      render: (r) => (
+        <span className="text-sm text-muted-foreground">
+          {r.description.length > 60 ? r.description.substring(0, 60) + "..." : r.description}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (r) => <StatusBadge status={r.status} domain="request" />,
+    },
+    {
+      key: "statutory_deadline",
+      header: "Deadline",
+      render: (r) => {
+        const days = r.statutory_deadline
+          ? Math.ceil((new Date(r.statutory_deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+          : null;
+        return (
+          <span className={days !== null && days < 0 ? "text-destructive font-medium" : days !== null && days <= 3 ? "text-warning font-medium" : "text-muted-foreground"}>
+            {formatRelativeDeadline(r.statutory_deadline)}
+          </span>
+        );
+      },
+    },
+    {
+      key: "created_at",
+      header: "Created",
+      render: (r) => <span className="text-sm text-muted-foreground">{formatDate(r.created_at)}</span>,
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
+        </div>
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Records Requests</h2>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
-          {showForm ? "Cancel" : "New Request"}
-        </button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Records Requests"
+        actions={
+          <Dialog open={showForm} onOpenChange={setShowForm}>
+            <DialogTrigger render={<Button />}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Request
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>New Records Request</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Requester Name *</label>
+                  <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Email</label>
+                  <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Description *</label>
+                  <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Statutory Deadline</label>
+                  <Input type="date" value={formData.deadline} onChange={(e) => setFormData({ ...formData, deadline: e.target.value })} />
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+                  <Button type="submit" disabled={submitting}>{submitting ? "Creating..." : "Create Request"}</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
-      {error && <p className="text-red-600 mb-4" role="alert">{error}</p>}
-
-      {loadingData && (
-        <div className="flex items-center gap-2 text-gray-500 mb-4" aria-live="polite">
-          <span className="spinner" aria-hidden="true" />
-          <span>Loading requests...</span>
-        </div>
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="p-4">
+            <p className="text-destructive text-sm">{error}</p>
+          </CardContent>
+        </Card>
       )}
 
+      {/* Stat cards */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500">Total</p>
-            <p className="text-2xl font-semibold text-gray-900">{stats.total_requests}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500">In Review</p>
-            <p className="text-2xl font-semibold text-yellow-600">{stats.by_status.in_review || 0}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500">Approaching Deadline</p>
-            <p className="text-2xl font-semibold text-orange-600">{stats.approaching_deadline}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500">Overdue</p>
-            <p className="text-2xl font-semibold text-red-600">{stats.overdue}</p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <StatCard label="Total Open" value={stats.total_requests} icon={FileText} />
+          <StatCard label="In Review" value={stats.by_status?.in_review ?? 0} icon={Clock} />
+          <StatCard
+            label="Approaching Deadline"
+            value={stats.approaching_deadline}
+            icon={AlertTriangle}
+            variant={stats.approaching_deadline > 0 ? "warning" : "default"}
+          />
+          <StatCard
+            label="Overdue"
+            value={stats.overdue}
+            icon={AlertTriangle}
+            variant={stats.overdue > 0 ? "danger" : "default"}
+          />
         </div>
       )}
 
-      {showForm && (
-        <form onSubmit={handleCreate} className="bg-white p-4 rounded-lg border border-gray-200 mb-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Requester Name</label><input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" required /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" /></div>
-          </div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea value={desc} onChange={(e) => setDesc(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" rows={3} required /></div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Statutory Deadline</label><input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" /></div>
-          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Create Request</button>
-        </form>
-      )}
-
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm" aria-label="Records requests">
-          <thead><tr className="border-b border-gray-200 bg-gray-50">
-            <th className="text-left px-4 py-3 font-medium text-gray-600">Requester</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-600">Description</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-600">Deadline</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-600">Created</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
-          </tr></thead>
-          <tbody>{requests.map((r) => (
-            <tr key={r.id} className="border-b border-gray-100">
-              <td className="px-4 py-3 text-gray-900">{r.requester_name}</td>
-              <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{r.description}</td>
-              <td className="px-4 py-3"><span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[r.status] || "bg-gray-100 text-gray-700"}`}>{r.status.replace("_", " ")}</span></td>
-              <td className="px-4 py-3">
-                {r.statutory_deadline ? (
-                  <span className={`text-xs ${isOverdue(r.statutory_deadline) ? "text-red-600 font-bold" : isApproaching(r.statutory_deadline) ? "text-orange-600 font-medium" : "text-gray-500"}`}>
-                    {new Date(r.statutory_deadline).toLocaleDateString()}
-                    {isOverdue(r.statutory_deadline) && " OVERDUE"}
-                  </span>
-                ) : <span className="text-xs text-gray-400">None</span>}
-              </td>
-              <td className="px-4 py-3 text-gray-500 text-xs">{new Date(r.created_at).toLocaleDateString()}</td>
-              <td className="px-4 py-3"><Link to={`/requests/${r.id}`} className="text-blue-600 hover:text-blue-800 text-sm font-medium" aria-label={`View request from ${r.requester_name}`}>View</Link></td>
-            </tr>
-          ))}</tbody>
-        </table>
-        {!loadingData && requests.length === 0 && (
-          <div className="text-center py-12 text-gray-400">
-            <p className="font-medium">No requests yet</p>
-            <p className="text-sm mt-1">Use the "New Request" button above to create your first open records request.</p>
-          </div>
-        )}
+      {/* Filter bar */}
+      <div className="flex items-center gap-3">
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "all")}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="received">Received</SelectItem>
+            <SelectItem value="searching">Searching</SelectItem>
+            <SelectItem value="in_review">In Review</SelectItem>
+            <SelectItem value="drafted">Drafted</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+
+      {/* Table */}
+      {filtered.length === 0 && !loading ? (
+        <EmptyState
+          icon={FileText}
+          title="No requests found"
+          description={statusFilter !== "all" ? "No requests match the selected filter." : "No records requests have been submitted yet."}
+          action={
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create First Request
+            </Button>
+          }
+        />
+      ) : (
+        <DataTable<Request & Record<string, unknown>>
+          columns={columns}
+          data={filtered as (Request & Record<string, unknown>)[]}
+          rowKey={(r) => r.id}
+          onRowClick={(r) => navigate(`/requests/${r.id}`)}
+          ariaLabel="Records requests"
+          emptyMessage="No requests found."
+        />
+      )}
     </div>
   );
 }
