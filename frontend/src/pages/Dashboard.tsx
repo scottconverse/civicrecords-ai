@@ -1,29 +1,48 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
+import { PageHeader } from "@/components/page-header";
+import { StatCard } from "@/components/stat-card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Users,
+  FileText,
+  Shield,
+  Search,
+  Plus,
+  Database,
+  Cpu,
+  Zap,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 
 interface SystemStatus {
   version: string;
-  database: string;
-  ollama: string;
-  redis: string;
+  database: { status: string };
+  ollama: { status: string };
+  redis: { status: string };
   user_count: number;
   audit_log_count: number;
 }
 
-interface Props {
-  token: string;
-}
-
-function StatusDot({ ok }: { ok: boolean }) {
+function ServiceIndicator({ name, status, icon: Icon }: { name: string; status: string; icon: React.ElementType }) {
+  const isConnected = status === "connected" || status === "ok" || status === "healthy";
   return (
-    <span
-      className={`inline-block w-2.5 h-2.5 rounded-full mr-2 ${ok ? "bg-green-500" : "bg-red-500"}`}
-      aria-label={ok ? "Connected" : "Disconnected"}
-    />
+    <div className="flex items-center gap-2 text-sm">
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <span className="text-foreground">{name}</span>
+      {isConnected ? (
+        <CheckCircle className="h-3.5 w-3.5 text-success" />
+      ) : (
+        <XCircle className="h-3.5 w-3.5 text-destructive" />
+      )}
+    </div>
   );
 }
 
-export default function Dashboard({ token }: Props) {
+export default function Dashboard({ token }: { token: string }) {
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,80 +50,84 @@ export default function Dashboard({ token }: Props) {
   useEffect(() => {
     apiFetch<SystemStatus>("/admin/status", { token })
       .then(setStatus)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load system status"))
+      .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [token]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <span className="spinner" aria-label="Loading dashboard" />
-        <span className="ml-3 text-gray-500">Loading system status...</span>
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-28" />
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="error-banner" role="alert">
-        <strong>Unable to load dashboard:</strong> {error}
+      <div>
+        <PageHeader title="Dashboard" />
+        <Card className="border-destructive">
+          <CardContent className="p-6">
+            <p className="text-destructive">{error}</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (!status) return null;
 
-  const services = [
-    { name: "Database (PostgreSQL)", status: status.database, icon: "🗄️" },
-    { name: "Ollama (LLM Engine)", status: status.ollama, icon: "🤖" },
-    { name: "Redis (Task Queue)", status: status.redis, icon: "⚡" },
-  ];
-
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">System Dashboard</h2>
-        <p className="text-sm text-gray-500 mt-1">CivicRecords AI v{status.version}</p>
+    <div className="space-y-8">
+      <PageHeader
+        title="Dashboard"
+        description={`CivicRecords AI v${status.version}`}
+      />
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard label="Registered Users" value={status.user_count} icon={Users} />
+        <StatCard label="Audit Log Entries" value={status.audit_log_count} icon={FileText} />
+        <StatCard label="System Version" value={status.version} icon={Shield} />
       </div>
 
-      <section aria-label="Service health">
-        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Services</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          {services.map((s) => (
-            <div
-              key={s.name}
-              className="bg-white p-5 rounded-lg border border-gray-200 flex items-center gap-3"
-            >
-              <span className="text-2xl" role="img" aria-hidden="true">{s.icon}</span>
-              <div>
-                <p className="text-sm text-gray-600">{s.name}</p>
-                <p className="flex items-center text-sm font-medium">
-                  <StatusDot ok={s.status === "connected"} />
-                  {s.status === "connected" ? "Connected" : s.status}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Service health — compact inline */}
+      <Card className="shadow-none">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-label uppercase text-muted-foreground">Services</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-6">
+            <ServiceIndicator name="Database (PostgreSQL)" status={status.database?.status} icon={Database} />
+            <ServiceIndicator name="Ollama (LLM Engine)" status={status.ollama?.status} icon={Cpu} />
+            <ServiceIndicator name="Redis (Task Queue)" status={status.redis?.status} icon={Zap} />
+          </div>
+        </CardContent>
+      </Card>
 
-      <section aria-label="System statistics">
-        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Overview</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-5 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500">Registered Users</p>
-            <p className="text-3xl font-semibold text-gray-900 mt-1">{status.user_count}</p>
+      {/* Quick actions */}
+      <Card className="shadow-none">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-label uppercase text-muted-foreground">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={() => window.location.href = "/requests"}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Request
+            </Button>
+            <Button variant="outline" onClick={() => window.location.href = "/search"}>
+              <Search className="h-4 w-4 mr-2" />
+              Search Records
+            </Button>
           </div>
-          <div className="bg-white p-5 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500">Audit Log Entries</p>
-            <p className="text-3xl font-semibold text-gray-900 mt-1">{status.audit_log_count}</p>
-          </div>
-          <div className="bg-white p-5 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500">System Version</p>
-            <p className="text-3xl font-semibold text-gray-900 mt-1">{status.version}</p>
-          </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     </div>
   );
 }
