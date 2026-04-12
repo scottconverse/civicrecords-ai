@@ -49,12 +49,12 @@ export default function Users({ token }: Props) {
       await apiFetch("/auth/register", {
         token,
         method: "POST",
-        body: {
+        body: JSON.stringify({
           email: formEmail,
           password: formPassword,
           full_name: formFullName,
           role: formRole,
-        },
+        }),
       });
       // Reset form and refresh list
       setFormEmail("");
