@@ -1,6 +1,30 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
+import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import FileUpload from "@/components/FileUpload";
+import {
+  Plus,
+  FolderOpen,
+  Upload,
+  Mail,
+  Database,
+  Globe,
+  RefreshCw,
+  CheckCircle,
+  Clock,
+} from "lucide-react";
 
 interface DataSource {
   id: string;
@@ -12,197 +36,218 @@ interface DataSource {
   last_ingestion_at: string | null;
 }
 
-interface Props {
-  token: string;
+function SourceCard({ source, onIngest, ingesting }: { source: DataSource; onIngest: () => void; ingesting: boolean }) {
+  return (
+    <Card className="shadow-none">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            {source.source_type === "upload" ? (
+              <Upload className="h-5 w-5 text-primary" />
+            ) : (
+              <FolderOpen className="h-5 w-5 text-primary" />
+            )}
+            <div>
+              <p className="font-medium text-foreground">{source.name}</p>
+              <p className="text-xs text-muted-foreground">{source.source_type}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            {source.is_active ? (
+              <CheckCircle className="h-4 w-4 text-success" />
+            ) : (
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            )}
+            <span className="text-xs text-muted-foreground">
+              {source.is_active ? "Active" : "Inactive"}
+            </span>
+          </div>
+        </div>
+        <Separator className="my-3" />
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            Last ingestion: {source.last_ingestion_at ? new Date(source.last_ingestion_at).toLocaleDateString() : "Never"}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={ingesting}
+            onClick={onIngest}
+          >
+            <RefreshCw className={`h-3 w-3 mr-1 ${ingesting ? "animate-spin" : ""}`} />
+            {ingesting ? "Ingesting..." : "Ingest Now"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
-export default function DataSources({ token }: Props) {
+function ComingSoonCard({ icon: Icon, title, phase }: { icon: React.ElementType; title: string; phase: string }) {
+  return (
+    <Card className="shadow-none opacity-60">
+      <CardContent className="p-5 text-center">
+        <Icon className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+        <p className="font-medium text-muted-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground mt-1">Coming in {phase}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function DataSources({ token }: { token: string }) {
   const [sources, setSources] = useState<DataSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState("");
-  const [path, setPath] = useState("");
-  const [ingesting, setIngesting] = useState<string | null>(null);
+  const [formData, setFormData] = useState({ name: "", path: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [ingesting, setIngesting] = useState<string | null>(null);
 
-  const loadSources = () => {
-    setLoading(true);
-    apiFetch<DataSource[]>("/datasources/", { token })
-      .then(setSources)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+  const loadData = async () => {
+    try {
+      const data = await apiFetch<DataSource[]>("/datasources/", { token });
+      setSources(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(loadSources, [token]);
+  useEffect(() => { loadData(); }, [token]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
       await apiFetch("/datasources/", {
         token,
         method: "POST",
-        body: JSON.stringify({ name, source_type: "directory", connection_config: { path } }),
+        body: JSON.stringify({
+          name: formData.name,
+          source_type: "directory",
+          connection_config: { path: formData.path },
+        }),
       });
-      setName("");
-      setPath("");
       setShowForm(false);
-      loadSources();
-    } catch (err: any) {
-      setError(err.message);
+      setFormData({ name: "", path: "" });
+      await loadData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleIngest = async (sourceId: string) => {
-    setIngesting(sourceId);
+  const handleIngest = async (id: string) => {
+    setIngesting(id);
     try {
-      await apiFetch(`/datasources/${sourceId}/ingest`, { token, method: "POST" });
-    } catch (err: any) {
-      setError(err.message);
+      await apiFetch(`/datasources/${id}/ingest`, { token, method: "POST" });
+      await loadData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ingestion failed");
+    } finally {
+      setIngesting(null);
     }
-    setIngesting(null);
   };
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Data Sources</h2>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="btn btn-primary"
-          aria-expanded={showForm}
-          aria-controls="add-source-form"
-        >
-          {showForm ? "Cancel" : "Add Source"}
-        </button>
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-40" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32" />)}
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Data Sources"
+        actions={
+          <Dialog open={showForm} onOpenChange={setShowForm}>
+            <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Source</Button>} />
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Data Source</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Source Name</label>
+                  <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Public Records Drive" required />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Directory Path</label>
+                  <Input value={formData.path} onChange={(e) => setFormData({ ...formData, path: e.target.value })} placeholder="e.g. C:\Records\Public or /mnt/records" required />
+                  <p className="text-xs text-muted-foreground mt-1">The folder on the server where documents are stored.</p>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+                  <Button type="submit" disabled={submitting}>{submitting ? "Adding..." : "Add Source"}</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       {error && (
-        <div className="error-banner mb-4" role="alert" aria-live="assertive">
-          {error}
+        <Card className="border-destructive">
+          <CardContent className="p-4"><p className="text-destructive text-sm">{error}</p></CardContent>
+        </Card>
+      )}
+
+      {/* Upload section */}
+      <Card className="shadow-none">
+        <CardHeader>
+          <CardTitle className="text-lg">Upload Documents</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FileUpload token={token} onUploadComplete={loadData} />
+        </CardContent>
+      </Card>
+
+      {/* Connected sources */}
+      <div>
+        <h3 className="text-label uppercase text-muted-foreground mb-3">Connected Sources</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {sources.map((s) => (
+            <SourceCard
+              key={s.id}
+              source={s}
+              onIngest={() => handleIngest(s.id)}
+              ingesting={ingesting === s.id}
+            />
+          ))}
+          {sources.length === 0 && (
+            <Card className="shadow-none md:col-span-3">
+              <CardContent className="p-8 text-center">
+                <p className="text-muted-foreground">No sources configured yet. Upload documents above or add a directory source.</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
-      )}
-
-      {showForm && (
-        <form
-          id="add-source-form"
-          onSubmit={handleCreate}
-          className="bg-white p-4 rounded-lg border border-gray-200 mb-4 space-y-3"
-          aria-label="Add new data source"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="source-name" className="form-label">
-                Name
-              </label>
-              <input
-                id="source-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="form-input"
-                aria-label="Data source name"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="source-path" className="form-label">
-                Directory Path
-              </label>
-              <input
-                id="source-path"
-                value={path}
-                onChange={(e) => setPath(e.target.value)}
-                placeholder="/data/city-documents"
-                className="form-input"
-                aria-label="Directory path"
-                required
-              />
-            </div>
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="btn btn-primary"
-            aria-busy={submitting}
-          >
-            {submitting ? (
-              <span className="flex items-center gap-2">
-                <span className="spinner" aria-hidden="true" />
-                Creating…
-              </span>
-            ) : (
-              "Create Source"
-            )}
-          </button>
-        </form>
-      )}
-
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">Upload a Document</h3>
-        <FileUpload token={token} onUploadComplete={loadSources} />
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center gap-3 py-12 text-gray-500">
-            <span className="spinner" aria-hidden="true" />
-            <span>Loading data sources…</span>
-          </div>
-        ) : sources.length === 0 ? (
-          <div className="py-12 text-center text-gray-500">
-            <p className="font-medium text-gray-700 mb-1">No data sources configured yet.</p>
-            <p className="text-sm">Add a directory to start indexing documents.</p>
-          </div>
-        ) : (
-          <table className="w-full text-sm" aria-label="Data sources">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="text-left px-4 py-3 font-medium text-gray-600" scope="col">Name</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600" scope="col">Type</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600" scope="col">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600" scope="col">Last Ingestion</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600" scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sources.map((s) => (
-                <tr key={s.id} className="border-b border-gray-100">
-                  <td className="px-4 py-3 text-gray-900">{s.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{s.source_type}</td>
-                  <td className="px-4 py-3">
-                    <span className={`badge ${s.is_active ? "badge-green" : "badge-red"}`}>
-                      {s.is_active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {s.last_ingestion_at ? new Date(s.last_ingestion_at).toLocaleString() : "Never"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleIngest(s.id)}
-                      disabled={ingesting === s.id}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:opacity-50"
-                      aria-label={`Ingest documents from ${s.name}`}
-                      aria-busy={ingesting === s.id}
-                    >
-                      {ingesting === s.id ? (
-                        <span className="flex items-center gap-1">
-                          <span className="spinner spinner-sm" aria-hidden="true" />
-                          Ingesting…
-                        </span>
-                      ) : (
-                        "Ingest Now"
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      {/* Integration roadmap */}
+      <div>
+        <h3 className="text-label uppercase text-muted-foreground mb-3">Integrations</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="shadow-none">
+            <CardContent className="p-5 text-center">
+              <Mail className="h-6 w-6 text-primary mx-auto mb-2" />
+              <p className="font-medium text-foreground">Email Archive</p>
+              <p className="text-xs text-muted-foreground mt-1">Microsoft 365 / Google Workspace</p>
+              <Button variant="outline" size="sm" className="mt-3" disabled>Configure Email</Button>
+            </CardContent>
+          </Card>
+          <ComingSoonCard icon={Database} title="Database (ODBC)" phase="v1.1" />
+          <ComingSoonCard icon={Globe} title="API Endpoint" phase="v2.0" />
+        </div>
       </div>
     </div>
   );
