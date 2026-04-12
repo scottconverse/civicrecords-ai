@@ -11,6 +11,9 @@ import Exemptions from "@/pages/Exemptions";
 import DataSources from "@/pages/DataSources";
 import Ingestion from "@/pages/Ingestion";
 import Users from "@/pages/Users";
+import Onboarding from "@/pages/Onboarding";
+import CityProfile from "@/pages/CityProfile";
+import Discovery from "@/pages/Discovery";
 
 export default function App() {
   const [token, setToken] = useState<string | null>(() => {
@@ -62,6 +65,9 @@ export default function App() {
         <Route path="/sources" element={<DataSources token={token} />} />
         <Route path="/ingestion" element={<Ingestion token={token} />} />
         <Route path="/users" element={<Users token={token} />} />
+        <Route path="/onboarding" element={<Onboarding token={token} />} />
+        <Route path="/city-profile" element={<CityProfile token={token} />} />
+        <Route path="/discovery" element={<Discovery token={token} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AppShell>

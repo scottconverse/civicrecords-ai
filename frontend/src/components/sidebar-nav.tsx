@@ -9,6 +9,9 @@ import {
   HardDrive,
   LayoutDashboard,
   Users,
+  Building2,
+  ClipboardList,
+  Radar,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,9 +27,15 @@ const WORKFLOW_ITEMS: NavItem[] = [
   { path: "/exemptions", label: "Exemptions", icon: Shield },
 ];
 
+const SETUP_ITEMS: NavItem[] = [
+  { path: "/onboarding", label: "Onboarding", icon: ClipboardList },
+  { path: "/city-profile", label: "City Profile", icon: Building2 },
+];
+
 const ADMIN_ITEMS: NavItem[] = [
   { path: "/sources", label: "Sources", icon: FolderOpen },
   { path: "/ingestion", label: "Ingestion", icon: HardDrive },
+  { path: "/discovery", label: "Discovery", icon: Radar },
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
   { path: "/users", label: "Users", icon: Users },
 ];
@@ -67,6 +76,15 @@ export function SidebarNav() {
         Workflow
       </p>
       {WORKFLOW_ITEMS.map((item) => (
+        <NavLink key={item.path} item={item} />
+      ))}
+
+      <Separator className="my-3" />
+
+      <p className="px-3 mb-1 text-label uppercase text-muted-foreground">
+        Setup
+      </p>
+      {SETUP_ITEMS.map((item) => (
         <NavLink key={item.path} item={item} />
       ))}
 
