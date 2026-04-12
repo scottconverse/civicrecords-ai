@@ -441,3 +441,55 @@ async def add_message(
         details={"is_internal": msg.is_internal},
     )
     return message
+
+
+@router.get("/{request_id}/fees", response_model=list[FeeLineItemRead])
+async def get_fees(
+    request_id: uuid.UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.STAFF)),
+):
+    from app.models.fees import FeeLineItem
+    result = await session.execute(
+        select(FeeLineItem)
+        .where(FeeLineItem.request_id == request_id)
+        .order_by(FeeLineItem.created_at.asc())
+    )
+    return result.scalars().all()
+
+
+@router.post("/{request_id}/fees", response_model=FeeLineItemRead, status_code=201)
+async def add_fee(
+    request_id: uuid.UUID,
+    fee: FeeLineItemCreate,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.STAFF)),
+):
+    from app.models.fees import FeeLineItem
+    req = await session.get(RecordsRequest, request_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    item = FeeLineItem(
+        request_id=request_id,
+        fee_schedule_id=fee.fee_schedule_id,
+        description=fee.description,
+        quantity=fee.quantity,
+        unit_price=fee.unit_price,
+        total=round(fee.quantity * fee.unit_price, 2),
+    )
+    session.add(item)
+
+    # Update estimated total on request
+    req.estimated_fee = (req.estimated_fee or 0) + item.total
+    req.fee_status = "estimated"
+
+    await session.commit()
+    await session.refresh(item)
+
+    await write_audit_log(
+        session=session, action="fee_added", resource_type="request",
+        resource_id=str(request_id), user_id=user.id,
+        details={"description": fee.description, "total": float(item.total)},
+    )
+    return item
