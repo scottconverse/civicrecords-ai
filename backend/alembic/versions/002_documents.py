@@ -16,15 +16,10 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
-    source_type = postgresql.ENUM("upload", "directory", name="source_type", create_type=True)
-    source_type.create(op.get_bind(), checkfirst=True)
-    ingestion_status = postgresql.ENUM("pending", "processing", "completed", "failed", name="ingestion_status", create_type=True)
-    ingestion_status.create(op.get_bind(), checkfirst=True)
-
     op.create_table("data_sources",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
-        sa.Column("source_type", sa.Enum("upload", "directory", name="source_type", create_type=False), nullable=False),
+        sa.Column("source_type", sa.Enum("upload", "directory", name="source_type", create_type=True), nullable=False),
         sa.Column("connection_config", postgresql.JSONB(), nullable=False, server_default="{}"),
         sa.Column("schedule_minutes", sa.Integer(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
@@ -42,7 +37,7 @@ def upgrade() -> None:
         sa.Column("file_type", sa.String(50), nullable=False),
         sa.Column("file_hash", sa.String(64), nullable=False),
         sa.Column("file_size", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("ingestion_status", sa.Enum("pending", "processing", "completed", "failed", name="ingestion_status", create_type=False), nullable=False, server_default="pending"),
+        sa.Column("ingestion_status", sa.Enum("pending", "processing", "completed", "failed", name="ingestion_status", create_type=True), nullable=False, server_default="pending"),
         sa.Column("ingestion_error", sa.Text(), nullable=True),
         sa.Column("chunk_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("ingested_at", sa.DateTime(timezone=True), nullable=True),

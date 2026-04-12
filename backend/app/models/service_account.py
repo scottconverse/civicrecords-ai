@@ -17,7 +17,7 @@ class ServiceAccount(Base):
     name: Mapped[str] = mapped_column(String(255), unique=True)
     api_key_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role", create_type=False),
+        Enum(UserRole, name="user_role", create_type=False, values_callable=lambda e: [m.value for m in e]),
         default=UserRole.READ_ONLY,
     )
     created_by: Mapped[uuid.UUID] = mapped_column(

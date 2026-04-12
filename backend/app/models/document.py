@@ -31,7 +31,7 @@ class DataSource(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), unique=True)
-    source_type: Mapped[SourceType] = mapped_column(Enum(SourceType, name="source_type"))
+    source_type: Mapped[SourceType] = mapped_column(Enum(SourceType, name="source_type", create_type=False, values_callable=lambda e: [m.value for m in e]))
     connection_config: Mapped[dict] = mapped_column(JSONB, default=dict)
     schedule_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -50,7 +50,7 @@ class Document(Base):
     file_type: Mapped[str] = mapped_column(String(50))
     file_hash: Mapped[str] = mapped_column(String(64), index=True)
     file_size: Mapped[int] = mapped_column(Integer, default=0)
-    ingestion_status: Mapped[IngestionStatus] = mapped_column(Enum(IngestionStatus, name="ingestion_status"), default=IngestionStatus.PENDING)
+    ingestion_status: Mapped[IngestionStatus] = mapped_column(Enum(IngestionStatus, name="ingestion_status", create_type=False, values_callable=lambda e: [m.value for m in e]), default=IngestionStatus.PENDING)
     ingestion_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     chunk_count: Mapped[int] = mapped_column(Integer, default=0)
     ingested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

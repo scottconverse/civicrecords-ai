@@ -22,7 +22,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
 
     full_name: Mapped[str] = mapped_column(default="")
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role"),
+        Enum(UserRole, name="user_role", create_type=False, values_callable=lambda e: [m.value for m in e]),
         default=UserRole.STAFF,
     )
     created_at: Mapped[datetime] = mapped_column(

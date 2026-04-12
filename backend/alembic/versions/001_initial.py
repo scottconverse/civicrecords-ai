@@ -21,11 +21,8 @@ def upgrade() -> None:
     # Enable pgvector extension
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
-    # UserRole enum
-    user_role = postgresql.ENUM("admin", "staff", "reviewer", "read_only", name="user_role", create_type=True)
-    user_role.create(op.get_bind(), checkfirst=True)
-
     # Users table (fastapi-users compatible)
+    # The Enum with create_type=True on the first table creates the user_role type
     op.create_table(
         "users",
         sa.Column("id", fastapi_users_db_sqlalchemy.generics.GUID(), nullable=False),
@@ -35,7 +32,7 @@ def upgrade() -> None:
         sa.Column("is_superuser", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("is_verified", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("full_name", sa.String(), nullable=False, server_default=""),
-        sa.Column("role", sa.Enum("admin", "staff", "reviewer", "read_only", name="user_role", create_type=False), nullable=False, server_default="staff"),
+        sa.Column("role", sa.Enum("admin", "staff", "reviewer", "read_only", name="user_role", create_type=True), nullable=False, server_default="staff"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("last_login", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
