@@ -1,5 +1,22 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Search as SearchIcon, FileText, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SearchResult {
   chunk_id: string;
@@ -29,20 +46,29 @@ interface FilterOptions {
   date_range: { min: string; max: string } | null;
 }
 
-interface Props {
-  token: string;
+function normalizeScore(score: number): number {
+  // RRF scores are typically 0.01-0.02 range; normalize to 0-100
+  return Math.min(100, Math.round(score * 5000));
 }
 
-export default function Search({ token }: Props) {
+function highlightMatch(text: string, query: string): string {
+  if (!query) return text;
+  const words = query.split(/\s+/).filter(w => w.length > 2);
+  if (words.length === 0) return text;
+  const pattern = new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  return text.replace(pattern, '**$1**');
+}
+
+export default function Search({ token }: { token: string }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResponse | null>(null);
   const [filters, setFilters] = useState<FilterOptions | null>(null);
-  const [selectedFileType, setSelectedFileType] = useState<string>("");
+  const [selectedFileType, setSelectedFileType] = useState("all");
   const [synthesize, setSynthesize] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [queryHistory, setQueryHistory] = useState<string[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     apiFetch<FilterOptions>("/search/filters", { token })
@@ -55,171 +81,178 @@ export default function Search({ token }: Props) {
     if (!query.trim()) return;
     setLoading(true);
     setError("");
+    setHasSearched(true);
     try {
       const body: Record<string, unknown> = {
         query: query.trim(),
         synthesize,
-        limit: 10,
+        limit: 20,
       };
       if (sessionId) body.session_id = sessionId;
-      if (selectedFileType) body.filters = { file_type: selectedFileType };
+      if (selectedFileType !== "all") body.filters = { file_type: selectedFileType };
 
-      const resp = await apiFetch<SearchResponse>("/search/query", {
+      const res = await apiFetch<SearchResponse>("/search/query", {
         token,
         method: "POST",
         body: JSON.stringify(body),
       });
-      setResults(resp);
-      setSessionId(resp.session_id);
-      setQueryHistory((prev) => [...prev, query.trim()]);
-      setQuery("");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      setResults(res);
+      if (res.session_id) setSessionId(res.session_id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Search failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const highlightMatch = (text: string, q: string) => {
-    if (!q) return text;
-    const words = q.split(/\s+/).filter((w) => w.length > 2);
-    if (!words.length) return text;
-    const regex = new RegExp(`(${words.join("|")})`, "gi");
-    const parts = text.split(regex);
-    return parts.map((part, i) =>
-      regex.test(part) ? (
-        <mark key={i} className="bg-yellow-200 px-0.5 rounded">
-          {part}
-        </mark>
-      ) : (
-        part
-      )
-    );
-  };
-
-  const lastQuery = queryHistory[queryHistory.length - 1] || "";
-
   return (
-    <div>
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Search Records</h2>
+    <div className="space-y-6">
+      <PageHeader title="Search Records" />
 
-      <form onSubmit={handleSearch} className="mb-6">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search documents... e.g. 'water quality reports 2025'"
-            aria-label="Search query"
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            disabled={loading || !query.trim()}
-            aria-label="Submit search"
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 sm:w-auto w-full"
-          >
-            {loading ? "Searching..." : "Search"}
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center gap-4 mt-3">
-          {filters && filters.file_types.length > 0 && (
-            <select
-              value={selectedFileType}
-              onChange={(e) => setSelectedFileType(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
-            >
-              <option value="">All file types</option>
-              {filters.file_types.map((ft) => (
-                <option key={ft} value={ft}>{ft.toUpperCase()}</option>
-              ))}
-            </select>
-          )}
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input
-              type="checkbox"
-              checked={synthesize}
-              onChange={(e) => setSynthesize(e.target.checked)}
-              className="rounded"
+      {/* Search form */}
+      <form onSubmit={handleSearch} className="space-y-4">
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search documents... e.g. 'water quality reports 2025'"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-10 h-11"
             />
-            Generate AI summary
-          </label>
-          {sessionId && (
-            <button
-              type="button"
-              onClick={() => { setSessionId(null); setQueryHistory([]); setResults(null); }}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              New session
-            </button>
-          )}
+          </div>
+          <Button type="submit" disabled={loading || !query.trim()} className="h-11 px-6">
+            {loading ? "Searching..." : "Search"}
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <Select value={selectedFileType} onValueChange={(v) => setSelectedFileType(v ?? "all")}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All file types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All file types</SelectItem>
+              {filters?.file_types.map((ft) => (
+                <SelectItem key={ft} value={ft}>{ft.toUpperCase()}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="synthesize"
+              checked={synthesize}
+              onCheckedChange={(checked) => setSynthesize(checked === true)}
+            />
+            <label htmlFor="synthesize" className="text-sm text-muted-foreground cursor-pointer">
+              Generate AI summary
+            </label>
+          </div>
         </div>
       </form>
 
-      {error && <p className="text-red-600 mb-4" role="alert">{error}</p>}
-
-      {loading && (
-        <div className="flex items-center gap-2 text-gray-500 mb-4" aria-live="polite">
-          <span className="spinner" aria-hidden="true" />
-          <span>Searching records...</span>
-        </div>
+      {/* Error */}
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="p-4">
+            <p className="text-destructive text-sm">{error}</p>
+          </CardContent>
+        </Card>
       )}
 
-      {queryHistory.length > 1 && (
-        <div className="mb-4 flex gap-2 flex-wrap">
-          <span className="text-xs text-gray-400">Session:</span>
-          {queryHistory.map((q, i) => (
-            <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{q}</span>
+      {/* Empty state — before first search */}
+      {!hasSearched && !loading && (
+        <EmptyState
+          icon={SearchIcon}
+          title="Search across all ingested documents"
+          description="Enter a query above to search. Try: 'water quality 2025' or 'police incident reports' or 'council budget'"
+        />
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full" />
           ))}
         </div>
       )}
 
-      {results && results.synthesized_answer && (
-        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded">AI-Generated Draft</span>
-            <span className="text-xs text-gray-400">Requires human review</span>
-          </div>
-          <p className="text-sm text-gray-800 whitespace-pre-wrap">{results.synthesized_answer}</p>
-        </div>
-      )}
-
-      {results && (
-        <div aria-label="Search results">
-          <p className="text-sm text-gray-500 mb-3">
-            {results.results_count} result{results.results_count !== 1 ? "s" : ""} for "{results.query_text}"
+      {/* Results */}
+      {results && !loading && (
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {results.results_count} result{results.results_count !== 1 ? "s" : ""} found
           </p>
-          <div className="space-y-3">
-            {results.results.map((r) => (
-              <div key={r.chunk_id} className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <div className="flex flex-wrap items-center gap-2 min-w-0">
-                    <span className="text-sm font-medium text-gray-900 truncate max-w-xs">{r.filename}</span>
-                    <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{r.file_type}</span>
-                    {r.page_number && (
-                      <span className="text-xs text-gray-400">Page {r.page_number}</span>
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-400 shrink-0">
-                    Score: {(r.similarity_score * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  {highlightMatch(
-                    r.content_text.length > 500 ? r.content_text.slice(0, 500) + "..." : r.content_text,
-                    lastQuery
-                  )}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {results && results.results_count === 0 && (
-        <div className="text-center py-12 text-gray-400">
-          <p>No documents match your query.</p>
-          <p className="text-sm mt-1">Try different search terms or broaden your filters.</p>
+          {/* AI Summary */}
+          {results.synthesized_answer && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+                    AI-generated draft — requires human review
+                  </Badge>
+                </div>
+                <p className="text-sm text-foreground">{results.synthesized_answer}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Result cards */}
+          {results.results.length === 0 && hasSearched && (
+            <EmptyState
+              icon={FileText}
+              title="No results found"
+              description="Try different keywords or broaden your search terms."
+            />
+          )}
+
+          {results.results.map((r) => {
+            const normalized = normalizeScore(r.similarity_score);
+            const displayName = r.filename.replace(/^[a-f0-9]{32}_/, "");
+            const highlighted = highlightMatch(
+              r.content_text.substring(0, 500),
+              query
+            );
+
+            return (
+              <Card key={r.chunk_id} className="shadow-none hover:shadow-sm transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium text-foreground">{displayName}</span>
+                      <Badge variant="outline" className="text-xs">{r.file_type}</Badge>
+                      {r.page_number && (
+                        <span className="text-xs text-muted-foreground">Page {r.page_number}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full",
+                            normalized >= 70 ? "bg-success" : normalized >= 40 ? "bg-warning" : "bg-muted-foreground"
+                          )}
+                          style={{ width: `${normalized}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-8 text-right">{normalized}%</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {highlighted.split('**').map((part, i) =>
+                      i % 2 === 1 ? <mark key={i} className="bg-warning-light px-0.5 rounded">{part}</mark> : part
+                    )}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
