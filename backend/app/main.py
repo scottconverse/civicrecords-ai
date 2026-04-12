@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.audit import AuditMiddleware, audit_router
 from app.auth import auth_router, register_router, users_router
 from app.config import settings
 from app.database import engine
@@ -44,9 +45,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.add_middleware(AuditMiddleware)
+
     app.include_router(auth_router, prefix="/auth/jwt", tags=["auth"])
     app.include_router(register_router, prefix="/auth", tags=["auth"])
     app.include_router(users_router, prefix="/users", tags=["users"])
+    app.include_router(audit_router)
 
     @app.get("/health")
     async def health():
