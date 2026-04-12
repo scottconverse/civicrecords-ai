@@ -69,6 +69,7 @@ All decisions documented below were evaluated against the constraint: 1-2 person
 | Exemption Detection | Rules-primary, LLM-secondary | Deterministic pattern matching (PII regex, statutory phrases) as primary layer. LLM as secondary "did I miss anything?" suggestion layer. All flags require human confirmation. |
 | Ingestion | Two-track pipeline | Fast track: lightweight Python parsers for structured docs (DOCX, CSV, email, text). LLM track: Gemma 4 multimodal for scanned PDFs, images, handwriting. Tesseract fallback for non-multimodal models. |
 | Licensing | Apache 2.0 (project) | All dependencies must be permissive (MIT, Apache 2.0, BSD) or weak-copyleft (LGPL, MPL, EPL). No AGPL, SSPL, or BSL dependencies. |
+| Multi-tenancy | Flat city-wide knowledge base (Phase 1) | Department-level access controls deferred to Phase 2. Single knowledge base is simpler and sufficient for MVP. |
 | Deployment | Docker Compose on Ubuntu 24.04 LTS | 5 services: postgres, redis, api, worker, ollama. Frontend served by API or nginx. |
 
 ---
@@ -157,8 +158,10 @@ document_chunks
   token_count
 
 document_cache
-  id, document_id, original_bytes, cached_at
-  (only populated when document is attached to a records request)
+  id, document_id, cached_file_path (local filesystem path), file_size,
+  cached_at
+  (only populated when document is attached to a records request;
+   original file stored on local filesystem, not in database)
 ```
 
 ### Search & RAG
