@@ -46,7 +46,11 @@ async def lifespan(app: FastAPI):
                 is_active=True,
                 is_verified=True,
             )
-            await manager.create(user_create)
+            from sqlalchemy.exc import IntegrityError
+            try:
+                await manager.create(user_create)
+            except IntegrityError:
+                await session.rollback()  # Already created by another instance
 
     # Auto-load systems catalog on startup
     from app.catalog.loader import load_catalog

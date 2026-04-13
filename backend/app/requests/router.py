@@ -8,6 +8,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.logger import write_audit_log
+from app.config import settings
 from app.auth.dependencies import require_role
 from app.database import get_async_session
 from app.models.document import Document
@@ -34,11 +35,12 @@ VALID_TRANSITIONS = {
     RequestStatus.ASSIGNED: {RequestStatus.SEARCHING, RequestStatus.CLARIFICATION_NEEDED},
     RequestStatus.SEARCHING: {RequestStatus.IN_REVIEW, RequestStatus.DRAFTED, RequestStatus.CLARIFICATION_NEEDED},
     RequestStatus.IN_REVIEW: {RequestStatus.DRAFTED, RequestStatus.READY_FOR_RELEASE, RequestStatus.SEARCHING},
-    RequestStatus.READY_FOR_RELEASE: {RequestStatus.DRAFTED, RequestStatus.IN_REVIEW},
+    RequestStatus.READY_FOR_RELEASE: {RequestStatus.DRAFTED, RequestStatus.IN_REVIEW, RequestStatus.APPROVED},
     RequestStatus.DRAFTED: {RequestStatus.IN_REVIEW, RequestStatus.APPROVED},
     RequestStatus.APPROVED: {RequestStatus.FULFILLED, RequestStatus.SENT},
-    RequestStatus.FULFILLED: {RequestStatus.CLOSED},
+    RequestStatus.FULFILLED: {RequestStatus.CLOSED},  # can only close
     RequestStatus.SENT: {RequestStatus.CLOSED},
+    RequestStatus.CLOSED: set(),  # terminal state — no transitions out
 }
 
 
@@ -129,7 +131,7 @@ async def request_stats(
             RecordsRequest.statutory_deadline.isnot(None),
             RecordsRequest.statutory_deadline <= three_days,
             RecordsRequest.statutory_deadline > now,
-            RecordsRequest.status.notin_([RequestStatus.SENT, RequestStatus.APPROVED]),
+            RecordsRequest.status.notin_([RequestStatus.FULFILLED, RequestStatus.CLOSED, RequestStatus.SENT]),
         )
     )).scalar() or 0
 
@@ -137,7 +139,7 @@ async def request_stats(
         select(func.count(RecordsRequest.id)).where(
             RecordsRequest.statutory_deadline.isnot(None),
             RecordsRequest.statutory_deadline < now,
-            RecordsRequest.status.notin_([RequestStatus.SENT, RequestStatus.APPROVED]),
+            RecordsRequest.status.notin_([RequestStatus.FULFILLED, RequestStatus.CLOSED, RequestStatus.SENT]),
         )
     )).scalar() or 0
 
@@ -178,6 +180,8 @@ async def update_request(
                 detail=f"Cannot transition from {req.status.value} to {data.status.value}",
             )
         req.status = data.status
+        if data.status in (RequestStatus.FULFILLED, RequestStatus.CLOSED):
+            req.closed_at = datetime.now(timezone.utc)
         await log_timeline(session, request_id, "status_change",
                           f"Status changed to {data.status.value}", user.id, user.role)
 
@@ -330,6 +334,32 @@ async def submit_for_review(
     return req
 
 
+@router.post("/{request_id}/ready-for-release", response_model=RequestRead)
+async def mark_ready_for_release(
+    request_id: uuid.UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.REVIEWER)),
+):
+    req = await session.get(RecordsRequest, request_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if req.status != RequestStatus.IN_REVIEW:
+        raise HTTPException(status_code=400, detail=f"Can only mark ready for release from 'in_review' status, current: {req.status.value}")
+
+    req.status = RequestStatus.READY_FOR_RELEASE
+    await log_timeline(session, request_id, "status_change",
+                      "Marked ready for release", user.id, user.role)
+    await session.commit()
+    await session.refresh(req)
+
+    await write_audit_log(
+        session=session, action="ready_for_release", resource_type="request",
+        resource_id=str(request_id), user_id=user.id,
+    )
+    return req
+
+
 @router.post("/{request_id}/approve", response_model=RequestRead)
 async def approve_request(
     request_id: uuid.UUID,
@@ -340,8 +370,8 @@ async def approve_request(
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if req.status != RequestStatus.DRAFTED:
-        raise HTTPException(status_code=400, detail=f"Can only approve from 'drafted' status, current: {req.status.value}")
+    if req.status not in (RequestStatus.DRAFTED, RequestStatus.READY_FOR_RELEASE):
+        raise HTTPException(status_code=400, detail=f"Can only approve from 'drafted' or 'ready_for_release' status, current: {req.status.value}")
 
     req.status = RequestStatus.APPROVED
     await log_timeline(session, request_id, "response_approved",
@@ -668,7 +698,7 @@ async def _try_llm_generation(
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(
-                "http://ollama:11434/api/generate",
+                f"{settings.ollama_base_url}/api/generate",
                 json={
                     "model": "llama3.2",
                     "prompt": prompt,
