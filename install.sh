@@ -61,32 +61,73 @@ if [ ! -f .env ]; then
     read -p "Press Enter after editing .env, or Ctrl+C to edit later..."
 fi
 
-# Pull and build
+# ─── Hardware Detection ───────────────────────────────────────────────────────
+echo ""
+echo "Detecting hardware capabilities..."
+bash scripts/detect_hardware.sh
+echo ""
+
+# Source the hardware config
+if [ -f ".env.hardware" ]; then
+    # shellcheck disable=SC1091
+    source .env.hardware
+fi
+
+# ─── Select Compose Configuration ────────────────────────────────────────────
+COMPOSE_FILES="-f docker-compose.yml"
+
+if [ "${CIVICRECORDS_GPU_ENABLED:-false}" = "true" ]; then
+    echo "GPU acceleration enabled — using ROCm device passthrough"
+    COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.gpu.yml"
+else
+    echo "GPU not detected or not available — using CPU inference"
+fi
+
+# ─── Build Application Images ────────────────────────────────────────────────
+echo ""
 echo ">>> Pulling Docker images..."
-docker compose pull
+# shellcheck disable=SC2086
+docker compose $COMPOSE_FILES pull
 
 echo ">>> Building application images..."
-docker compose build
+# shellcheck disable=SC2086
+docker compose $COMPOSE_FILES build
 
-# Run migrations before starting app
-echo ">>> Running database migrations..."
-docker compose up -d postgres redis
-echo "Waiting for database..."
+# ─── Start Infrastructure and Wait for Database ──────────────────────────────
+echo ">>> Starting database and cache..."
+# shellcheck disable=SC2086
+docker compose $COMPOSE_FILES --env-file .env up -d postgres redis
+
+echo ">>> Waiting for database..."
 for i in $(seq 1 30); do
-    if docker compose exec postgres pg_isready -U civicrecords &>/dev/null; then
+    if docker compose exec -T postgres pg_isready -U civicrecords -q 2>/dev/null; then
         echo "[OK] Database is ready"
         break
+    fi
+    if [ "$i" -eq 30 ]; then
+        echo "ERROR: PostgreSQL did not become ready after 30 attempts."
+        echo "Check: docker compose logs postgres"
+        exit 1
     fi
     echo "  Waiting for database... ($i/30)"
     sleep 2
 done
-docker compose run --rm api alembic upgrade head
 
-# Start all services
+# ─── Run Migrations ──────────────────────────────────────────────────────────
+echo ">>> Running database migrations..."
+# shellcheck disable=SC2086
+docker compose $COMPOSE_FILES run --rm api alembic upgrade head
+
+# ─── Start All Services ──────────────────────────────────────────────────────
 echo ">>> Starting all services..."
-docker compose up -d
+# shellcheck disable=SC2086
+if [ -f ".env.hardware" ]; then
+    docker compose $COMPOSE_FILES --env-file .env --env-file .env.hardware up -d
+else
+    docker compose $COMPOSE_FILES --env-file .env up -d
+fi
 
-# Wait for health
+# Wait for API health
 echo ">>> Waiting for API to be healthy..."
 for i in $(seq 1 30); do
     if curl -sf http://localhost:8000/health &>/dev/null; then
@@ -97,16 +138,26 @@ for i in $(seq 1 30); do
     sleep 5
 done
 
-# Pull embedding model
+# ─── Pull Models ─────────────────────────────────────────────────────────────
+RECOMMENDED_MODEL="${CIVICRECORDS_RECOMMENDED_MODEL:-gemma4:12b}"
+
+echo ""
 echo ">>> Pulling embedding model (required for search)..."
-docker compose exec ollama ollama pull nomic-embed-text || echo "[WARN] Embedding model pull failed — retry: docker compose exec ollama ollama pull nomic-embed-text"
+# shellcheck disable=SC2086
+docker compose $COMPOSE_FILES exec ollama ollama pull nomic-embed-text || echo "[WARN] Embedding model pull failed — retry: docker compose exec ollama ollama pull nomic-embed-text"
 
 echo ""
 echo ">>> To enable AI-powered search, pull a language model:"
-echo "    docker compose exec ollama ollama pull gemma4:26b    (recommended, ~15GB)"
-echo "    docker compose exec ollama ollama pull gemma3:4b     (lighter alternative, ~2.5GB)"
+echo "    docker compose exec ollama ollama pull $RECOMMENDED_MODEL"
+if [ "$RECOMMENDED_MODEL" = "gemma4:12b" ]; then
+    echo "    (recommended for your ${CIVICRECORDS_TOTAL_RAM_GB:-32}GB RAM configuration)"
+    echo "    Alternative: docker compose exec ollama ollama pull gemma4:27b  (needs 48GB+ RAM)"
+else
+    echo "    (recommended for your ${CIVICRECORDS_TOTAL_RAM_GB:-64}GB RAM configuration)"
+fi
 
 # Get IP
+OS="$(uname -s)"
 if [ "$OS" = "Darwin" ]; then
     IP=$(ipconfig getifaddr en0 2>/dev/null || echo "localhost")
 else
@@ -120,6 +171,13 @@ echo ""
 echo "  Admin panel:  http://${IP}:8080"
 echo "  API:          http://${IP}:8000"
 echo "  API docs:     http://${IP}:8000/docs"
+echo ""
+if [ "${CIVICRECORDS_GPU_ENABLED:-false}" = "true" ]; then
+    echo "  GPU inference: ENABLED (${CIVICRECORDS_PLATFORM} / GFX ${CIVICRECORDS_GFX_VERSION})"
+else
+    echo "  GPU inference: DISABLED (CPU only)"
+    echo "  See docs for GPU enablement on AMD Ryzen"
+fi
 echo ""
 echo "  Run sovereignty check: bash scripts/verify-sovereignty.sh"
 echo "============================================"

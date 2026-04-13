@@ -35,5 +35,8 @@ Thumbs.db
 # Temp files
 temp_*.tsx
 
+# Hardware detection output
+.env.hardware
+
 # Claude Code
 .claude/

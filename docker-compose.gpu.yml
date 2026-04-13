@@ -1,0 +1,29 @@
+# docker-compose.gpu.yml
+# GPU override for Linux with ROCm-capable AMD iGPU
+# Usage: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+# This file is selected automatically by install.sh when GPU is detected.
+# Do not edit manually — managed by detect_hardware.sh
+
+services:
+  ollama:
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+      - render
+    environment:
+      - ${CIVICRECORDS_HSA_OVERRIDE}
+      - HSA_ENABLE_SDMA=0
+      - ROCR_VISIBLE_DEVICES=0
+
+  api:
+    environment:
+      - CIVICRECORDS_GPU_ENABLED=${CIVICRECORDS_GPU_ENABLED}
+      - CIVICRECORDS_PLATFORM=${CIVICRECORDS_PLATFORM}
+      - CIVICRECORDS_NPU_AVAILABLE=${CIVICRECORDS_NPU_AVAILABLE}
+
+  worker:
+    environment:
+      - CIVICRECORDS_GPU_ENABLED=${CIVICRECORDS_GPU_ENABLED}
+      - CIVICRECORDS_PLATFORM=${CIVICRECORDS_PLATFORM}

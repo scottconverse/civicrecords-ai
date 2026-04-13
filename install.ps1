@@ -50,29 +50,84 @@ if (-not (Test-Path ".env")) {
     Read-Host "Press Enter after editing .env, or Ctrl+C to edit later"
 }
 
-# Pull and start services
+# ─── Hardware Detection ───────────────────────────────────────────────────────
+Write-Host ""
+Write-Host "Detecting hardware capabilities..." -ForegroundColor Cyan
+& "$PSScriptRoot\scripts\detect_hardware.ps1"
+Write-Host ""
+
+# Load hardware config
+$hardwareEnv = @{}
+if (Test-Path ".env.hardware") {
+    Get-Content ".env.hardware" | ForEach-Object {
+        if ($_ -match "^([^#][^=]+)=(.*)$") {
+            $hardwareEnv[$matches[1]] = $matches[2].Trim('"')
+        }
+    }
+}
+
+# ─── Select Compose Configuration ────────────────────────────────────────────
+$composeFiles = @("-f", "docker-compose.yml")
+$useHostOllama = $hardwareEnv["CIVICRECORDS_USE_HOST_OLLAMA"] -eq "true"
+$gpuEnabled = $hardwareEnv["CIVICRECORDS_GPU_ENABLED"] -eq "true"
+
+if ($useHostOllama) {
+    Write-Host "GPU acceleration enabled — using native Ollama on host (DirectML)" -ForegroundColor Green
+    $composeFiles += @("-f", "docker-compose.host-ollama.yml")
+} else {
+    Write-Host "Using in-container Ollama — CPU inference" -ForegroundColor Yellow
+}
+
+# ─── Build Application Images ────────────────────────────────────────────────
+Write-Host ""
 Write-Host ">>> Pulling Docker images..."
-docker compose pull
+& docker compose @composeFiles pull
 
 Write-Host ">>> Building application images..."
-docker compose build
+& docker compose @composeFiles build
 
+# ─── Start Infrastructure and Wait for Database ──────────────────────────────
+Write-Host ">>> Starting database and cache..."
+$envFileArgs = @("--env-file", ".env")
+if (Test-Path ".env.hardware") {
+    $envFileArgs += @("--env-file", ".env.hardware")
+}
+& docker compose @composeFiles @envFileArgs up -d postgres redis
+
+Write-Host ">>> Waiting for database..."
+$dbReady = $false
+for ($i = 1; $i -le 30; $i++) {
+    $result = docker compose exec -T postgres pg_isready -U civicrecords -q 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[OK] Database is ready" -ForegroundColor Green
+        $dbReady = $true
+        break
+    }
+    if ($i -eq 30) {
+        Write-Host "ERROR: PostgreSQL did not become ready after 30 attempts." -ForegroundColor Red
+        Write-Host "Check: docker compose logs postgres"
+        exit 1
+    }
+    Write-Host "  Waiting for database... ($i/30)"
+    Start-Sleep -Seconds 2
+}
+
+# ─── Run Migrations ──────────────────────────────────────────────────────────
 Write-Host ">>> Running database migrations..."
-docker compose up -d postgres redis
-Start-Sleep -Seconds 10
-docker compose run --rm api alembic upgrade head
+& docker compose @composeFiles run --rm api alembic upgrade head
 
+# ─── Start All Services ──────────────────────────────────────────────────────
 Write-Host ">>> Starting all services..."
-docker compose up -d
+& docker compose @composeFiles @envFileArgs up -d
 
-# Wait for health
-Write-Host ">>> Waiting for services to be healthy..."
+# Wait for API health
+Write-Host ">>> Waiting for API to be healthy..."
 $healthy = $false
 for ($i = 1; $i -le 30; $i++) {
     try {
         $response = Invoke-RestMethod -Uri "http://localhost:8000/health" -TimeoutSec 5 -ErrorAction Stop
         if ($response.status -eq "ok") {
-            Write-Host "API is healthy!" -ForegroundColor Green
+            Write-Host "[OK] API is healthy!" -ForegroundColor Green
             $healthy = $true
             break
         }
@@ -85,14 +140,44 @@ if (-not $healthy) {
     Write-Host "[WARN] API health check timed out. Check logs with: docker compose logs api" -ForegroundColor Yellow
 }
 
-# Pull embedding model
-Write-Host ">>> Pulling embedding model (required for search)..."
-docker compose exec ollama ollama pull nomic-embed-text
+# ─── Pull Models ─────────────────────────────────────────────────────────────
+$recommendedModel = if ($hardwareEnv["CIVICRECORDS_RECOMMENDED_MODEL"]) { $hardwareEnv["CIVICRECORDS_RECOMMENDED_MODEL"] } else { "gemma4:12b" }
 
 Write-Host ""
-Write-Host ">>> To enable AI-powered search, pull a language model:"
-Write-Host "    docker compose exec ollama ollama pull gemma4:26b    (recommended, ~15GB)"
-Write-Host "    docker compose exec ollama ollama pull gemma3:4b     (lighter alternative, ~2.5GB)"
+Write-Host ">>> Pulling embedding model (required for search)..."
+
+if ($useHostOllama) {
+    # Use native Ollama for model pulls (GPU-accelerated)
+    try {
+        & ollama pull nomic-embed-text
+    } catch {
+        Write-Host "[WARN] Embedding model pull failed — retry: ollama pull nomic-embed-text" -ForegroundColor Yellow
+    }
+
+    Write-Host ""
+    Write-Host ">>> To enable AI-powered search, pull a language model:"
+    Write-Host "    ollama pull $recommendedModel"
+} else {
+    # Use in-container Ollama
+    try {
+        & docker compose @composeFiles exec ollama ollama pull nomic-embed-text
+    } catch {
+        Write-Host "[WARN] Embedding model pull failed — retry: docker compose exec ollama ollama pull nomic-embed-text" -ForegroundColor Yellow
+    }
+
+    Write-Host ""
+    Write-Host ">>> To enable AI-powered search, pull a language model:"
+    Write-Host "    docker compose exec ollama ollama pull $recommendedModel"
+}
+
+if ($recommendedModel -eq "gemma4:12b") {
+    $ramGB = if ($hardwareEnv["CIVICRECORDS_TOTAL_RAM_GB"]) { $hardwareEnv["CIVICRECORDS_TOTAL_RAM_GB"] } else { "32" }
+    Write-Host "    (recommended for your ${ramGB}GB RAM configuration)"
+    Write-Host "    Alternative: gemma4:27b (needs 48GB+ RAM)"
+} else {
+    $ramGB = if ($hardwareEnv["CIVICRECORDS_TOTAL_RAM_GB"]) { $hardwareEnv["CIVICRECORDS_TOTAL_RAM_GB"] } else { "64" }
+    Write-Host "    (recommended for your ${ramGB}GB RAM configuration)"
+}
 
 $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notmatch "Loopback" } | Select-Object -First 1).IPAddress
 
@@ -103,6 +188,18 @@ Write-Host ""
 Write-Host "  Admin panel:  http://${ip}:8080"
 Write-Host "  API:          http://${ip}:8000"
 Write-Host "  API docs:     http://${ip}:8000/docs"
+Write-Host ""
+if ($gpuEnabled) {
+    $plat = $hardwareEnv["CIVICRECORDS_PLATFORM"]
+    if ($useHostOllama) {
+        Write-Host "  GPU inference: ENABLED (Native Ollama / DirectML / $plat)" -ForegroundColor Green
+    } else {
+        Write-Host "  GPU inference: ENABLED ($plat)" -ForegroundColor Green
+    }
+} else {
+    Write-Host "  GPU inference: DISABLED (CPU only)" -ForegroundColor Yellow
+    Write-Host "  See docs for GPU enablement on AMD Ryzen"
+}
 Write-Host ""
 Write-Host "  Run sovereignty check: .\scripts\verify-sovereignty.ps1"
 Write-Host "============================================" -ForegroundColor Cyan

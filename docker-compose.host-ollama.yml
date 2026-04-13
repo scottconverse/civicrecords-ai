@@ -1,0 +1,41 @@
+# docker-compose.host-ollama.yml
+# Used when native Ollama is running on the Windows host with DirectML GPU access.
+# Disables the in-container Ollama service and routes to the host instead.
+# Selected automatically by install.ps1 when native Ollama is detected.
+
+services:
+  ollama:
+    # Disable the in-container Ollama — host Ollama handles inference
+    profiles:
+      - disabled
+
+  api:
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - CIVICRECORDS_GPU_ENABLED=true
+      - CIVICRECORDS_USE_HOST_OLLAMA=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Remove Ollama from depends_on since we're using host Ollama
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - CIVICRECORDS_GPU_ENABLED=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    depends_on:
+      redis:
+        condition: service_healthy
