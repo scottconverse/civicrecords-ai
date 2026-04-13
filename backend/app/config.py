@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     embedding_model: str = "nomic-embed-text"
     chat_model: str = "gemma4:26b"
     vision_model: str = "gemma4:26b"
+    # SMTP settings for notification email delivery
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@civicrecords.local"
+    smtp_use_tls: bool = True
+
     testing: bool = False
 
     model_config = {"env_file": ".env", "extra": "ignore"}

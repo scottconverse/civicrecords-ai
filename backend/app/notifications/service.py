@@ -63,6 +63,8 @@ async def queue_notification(
         recipient_email=recipient_email,
         request_id=request_id,
         channel=template.channel,
+        subject=rendered_subject,
+        body=rendered_body,
         status="queued",
     )
     session.add(log_entry)

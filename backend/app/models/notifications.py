@@ -34,6 +34,8 @@ class NotificationLog(Base):
         ForeignKey("records_requests.id", ondelete="SET NULL")
     )
     channel: Mapped[str] = mapped_column(String(20))
+    subject: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="queued")  # queued/sent/failed
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_message: Mapped[str | None] = mapped_column(Text)
