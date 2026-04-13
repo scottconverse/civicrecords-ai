@@ -1,32 +1,21 @@
+import logging
 import uuid
 
-import httpx
+from app.llm.client import generate
 
-from app.config import settings
-from app.models.exemption import ExemptionFlag, FlagStatus
+logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "gemma4:26b"
 
-LLM_EXEMPTION_PROMPT = """You are reviewing a municipal document excerpt for potential open records exemptions.
-
-State: {state_code}
-
-Review this text and identify any content that might be exempt from public disclosure. Common exemption categories include:
-- Personal Identifiable Information (PII): SSNs, addresses, phone numbers, medical info
-- Law enforcement: ongoing investigations, informant identities, security procedures
-- Legal privilege: attorney-client communications, work product
-- Trade secrets: proprietary business information
-- Personnel records: employee evaluations, disciplinary actions
-- Deliberative process: internal policy discussions, draft recommendations
+_SYSTEM_PROMPT = """You are reviewing a municipal document excerpt for potential open records exemptions.
 
 For each potential exemption found, respond with ONE LINE per finding in this exact format:
 EXEMPTION|category|matched text excerpt|confidence (0.0-1.0)
 
-If no exemptions are found, respond with:
-NONE
+Common exemption categories: PII, Law enforcement, Legal privilege, Trade secrets, Personnel records, Deliberative process.
 
-Text to review:
-{text}"""
+If no exemptions are found, respond with:
+NONE"""
 
 
 async def llm_suggest_exemptions(
@@ -40,20 +29,18 @@ async def llm_suggest_exemptions(
 
     Returns list of dicts with category, matched_text, confidence.
     Lower confidence than rules engine (LLM is secondary).
+    Routes through central LLM client for context management and sanitization.
     """
-    prompt = LLM_EXEMPTION_PROMPT.format(state_code=state_code, text=text[:3000])
+    user_content = f"State: {state_code}\n\nText to review:\n{text[:3000]}"
 
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(
-                f"{settings.ollama_base_url}/api/generate",
-                json={"model": model, "prompt": prompt, "stream": False},
-            )
-            if resp.status_code != 200:
-                return []
-
-            response_text = resp.json().get("response", "")
+        response_text = await generate(
+            system_prompt=_SYSTEM_PROMPT,
+            user_content=user_content,
+            model=model,
+        )
     except Exception:
+        logger.exception("LLM exemption review failed for chunk %s", chunk_id)
         return []
 
     if "NONE" in response_text.strip().upper():

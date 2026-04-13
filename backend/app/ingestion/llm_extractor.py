@@ -1,23 +1,25 @@
 import base64
-import subprocess
+import logging
 from pathlib import Path
-import httpx
-from app.config import settings
 
-OCR_PROMPT = "Extract all text from this image. Return only the extracted text, no commentary."
+from app.config import settings
+from app.llm.client import generate
+
+logger = logging.getLogger(__name__)
+
+_OCR_SYSTEM_PROMPT = "You are an OCR engine. Extract all text from the provided image. Return only the extracted text, no commentary or formatting instructions."
+
 
 async def extract_text_multimodal(image_path: Path, model: str | None = None) -> str:
-    model = model or settings.vision_model
-    image_bytes = image_path.read_bytes()
-    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        resp = await client.post(
-            f"{settings.ollama_base_url}/api/generate",
-            json={"model": model, "prompt": OCR_PROMPT, "images": [image_b64], "stream": False},
-        )
-        if resp.status_code == 200:
-            return resp.json().get("response", "")
-        raise RuntimeError(f"Ollama multimodal failed: {resp.status_code} {resp.text}")
+    """Extract text from an image using a multimodal LLM via the central client."""
+    resolved_model = model or settings.vision_model
+    image_b64 = base64.b64encode(image_path.read_bytes()).decode("utf-8")
+    return await generate(
+        system_prompt=_OCR_SYSTEM_PROMPT,
+        user_content="Extract all text from this image.",
+        model=resolved_model,
+        images=[image_b64],
+    )
 
 def extract_text_tesseract(image_path: Path) -> str:
     try:
