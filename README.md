@@ -135,16 +135,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, 
 
 ## Status
 
-**v1.0.0** — Production-ready release with civic design system and full request lifecycle.
+**v1.0.1** — Hardened release with security review remediations, GPU acceleration support, and cross-platform testing.
 
 - 11 staff workbench pages with shadcn/ui design system
 - 29 database tables, ~25 API endpoints
-- 80+ automated tests passing
+- 104 automated tests passing
 - Guided onboarding, systems catalog, connector framework
 - Request timeline, messaging, fee tracking, response letter generation
 - Operational analytics and notification service
-- Tested on Windows 11 with Docker Desktop
+- AMD GPU/NPU hardware auto-detection (ROCm on Linux, DirectML on Windows)
+- Login rate limiting (5 requests/minute per IP)
+- Audit log archival before retention cleanup
+- Public registration removed — users created by admin only
+- Tested on Windows 11 (Docker Desktop) and Ubuntu 22.04 (Docker Engine)
 
 **Roadmap:**
-- **v1.1** — Public portal, network discovery engine, REST API/ODBC connectors, Tier 2 NER redaction
+- **v1.1** — Public submission portal, network discovery engine, REST API/ODBC connectors, Tier 2 NER redaction
 - **v2.0** — Open records library, visual AI (face/plate blurring), RPA bridge, federation

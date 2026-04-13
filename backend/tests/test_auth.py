@@ -3,17 +3,22 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
+from tests.conftest import _create_test_user
+from app.models.user import UserRole
+
 
 @pytest.mark.asyncio
-async def test_register_user(client: AsyncClient):
+async def test_admin_can_create_user(client: AsyncClient, admin_token: str):
+    """Admin can create a user via the admin endpoint (public registration removed)."""
     resp = await client.post(
-        "/auth/register",
+        "/admin/users",
         json={
             "email": f"test-{uuid.uuid4().hex[:8]}@example.com",
             "password": "securepassword123",
             "full_name": "Jane Clerk",
             "role": "staff",
         },
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert resp.status_code == 201
     data = resp.json()
@@ -25,10 +30,7 @@ async def test_register_user(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_login_returns_jwt(client: AsyncClient):
     email = f"login-{uuid.uuid4().hex[:8]}@example.com"
-    await client.post(
-        "/auth/register",
-        json={"email": email, "password": "testpass123", "full_name": "Test"},
-    )
+    await _create_test_user(email, "testpass123", "Test User", UserRole.STAFF)
     resp = await client.post(
         "/auth/jwt/login",
         data={"username": email, "password": "testpass123"},
@@ -40,10 +42,7 @@ async def test_login_returns_jwt(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_me_endpoint(client: AsyncClient):
     email = f"me-{uuid.uuid4().hex[:8]}@example.com"
-    await client.post(
-        "/auth/register",
-        json={"email": email, "password": "testpass123", "full_name": "Me User", "role": "reviewer"},
-    )
+    await _create_test_user(email, "testpass123", "Me User", UserRole.REVIEWER)
     login = await client.post(
         "/auth/jwt/login",
         data={"username": email, "password": "testpass123"},
@@ -69,3 +68,17 @@ async def test_role_enforcement_rejects_insufficient_role(client: AsyncClient, s
         headers={"Authorization": f"Bearer {staff_token}"},
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_public_registration_disabled(client: AsyncClient):
+    """Public registration endpoint should not exist."""
+    resp = await client.post(
+        "/auth/register",
+        json={
+            "email": "shouldfail@example.com",
+            "password": "testpass123",
+            "full_name": "Nobody",
+        },
+    )
+    assert resp.status_code in (404, 405)
