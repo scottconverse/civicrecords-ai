@@ -8,6 +8,7 @@ Security considerations (per audit guidance):
 - All content eventually passes through sanitize_for_llm() at the chunking stage
 """
 
+import asyncio
 import email
 import email.policy
 import imaplib
@@ -109,8 +110,8 @@ class ImapEmailConnector(BaseConnector):
     def connector_type(self) -> str:
         return "imap_email"
 
-    async def authenticate(self) -> bool:
-        """Connect and authenticate to the IMAP server."""
+    def _authenticate_sync(self) -> bool:
+        """Blocking IMAP connect + login. Called via asyncio.to_thread()."""
         host = self.config.get("host", "")
         port = self.config.get("port", 993)
         username = self.config.get("username", "")
@@ -136,8 +137,12 @@ class ImapEmailConnector(BaseConnector):
             self._authenticated = False
             return False
 
-    async def discover(self) -> list[DiscoveredRecord]:
-        """List emails in the configured mailbox folder."""
+    async def authenticate(self) -> bool:
+        """Connect and authenticate to the IMAP server (non-blocking)."""
+        return await asyncio.to_thread(self._authenticate_sync)
+
+    def _discover_sync(self) -> list[DiscoveredRecord]:
+        """Blocking IMAP mailbox listing. Called via asyncio.to_thread()."""
         if not self._conn or not self._authenticated:
             raise RuntimeError("Not authenticated — call authenticate() first")
 
@@ -148,7 +153,6 @@ class ImapEmailConnector(BaseConnector):
         _, data = self._conn.search(None, "ALL")
         message_ids = data[0].split()
 
-        # Take the most recent N emails
         recent_ids = message_ids[-max_emails:] if len(message_ids) > max_emails else message_ids
 
         records = []
@@ -164,7 +168,6 @@ class ImapEmailConnector(BaseConnector):
             from_addr = str(header.get("From", "Unknown"))
             date_str = str(header.get("Date", ""))
 
-            # Parse size from FETCH response
             size_info = msg_data[0][0] if isinstance(msg_data[0], tuple) else b""
             size = 0
             if b"RFC822.SIZE" in size_info:
@@ -191,13 +194,15 @@ class ImapEmailConnector(BaseConnector):
         logger.info("IMAP discover: %d emails found in %s", len(records), folder)
         return records
 
-    async def fetch(self, source_path: str) -> FetchedDocument:
-        """Fetch a specific email by message ID."""
+    async def discover(self) -> list[DiscoveredRecord]:
+        """List emails in the configured mailbox folder (non-blocking)."""
+        return await asyncio.to_thread(self._discover_sync)
+
+    def _fetch_sync(self, source_path: str) -> FetchedDocument:
+        """Blocking IMAP message fetch. Called via asyncio.to_thread()."""
         if not self._conn or not self._authenticated:
             raise RuntimeError("Not authenticated — call authenticate() first")
 
-        # Extract folder and message_id from source_path
-        # Format: imap://FOLDER/MESSAGE_ID
         parts = source_path.replace("imap://", "").split("/", 1)
         folder = parts[0] if len(parts) > 1 else "INBOX"
         msg_id = parts[-1]
@@ -227,8 +232,12 @@ class ImapEmailConnector(BaseConnector):
             },
         )
 
-    async def health_check(self) -> HealthCheckResult:
-        """Check IMAP connection health."""
+    async def fetch(self, source_path: str) -> FetchedDocument:
+        """Fetch a specific email by message ID (non-blocking)."""
+        return await asyncio.to_thread(self._fetch_sync, source_path)
+
+    def _health_check_sync(self) -> HealthCheckResult:
+        """Blocking IMAP NOOP check. Called via asyncio.to_thread()."""
         if not self._conn:
             return HealthCheckResult(
                 status=HealthStatus.UNREACHABLE,
@@ -248,6 +257,15 @@ class ImapEmailConnector(BaseConnector):
                 status=HealthStatus.FAILED,
                 error_message=str(exc),
             )
+
+    async def health_check(self) -> HealthCheckResult:
+        """Check IMAP connection health (non-blocking)."""
+        if not self._conn:
+            return HealthCheckResult(
+                status=HealthStatus.UNREACHABLE,
+                error_message="Not connected",
+            )
+        return await asyncio.to_thread(self._health_check_sync)
 
     def extract_safe_attachments(self, raw_email: bytes) -> list[FetchedDocument]:
         """Extract attachments from a raw email, applying safety filters.

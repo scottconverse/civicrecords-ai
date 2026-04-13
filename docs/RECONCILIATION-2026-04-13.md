@@ -279,7 +279,8 @@ Applied to all document chunks and exemption rules in `assemble_context()`. Syst
 
 5. ~~**P1 — Fee Schedules CRUD:** COMPLETED 2026-04-13. GET/POST/PATCH/DELETE at /admin/fee-schedules, 5 tests.~~
 
-6. ~~**P1 — SMTP/IMAP Connector:** COMPLETED 2026-04-13. ImapEmailConnector with MIME allowlist, extension blocklist, 50MB size cap. 26 tests. Note: embedded macro stripping not implemented (defense-in-depth via downstream sanitize_for_llm).~~
+6. ~~**P1 — SMTP/IMAP Connector:** COMPLETED 2026-04-13. ImapEmailConnector (`app/connectors/imap_email.py`) with MIME allowlist, extension blocklist, 50MB size cap, asyncio.to_thread() wrapping for non-blocking I/O, pipeline wiring via task_ingest_source dispatch. 26 tests.~~
+   - **Known gap:** Embedded macro stripping not implemented. DOCX/XLSX files with VBA macros pass the MIME allowlist but macros are not removed before ingestion. Mitigated by: (1) macros don't execute in the ingestion pipeline (text extraction only), (2) downstream `sanitize_for_llm()` strips injection patterns from extracted text. Full macro stripping requires a document-specific parser (e.g., python-docx VBA removal) — deferred.
 
 7. ~~**P1 — Exemption dashboard time-period filtering:** COMPLETED 2026-04-13. date_from/date_to params on accuracy and export endpoints.~~
 

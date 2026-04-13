@@ -87,7 +87,6 @@ def task_ingest_file(
 def task_ingest_source(self, source_id: str, user_id: str | None = None):
     async def _ingest():
         async with get_worker_session() as session:
-            from sqlalchemy import select
             from app.models.document import DataSource
             from datetime import datetime, timezone
 
@@ -96,6 +95,13 @@ def task_ingest_source(self, source_id: str, user_id: str | None = None):
                 return {"error": "Source not found"}
 
             config = source.connection_config
+            source_type = source.source_type.value if hasattr(source.source_type, 'value') else str(source.source_type)
+
+            # Dispatch by source type
+            if source_type == "email":
+                return await _ingest_email_source(session, source, user_id)
+
+            # Default: directory-based ingestion
             directory = Path(config.get("path", ""))
             if not directory.is_dir():
                 return {"error": f"Directory not found: {directory}"}
@@ -119,3 +125,124 @@ def task_ingest_source(self, source_id: str, user_id: str | None = None):
             return stats
 
     return _run_async(_ingest())
+
+
+async def _ingest_email_source(session, source, user_id: str | None) -> dict:
+    """Ingest documents from an IMAP email source via the connector protocol."""
+    import logging
+    from datetime import datetime, timezone
+    from app.connectors.imap_email import ImapEmailConnector
+
+    logger = logging.getLogger(__name__)
+
+    connector = ImapEmailConnector(source.connection_config)
+
+    # authenticate() and discover() use blocking imaplib — run in thread
+    authenticated = await asyncio.to_thread(
+        asyncio.get_event_loop().run_until_complete,
+        connector.authenticate()
+    )
+    if not authenticated:
+        return {"error": "IMAP authentication failed"}
+
+    # Wrap blocking IMAP calls in thread
+    import functools
+
+    loop = asyncio.get_event_loop()
+
+    # discover and fetch are async but use blocking imaplib internally
+    # Run them via to_thread since they block
+    discovered = await connector.discover()
+
+    ingested = 0
+    skipped = 0
+    errors = 0
+
+    for record in discovered:
+        try:
+            fetched = await connector.fetch(record.source_path)
+
+            # Extract safe attachments
+            safe_attachments = connector.extract_safe_attachments(fetched.content)
+
+            # Also ingest the email body itself as a document
+            email_doc = await ingest_file_from_bytes(
+                session=session,
+                content=fetched.content,
+                filename=fetched.filename,
+                file_type="eml",
+                source_id=source.id,
+            )
+            if email_doc:
+                ingested += 1
+
+            # Ingest each safe attachment
+            for attachment in safe_attachments:
+                att_doc = await ingest_file_from_bytes(
+                    session=session,
+                    content=attachment.content,
+                    filename=attachment.filename,
+                    file_type=attachment.file_type,
+                    source_id=source.id,
+                )
+                if att_doc:
+                    ingested += 1
+
+        except Exception as exc:
+            logger.error("Failed to ingest email %s: %s", record.source_path, exc)
+            errors += 1
+
+    source.last_ingestion_at = datetime.now(timezone.utc)
+    await session.commit()
+
+    stats = {"ingested": ingested, "skipped": skipped, "errors": errors, "discovered": len(discovered)}
+
+    await write_audit_log(
+        session=session,
+        action="ingest_email_source",
+        resource_type="data_source",
+        resource_id=str(source.id),
+        user_id=uuid.UUID(user_id) if user_id else None,
+        details=stats,
+    )
+
+    logger.info("Email ingestion complete for source %s: %s", source.id, stats)
+    return stats
+
+
+async def ingest_file_from_bytes(
+    session,
+    content: bytes,
+    filename: str,
+    file_type: str,
+    source_id: uuid.UUID,
+) -> object | None:
+    """Ingest a document from raw bytes (used for email attachments).
+
+    Writes content to a temp file and delegates to ingest_file().
+    Returns the Document object or None on failure.
+    """
+    import tempfile
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_type}") as tmp:
+            tmp.write(content)
+            tmp_path = Path(tmp.name)
+
+        doc = await ingest_file(
+            session=session,
+            file_path=tmp_path,
+            source_id=source_id,
+        )
+        return doc
+    except Exception as exc:
+        logger.error("Failed to ingest %s: %s", filename, exc)
+        return None
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
