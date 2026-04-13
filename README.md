@@ -121,9 +121,13 @@ All dependencies use permissive (MIT, Apache 2.0, BSD) or weak-copyleft (LGPL, M
 
 ## Documentation
 
+**Complete System Manual** (unified staff + IT admin guide with architecture diagrams):
+- [Download PDF](docs/civicrecords-ai-manual.pdf) | [Download Word](docs/civicrecords-ai-manual.docx) | [View Online](docs/civicrecords-ai-manual.html)
+
+**Individual References:**
 - [Staff User Manual](docs/user-manual-staff.html) — For city clerks and records officers (non-technical)
 - [IT Administrator Manual](docs/admin-manual-it.html) — Installation, configuration, security, backup, monitoring
-- [Master Design Spec](docs/superpowers/specs/2026-04-11-civicrecords-ai-master-design.md) — Full architecture and compliance specification
+- [Master Design Spec](docs/superpowers/specs/2026-04-11-civicrecords-ai-master-design.md) — Full architecture and compliance specification (v2.0)
 - [System Architecture Diagram](docs/architecture/system-architecture.html) — Interactive component and data flow diagrams
 - [Phase Decomposition](docs/architecture/decomposition.html) — Project phases and build sequence
 
