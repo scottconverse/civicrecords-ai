@@ -275,11 +275,11 @@ Applied to all document chunks and exemption rules in `assemble_context()`. Syst
 
 3. **P0 — Public API endpoints:** Create unauthenticated API routes for citizen records request submission and status lookup.
 
-4. **P1 — Email delivery (SMTP):** Implement a Celery task in `app/notifications/` that reads queued `NotificationLog` entries and sends via SMTP (aiosmtplib or smtplib). Add SMTP configuration to settings.
+4. ~~**P1 — Email delivery (SMTP):** COMPLETED 2026-04-13. smtp_delivery.py + Celery beat task every 60s. 6 tests.~~
 
 5. ~~**P1 — Fee Schedules CRUD:** COMPLETED 2026-04-13. GET/POST/PATCH/DELETE at /admin/fee-schedules, 5 tests.~~
 
-6. **P1 — SMTP/IMAP Connector:** Implement `app/connectors/smtp_imap.py` for email-based document ingestion.
+6. ~~**P1 — SMTP/IMAP Connector:** COMPLETED 2026-04-13. ImapEmailConnector with MIME allowlist, extension blocklist, 50MB size cap. 26 tests. Note: embedded macro stripping not implemented (defense-in-depth via downstream sanitize_for_llm).~~
 
 7. ~~**P1 — Exemption dashboard time-period filtering:** COMPLETED 2026-04-13. date_from/date_to params on accuracy and export endpoints.~~
 
