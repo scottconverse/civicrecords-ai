@@ -30,13 +30,13 @@ Every intentional deviation from the canonical spec is recorded here with ration
 
 These items were identified as potential intentional deviations but have NOT been approved. They are listed here so they can be formally reviewed:
 
-| ID | Canonical Spec Says | Proposed Deviation | Rationale (draft) | Status |
-|----|--------------------|--------------------|-------------------|--------|
-| CC-001 | Tier 2 NER/NLP redaction via Ollama or spaCy [v1.1] (Section 12.7) | Defer beyond v1.1 | Deploying NER-based automated redaction detection may push the system from "staff productivity tool" to "automated decision-making" under Colorado CAIA (SB 24-205), risking high-risk classification. Needs legal review. | **Pending** |
-| CC-002 | Tier 3 Visual AI — faces/plates in video, OCR for scanned docs, speech-to-text [v2.0] (Section 12.7) | Keep as v2.0, no change proposed | Listed here for tracking. No deviation — canonical spec already places this at v2.0. | **No action needed** |
-| CC-003 | RPA bridge as last-resort connector [v2.0] (Section 12.4) | Keep as v2.0, no change proposed | Listed here for tracking. No deviation — canonical spec already places this at v2.0. | **No action needed** |
-| CC-004 | Active Discovery Engine with network scanning [v1.1] (Section 12.3) | No decision yet | Significant security implications for municipal networks. Needs IT security review before implementation scope is finalized. | **Pending** |
-| CC-005 | Version numbering: canonical spec uses phase-based naming (Phase 0-4), repo used semver (v1.0.0, v1.0.1, v1.1.0) | Reconcile during Step 3 | The repo's version numbers (v1.0.0, v1.1.0) don't correspond to the canonical spec's phases. Either version numbers need to be walked back, or the canonical spec's v1.0 scope needs to be formally reduced. Decision required. | **Pending** |
+| ID | Date | Canonical Spec Says | Proposed Deviation | Rationale (draft) | Status |
+|----|------|--------------------|--------------------|-------------------|--------|
+| CC-001 | 2026-04-13 | Tier 2 NER/NLP redaction via Ollama or spaCy [v1.1] (Section 12.7) | Defer beyond v1.1 | Deploying NER-based automated redaction detection may push the system from "staff productivity tool" to "automated decision-making" under Colorado CAIA (SB 24-205), risking high-risk classification. Needs legal review. | **Pending** |
+| CC-002 | 2026-04-13 | Tier 3 Visual AI — faces/plates in video, OCR for scanned docs, speech-to-text [v2.0] (Section 12.7) | Keep as v2.0, no change proposed | Listed here for tracking. No deviation — canonical spec already places this at v2.0. | **No action needed** |
+| CC-003 | 2026-04-13 | RPA bridge as last-resort connector [v2.0] (Section 12.4) | Keep as v2.0, no change proposed | Listed here for tracking. No deviation — canonical spec already places this at v2.0. | **No action needed** |
+| CC-004 | 2026-04-13 | Active Discovery Engine with network scanning [v1.1] (Section 12.3) | No decision yet | Significant security implications for municipal networks. Needs IT security review before implementation scope is finalized. | **Pending** |
+| CC-005 | 2026-04-13 | Version numbering: canonical spec uses phase-based naming (Phase 0-4), repo used semver (v1.0.0, v1.0.1, v1.1.0) | Reconcile during Step 3 | The repo's version numbers (v1.0.0, v1.1.0) don't correspond to the canonical spec's phases. Either version numbers need to be walked back, or the canonical spec's v1.0 scope needs to be formally reduced. Decision required. | **Pending** |
 
 ---
 
