@@ -6,6 +6,8 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(300.0, check_scheduled_sources.s(), name="check-scheduled-sources")
     # Run audit retention cleanup daily (86400 seconds)
     sender.add_periodic_task(86400.0, cleanup_audit_logs.s(), name="audit-retention-cleanup")
+    # Deliver queued email notifications every 60 seconds
+    sender.add_periodic_task(60.0, deliver_notifications.s(), name="deliver-notifications")
 
 
 @celery_app.task(name="civicrecords.check_scheduled_sources")
@@ -122,5 +124,29 @@ def cleanup_audit_logs():
     loop = asyncio.new_event_loop()
     try:
         return loop.run_until_complete(_cleanup())
+    finally:
+        loop.close()
+
+
+@celery_app.task(name="civicrecords.deliver_notifications")
+def deliver_notifications():
+    """Send queued email notifications via SMTP."""
+    import asyncio
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+    from app.config import settings
+    from app.notifications.smtp_delivery import deliver_queued_notifications
+
+    async def _deliver():
+        engine = create_async_engine(settings.database_url, echo=False)
+        session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        try:
+            async with session_maker() as session:
+                return await deliver_queued_notifications(session)
+        finally:
+            await engine.dispose()
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(_deliver())
     finally:
         loop.close()
