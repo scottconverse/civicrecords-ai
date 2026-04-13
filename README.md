@@ -152,10 +152,11 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 
 **Roadmap:**
 
-| Phase | Focus | Key Deliverables |
-|-------|-------|-----------------|
-| **Phase 2** | Department access & state rules | Department-level access controls, per-state exemption rule sets beyond pilot states, compliance template documents (AI Use Disclosure, CAIA Impact Assessment, AI Governance Policy, Data Residency Attestation) |
-| **Phase 3** | Connectors & integration | PostgreSQL, MySQL, MSSQL, SQLite, IMAP email, SMB/NFS file shares, SharePoint, REST API connectors |
-| **Phase 3+** | Federation | Instance discovery and registration, cross-instance search, federated audit log aggregation, trust relationship management UI |
+| Phase | Version | Focus | Key Deliverables |
+|-------|---------|-------|-----------------|
+| **Phase 1** | **v1.0.x** | MVP (shipped) | AI search, request workflow, exemption detection, audit logging, onboarding, connector framework |
+| **Phase 2** | **v1.1.0** | Department access & state rules | Department-level access controls, per-state exemption rule sets beyond pilot states, compliance template documents (AI Use Disclosure, CAIA Impact Assessment, AI Governance Policy, Data Residency Attestation) |
+| **Phase 3** | **v1.2.0** | Connectors & integration | PostgreSQL, MySQL, MSSQL, SQLite, IMAP email, SMB/NFS file shares, SharePoint, REST API connectors |
+| **Phase 3+** | **v2.0.0** | Federation | Instance discovery and registration, cross-instance search, federated audit log aggregation, trust relationship management UI |
 
-*Note: v1 is an internal staff tool. Public-facing submission portal is not in the current spec and would be Phase 3+ at earliest.*
+*v1 is an internal staff tool. Public-facing submission portal is not in the current spec and would be Phase 3+ at earliest.*
