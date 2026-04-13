@@ -12,6 +12,7 @@ from app.notifications.service import queue_notification
 from app.config import settings
 from app.auth.dependencies import require_role, check_department_access
 from app.database import get_async_session
+from app.models.city_profile import CityProfile
 from app.models.document import Document
 from app.models.request import (
     DocumentCache, InclusionStatus, RecordsRequest, RequestDocument, RequestStatus,
@@ -28,6 +29,15 @@ from app.schemas.request import (
 )
 
 router = APIRouter(prefix="/requests", tags=["requests"])
+
+logger = logging.getLogger(__name__)
+
+
+async def _get_city_name(session: AsyncSession) -> str:
+    """Fetch the configured city name for notification templates."""
+    result = await session.execute(select(CityProfile).limit(1))
+    profile = result.scalar_one_or_none()
+    return profile.city_name if profile else "Records Office"
 
 # Valid status transitions
 VALID_TRANSITIONS = {
@@ -214,6 +224,7 @@ async def update_request(
                           f"Status changed to {data.status.value}", user.id, user.role)
         # Dispatch notification if template exists for this event
         if req.requester_email:
+            city_name = await _get_city_name(session)
             await queue_notification(
                 session=session,
                 event_type=f"request_{data.status.value}",
@@ -223,6 +234,7 @@ async def update_request(
                     "requester_name": req.requester_name,
                     "request_id": str(request_id),
                     "status": data.status.value,
+                    "city_name": city_name,
                 },
             )
 
@@ -382,6 +394,7 @@ async def submit_for_review(
                       "Submitted for review", user.id, user.role)
     # Dispatch notification if template exists for this event
     if req.requester_email:
+        city_name = await _get_city_name(session)
         await queue_notification(
             session=session,
             event_type="request_in_review",
@@ -391,6 +404,7 @@ async def submit_for_review(
                 "requester_name": req.requester_name,
                 "request_id": str(request_id),
                 "status": "in_review",
+                "city_name": city_name,
             },
         )
     await session.commit()
@@ -422,6 +436,7 @@ async def mark_ready_for_release(
                       "Marked ready for release", user.id, user.role)
     # Dispatch notification if template exists for this event
     if req.requester_email:
+        city_name = await _get_city_name(session)
         await queue_notification(
             session=session,
             event_type="request_ready_for_release",
@@ -431,6 +446,7 @@ async def mark_ready_for_release(
                 "requester_name": req.requester_name,
                 "request_id": str(request_id),
                 "status": "ready_for_release",
+                "city_name": city_name,
             },
         )
     await session.commit()
@@ -462,6 +478,7 @@ async def approve_request(
                       "Request approved", user.id, user.role)
     # Dispatch notification if template exists for this event
     if req.requester_email:
+        city_name = await _get_city_name(session)
         await queue_notification(
             session=session,
             event_type="request_approved",
@@ -471,6 +488,7 @@ async def approve_request(
                 "requester_name": req.requester_name,
                 "request_id": str(request_id),
                 "status": "approved",
+                "city_name": city_name,
             },
         )
     await session.commit()
@@ -505,6 +523,7 @@ async def reject_request(
                       internal_note=reason if reason else None)
     # Dispatch notification if template exists for this event
     if req.requester_email:
+        city_name = await _get_city_name(session)
         await queue_notification(
             session=session,
             event_type="request_drafted",
@@ -514,6 +533,7 @@ async def reject_request(
                 "requester_name": req.requester_name,
                 "request_id": str(request_id),
                 "status": "drafted",
+                "city_name": city_name,
             },
         )
     await session.commit()

@@ -105,6 +105,42 @@ async def test_queue_notification_creates_log_for_each_event_type(client, admin_
     )
 
 
+# The exact keys the router passes to queue_notification context_data.
+# If a template uses a variable not in this set, it will KeyError at render time.
+# This must be kept in sync with requests/router.py.
+ROUTER_CONTEXT_KEYS = {
+    "requester_name": "Test User",
+    "request_id": "REQ-001",
+    "status": "searching",
+    "city_name": "Test City",
+}
+
+
+@pytest.mark.asyncio
+async def test_all_templates_render_with_router_context_keys(client, admin_token: str):
+    """Every template must render cleanly with ONLY the keys the router actually passes.
+
+    Catches the {city_name} KeyError bug: templates referenced variables that no
+    call site provided, causing silent render failures in production.
+    """
+    from scripts.seed_notification_templates import NOTIFICATION_TEMPLATES
+
+    render_failures = []
+    for tmpl in NOTIFICATION_TEMPLATES:
+        try:
+            tmpl["subject_template"].format(**ROUTER_CONTEXT_KEYS)
+            tmpl["body_template"].format(**ROUTER_CONTEXT_KEYS)
+        except KeyError as e:
+            render_failures.append(
+                f"{tmpl['event_type']}: missing key {e} in router context_data"
+            )
+
+    assert render_failures == [], (
+        f"Templates reference variables not provided by the router:\n"
+        + "\n".join(render_failures)
+    )
+
+
 @pytest.mark.asyncio
 async def test_audit_export_csv_endpoint(client, admin_token: str):
     """GET /audit/export?format=csv returns CSV with correct headers."""
