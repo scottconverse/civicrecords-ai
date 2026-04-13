@@ -78,8 +78,12 @@ async def create_request(
     req = RecordsRequest(
         requester_name=data.requester_name,
         requester_email=data.requester_email,
+        requester_phone=data.requester_phone,
+        requester_type=data.requester_type,
         description=data.description,
         statutory_deadline=data.statutory_deadline,
+        scope_assessment=data.scope_assessment,
+        priority=data.priority,
         created_by=user.id,
         assigned_to=user.id,
         department_id=dept_id,
@@ -216,6 +220,8 @@ async def update_request(
         req.response_draft = data.response_draft
     if data.statutory_deadline is not None:
         req.statutory_deadline = data.statutory_deadline
+    if data.scope_assessment is not None:
+        req.scope_assessment = data.scope_assessment
 
     await session.commit()
     await session.refresh(req)

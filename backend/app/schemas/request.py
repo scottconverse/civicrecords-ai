@@ -13,6 +13,7 @@ class RequestCreate(BaseModel):
     description: str = Field(..., max_length=10000)
     statutory_deadline: datetime | None = None
     priority: str = "normal"
+    scope_assessment: str | None = Field(None, pattern="^(narrow|moderate|broad)$")
     department_id: uuid.UUID | None = None
 
 
@@ -36,6 +37,7 @@ class RequestRead(BaseModel):
     fee_status: str | None = None
     fee_waiver_requested: bool = False
     priority: str = "normal"
+    scope_assessment: str | None = None
     closed_at: datetime | None = None
     closure_reason: str | None = None
 
@@ -48,6 +50,7 @@ class RequestUpdate(BaseModel):
     assigned_to: uuid.UUID | None = None
     response_draft: str | None = None
     statutory_deadline: datetime | None = None
+    scope_assessment: str | None = None
 
 
 class RequestDocumentAdd(BaseModel):
