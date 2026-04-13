@@ -65,4 +65,5 @@ See `docs/superpowers/specs/2026-04-11-civicrecords-ai-master-design.md` for ful
 3. `ollama` — Local LLM runtime
 4. `api` — FastAPI backend (port 8000)
 5. `worker` — Celery async tasks
-6. `frontend` — React admin panel (port 8080)
+6. `beat` — Celery beat scheduler
+7. `frontend` — React admin panel (port 8080)
