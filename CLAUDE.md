@@ -1,5 +1,17 @@
 # CivicRecords AI — Development Standards
 
+## Context Mode (MANDATORY)
+
+Context-mode MCP tools are REQUIRED for all operations that produce large output. This is not optional.
+
+- Bash commands that may produce >20 lines: use mcp__plugin_context-mode_context-mode__ctx_execute or ctx_batch_execute
+- Reading files for analysis (not for editing): use mcp__plugin_context-mode_context-mode__ctx_execute_file
+- Web fetches: use mcp__plugin_context-mode_context-mode__ctx_fetch_and_index
+- Multiple commands + searches: use mcp__plugin_context-mode_context-mode__ctx_batch_execute
+- Bash is ONLY for: git, mkdir, rm, mv, and commands producing <20 lines
+- Read is ONLY for: files you intend to Edit (Edit requires file content in context)
+- NEVER dismiss context-mode hook reminders. They exist because you keep ignoring them.
+
 ## Project
 
 Open-source, locally-hosted AI system for municipal open records request processing.
