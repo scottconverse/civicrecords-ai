@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Users as UsersIcon } from "lucide-react";
+import { Pencil, Plus, UserX, Users as UsersIcon } from "lucide-react";
 
 interface User {
   id: string;
@@ -66,6 +66,9 @@ export default function Users({ token }: { token: string }) {
   const [formData, setFormData] = useState({ email: "", password: "", fullName: "", role: "read_only" });
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [editData, setEditData] = useState({ fullName: "", role: "", departmentId: "" });
+  const [editError, setEditError] = useState("");
 
   const loadData = async () => {
     try {
@@ -112,6 +115,56 @@ export default function Users({ token }: { token: string }) {
     }
   };
 
+  const openEditDialog = (u: User) => {
+    setEditUser(u);
+    setEditData({
+      fullName: u.full_name || "",
+      role: u.role,
+      departmentId: u.department_id || "",
+    });
+    setEditError("");
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editUser) return;
+    setSubmitting(true);
+    setEditError("");
+    try {
+      const body: Record<string, unknown> = {};
+      if (editData.fullName !== (editUser.full_name || "")) body.full_name = editData.fullName;
+      if (editData.role !== editUser.role) body.role = editData.role;
+      if (editData.departmentId !== (editUser.department_id || "")) {
+        body.department_id = editData.departmentId || null;
+      }
+      await apiFetch(`/admin/users/${editUser.id}`, {
+        token,
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      setEditUser(null);
+      await loadData();
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : "Failed to update");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeactivate = async (u: User) => {
+    if (!confirm(`Deactivate ${u.full_name || u.email}? They will lose access.`)) return;
+    try {
+      await apiFetch(`/admin/users/${u.id}`, {
+        token,
+        method: "PATCH",
+        body: JSON.stringify({ is_active: false }),
+      });
+      await loadData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to deactivate");
+    }
+  };
+
   const columns: Column<User & Record<string, unknown>>[] = [
     {
       key: "full_name",
@@ -155,6 +208,22 @@ export default function Users({ token }: { token: string }) {
       header: "Last Active",
       render: (u) => (
         <span className="text-sm text-muted-foreground">{formatLastLogin(u.last_login)}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (u) => (
+        <div className="flex gap-1">
+          <Button size="icon-xs" variant="ghost" onClick={() => openEditDialog(u as unknown as User)} title="Edit user">
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          {u.is_active && (
+            <Button size="icon-xs" variant="ghost" onClick={() => handleDeactivate(u as unknown as User)} title="Deactivate user" className="text-destructive hover:text-destructive">
+              <UserX className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       ),
     },
   ];
@@ -245,6 +314,56 @@ export default function Users({ token }: { token: string }) {
           ariaLabel="System users"
         />
       )}
+
+      {/* Edit User Dialog */}
+      <Dialog open={!!editUser} onOpenChange={(open) => { if (!open) setEditUser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User — {editUser?.email}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            {editError && (
+              <Card className="border-destructive">
+                <CardContent className="p-3"><p className="text-destructive text-sm">{editError}</p></CardContent>
+              </Card>
+            )}
+            <div>
+              <label className="text-sm font-medium">Full Name</label>
+              <Input value={editData.fullName} onChange={(e) => setEditData({ ...editData, fullName: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Role</label>
+              <Select value={editData.role} onValueChange={(v) => setEditData({ ...editData, role: v ?? editData.role })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="read_only">Read Only</SelectItem>
+                  <SelectItem value="liaison">Liaison</SelectItem>
+                  <SelectItem value="staff">Staff</SelectItem>
+                  <SelectItem value="reviewer">Reviewer</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Department</label>
+              <Select value={editData.departmentId} onValueChange={(v) => setEditData({ ...editData, departmentId: v ?? "" })}>
+                <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Cancel</Button>
+              <Button type="submit" disabled={submitting}>{submitting ? "Saving..." : "Save Changes"}</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

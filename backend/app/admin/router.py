@@ -156,6 +156,74 @@ async def create_user(
     )
 
 
+class UserUpdateRequest(BaseModel):
+    full_name: str | None = None
+    role: str | None = None
+    department_id: uuid.UUID | None = None
+    is_active: bool | None = None
+
+
+@router.patch("/users/{user_id}", response_model=AdminUserCreateResponse)
+async def update_user(
+    user_id: uuid.UUID,
+    body: UserUpdateRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.ADMIN)),
+):
+    """Update user fields. Admin only.
+
+    Guards against self-demotion: admins cannot change their own role.
+    """
+    target = await session.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if body.role is not None:
+        # Prevent admin from changing their own role (self-demotion lockout)
+        if user_id == user.id:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot change your own role. Another admin must do this.",
+            )
+        try:
+            target.role = UserRole(body.role)
+        except ValueError:
+            raise HTTPException(status_code=422, detail=f"Invalid role: {body.role}")
+
+    if body.full_name is not None:
+        target.full_name = body.full_name
+    if body.department_id is not None:
+        target.department_id = body.department_id
+    if body.is_active is not None:
+        # Prevent admin from deactivating themselves
+        if user_id == user.id and not body.is_active:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot deactivate your own account.",
+            )
+        target.is_active = body.is_active
+
+    await session.commit()
+    await session.refresh(target)
+
+    from app.audit.logger import write_audit_log
+    await write_audit_log(
+        session=session,
+        action="update_user",
+        resource_type="user",
+        resource_id=str(user_id),
+        user_id=user.id,
+    )
+
+    return AdminUserCreateResponse(
+        id=str(target.id),
+        email=target.email,
+        full_name=target.full_name,
+        role=target.role.value if hasattr(target.role, 'value') else str(target.role),
+        is_active=target.is_active,
+    )
+
+
 @router.get("/models", response_model=OllamaStatus)
 async def list_models(
     user: User = Depends(require_role(UserRole.ADMIN)),
