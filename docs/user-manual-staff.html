@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CivicRecords AI &mdash; Staff User Manual v1.1.0</title>
+<style>
+  :root {
+    --blue-900: #1e3a5f;
+    --blue-800: #1e4878;
+    --blue-700: #1d4ed8;
+    --blue-600: #2563eb;
+    --blue-500: #3b82f6;
+    --blue-400: #60a5fa;
+    --blue-100: #dbeafe;
+    --blue-50: #eff6ff;
+    --gray-900: #111827;
+    --gray-800: #1f2937;
+    --gray-700: #374151;
+    --gray-600: #4b5563;
+    --gray-500: #6b7280;
+    --gray-400: #9ca3af;
+    --gray-300: #d1d5db;
+    --gray-200: #e5e7eb;
+    --gray-100: #f3f4f6;
+    --gray-50: #f9fafb;
+    --green-600: #16a34a;
+    --green-100: #dcfce7;
+    --green-50: #f0fdf4;
+    --amber-600: #d97706;
+    --amber-100: #fef3c7;
+    --amber-50: #fffbeb;
+    --red-600: #dc2626;
+    --red-100: #fee2e2;
+    --red-50: #fef2f2;
+    --sidebar-width: 280px;
+    --content-max: 820px;
+    --font-sans: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "Cascadia Code", "Fira Code", "SF Mono", Consolas, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; font-size: 16px; }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--gray-800);
+    background: var(--gray-50);
+    line-height: 1.7;
+  }
+
+  /* ── Sidebar ───────────────────────────────────────────── */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--sidebar-width);
+    height: 100vh;
+    background: var(--blue-900);
+    color: #fff;
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    border-right: 3px solid var(--blue-700);
+  }
+
+  .sidebar-header {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    flex-shrink: 0;
+  }
+
+  .sidebar-header h1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.3;
+  }
+
+  .sidebar-header .subtitle {
+    font-size: 0.78rem;
+    opacity: 0.7;
+    margin-top: 4px;
+    font-weight: 400;
+  }
+
+  .version-badge {
+    display: inline-block;
+    background: var(--blue-600);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-top: 8px;
+    letter-spacing: 0.04em;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 12px 0;
+    overflow-y: auto;
+  }
+
+  .sidebar-nav a {
+    display: block;
+    color: rgba(255,255,255,0.82);
+    text-decoration: none;
+    padding: 7px 24px;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    transition: background 0.15s, color 0.15s;
+    border-left: 3px solid transparent;
+  }
+
+  .sidebar-nav a:hover,
+  .sidebar-nav a:focus {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border-left-color: var(--blue-400);
+  }
+
+  .sidebar-nav .nav-section {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.4);
+    padding: 16px 24px 4px;
+    font-weight: 600;
+  }
+
+  .sidebar-footer {
+    padding: 16px 24px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    font-size: 0.72rem;
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
+  /* ── Main content ──────────────────────────────────────── */
+  .main {
+    margin-left: var(--sidebar-width);
+    padding: 0 48px 80px;
+  }
+
+  .content {
+    max-width: var(--content-max);
+    margin: 0 auto;
+  }
+
+  /* ── Cover header ──────────────────────────────────────── */
+  .cover {
+    padding: 56px 0 40px;
+    border-bottom: 2px solid var(--blue-100);
+    margin-bottom: 48px;
+  }
+
+  .cover h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--blue-900);
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+
+  .cover .cover-sub {
+    font-size: 1.1rem;
+    color: var(--gray-600);
+    font-weight: 400;
+    margin-bottom: 16px;
+  }
+
+  .cover-meta {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    color: var(--gray-500);
+  }
+
+  .cover-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── Sections ──────────────────────────────────────────── */
+  .section {
+    padding-top: 48px;
+    margin-bottom: 24px;
+  }
+
+  .section-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--blue-700);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border-radius: 50%;
+    margin-right: 12px;
+    flex-shrink: 0;
+    vertical-align: middle;
+  }
+
+  h2 {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: var(--blue-900);
+    margin-bottom: 20px;
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+  }
+
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--blue-800);
+    margin: 28px 0 12px;
+  }
+
+  h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin: 20px 0 8px;
+  }
+
+  p { margin-bottom: 14px; }
+
+  ul, ol {
+    margin: 0 0 16px 24px;
+  }
+
+  li { margin-bottom: 6px; }
+
+  /* ── Tables ────────────────────────────────────────────── */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 16px 0 24px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  thead th {
+    background: var(--blue-900);
+    color: #fff;
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--gray-200);
+    vertical-align: top;
+  }
+
+  tbody tr:nth-child(even) { background: var(--gray-50); }
+  tbody tr:hover { background: var(--blue-50); }
+
+  /* ── Callout boxes ─────────────────────────────────────── */
+  .callout {
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    display: flex;
+    gap: 14px;
+  }
+
+  .callout-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border-radius: 50%;
+    margin-top: 1px;
+  }
+
+  .callout-body { flex: 1; }
+  .callout-body strong { display: block; margin-bottom: 2px; }
+
+  .callout-tip {
+    background: var(--green-50);
+    border-left: 4px solid var(--green-600);
+  }
+  .callout-tip .callout-icon { background: var(--green-100); color: var(--green-600); }
+
+  .callout-note {
+    background: var(--blue-50);
+    border-left: 4px solid var(--blue-600);
+  }
+  .callout-note .callout-icon { background: var(--blue-100); color: var(--blue-700); }
+
+  .callout-warning {
+    background: var(--amber-50);
+    border-left: 4px solid var(--amber-600);
+  }
+  .callout-warning .callout-icon { background: var(--amber-100); color: var(--amber-600); }
+
+  .callout-danger {
+    background: var(--red-50);
+    border-left: 4px solid var(--red-600);
+  }
+  .callout-danger .callout-icon { background: var(--red-100); color: var(--red-600); }
+
+  /* ── Steps ─────────────────────────────────────────────── */
+  .steps {
+    list-style: none;
+    margin: 16px 0 24px;
+    padding: 0;
+    counter-reset: step-counter;
+  }
+
+  .steps li {
+    counter-increment: step-counter;
+    position: relative;
+    padding: 14px 16px 14px 60px;
+    margin-bottom: 8px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+  }
+
+  .steps li::before {
+    content: counter(step-counter);
+    position: absolute;
+    left: 16px;
+    top: 14px;
+    width: 30px;
+    height: 30px;
+    background: var(--blue-700);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Code / kbd ────────────────────────────────────────── */
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--gray-100);
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: var(--blue-800);
+  }
+
+  kbd {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.78em;
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    border-radius: 4px;
+    padding: 2px 7px;
+    box-shadow: 0 1px 0 var(--gray-300);
+    color: var(--gray-700);
+  }
+
+  /* ── Status badges ─────────────────────────────────────── */
+  .status-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  .status-received      { background: #dbeafe; color: #1e40af; }
+  .status-clarification { background: #fef3c7; color: #92400e; }
+  .status-assigned      { background: #e0e7ff; color: #3730a3; }
+  .status-searching     { background: #cffafe; color: #155e75; }
+  .status-in-review     { background: #fce7f3; color: #9d174d; }
+  .status-ready         { background: #dcfce7; color: #166534; }
+  .status-drafted       { background: #f3e8ff; color: #6b21a8; }
+  .status-approved      { background: #d1fae5; color: #065f46; }
+  .status-fulfilled     { background: #bbf7d0; color: #14532d; }
+  .status-sent          { background: #a7f3d0; color: #064e3b; }
+  .status-closed        { background: var(--gray-200); color: var(--gray-700); }
+
+  /* ── Workflow diagram ──────────────────────────────────── */
+  .workflow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin: 20px 0 28px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .workflow .wf-node {
+    background: var(--blue-100);
+    color: var(--blue-900);
+    padding: 6px 12px;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+
+  .workflow .wf-arrow {
+    color: var(--gray-400);
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  .workflow .wf-branch {
+    color: var(--amber-600);
+    font-size: 0.72rem;
+    font-weight: 400;
+    margin: 0 2px;
+  }
+
+  /* ── Glossary ──────────────────────────────────────────── */
+  .glossary-list {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0;
+  }
+
+  .glossary-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .glossary-list .term {
+    font-weight: 600;
+    color: var(--blue-900);
+  }
+
+  /* ── Responsive ────────────────────────────────────────── */
+  @media (max-width: 960px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 0 24px 60px; }
+  }
+
+  /* ── Print ─────────────────────────────────────────────── */
+  @media print {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 0; }
+    .content { max-width: 100%; }
+    body { font-size: 11pt; color: #000; background: #fff; }
+    .cover { page-break-after: always; }
+    .section { page-break-before: always; }
+    h2, h3 { page-break-after: avoid; }
+    table { page-break-inside: avoid; }
+    .callout { break-inside: avoid; }
+    a { color: #000; text-decoration: none; }
+    a[href]::after { content: " (" attr(href) ")"; font-size: 0.8em; color: #666; }
+    .sidebar-nav a[href]::after { content: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     SIDEBAR NAVIGATION
+     ════════════════════════════════════════════════════════ -->
+<nav class="sidebar" aria-label="Manual navigation">
+  <div class="sidebar-header">
+    <h1>CivicRecords AI</h1>
+    <div class="subtitle">Staff User Manual</div>
+    <span class="version-badge">v1.1.0</span>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">Getting Started</div>
+    <a href="#welcome">1. Welcome</a>
+    <a href="#signing-in">2. Signing In</a>
+    <a href="#dashboard">3. Dashboard Overview</a>
+    <div class="nav-section">Core Tasks</div>
+    <a href="#searching">4. Searching for Records</a>
+    <a href="#requests">5. Managing Records Requests</a>
+    <a href="#exemptions">6. Reviewing Exemption Flags</a>
+    <a href="#response-letters">7. Response Letters</a>
+    <div class="nav-section">Communication &amp; Tracking</div>
+    <a href="#timeline">8. Timeline &amp; Messaging</a>
+    <a href="#fees">9. Fee Tracking</a>
+    <a href="#departments">10. Department Access</a>
+    <div class="nav-section">Reference</div>
+    <a href="#quick-reference">11. Quick Reference</a>
+    <a href="#getting-help">12. Getting Help</a>
+  </div>
+  <div class="sidebar-footer">
+    &copy; 2026 CivicRecords AI Project
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════
+     MAIN CONTENT
+     ════════════════════════════════════════════════════════ -->
+<div class="main">
+<div class="content">
+
+<!-- ── Cover ──────────────────────────────────────────────── -->
+<div class="cover">
+  <h1>CivicRecords AI</h1>
+  <div class="cover-sub">Staff User Manual</div>
+  <div class="cover-meta">
+    <span><strong>Version:</strong>&nbsp; 1.1.0</span>
+    <span><strong>Updated:</strong>&nbsp; April 2026</span>
+    <span><strong>Audience:</strong>&nbsp; City Clerks, Records Officers, Department Liaisons, City Managers</span>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     1. WELCOME
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="welcome">
+  <h2><span class="section-number">1</span> Welcome</h2>
+
+  <h3>What CivicRecords AI Does</h3>
+  <p>
+    CivicRecords AI is a tool that helps your city respond to public records requests faster and more accurately. When a resident asks for a document, CivicRecords AI searches across your city's record sources&mdash;meeting minutes, resolutions, ordinances, permits, and more&mdash;and presents the most relevant results in seconds. It also suggests which exemptions might apply, drafts response letters, and tracks every request from receipt to fulfillment. Everything runs on your city's own servers, and every decision is made by you, not by the system.
+  </p>
+
+  <h3>What CivicRecords AI Does NOT Do</h3>
+  <ul>
+    <li><strong>It does not make decisions for you.</strong> The system suggests and drafts; you review and approve. Every exemption flag, every response letter, and every release decision requires a human sign-off.</li>
+    <li><strong>It is not a public portal.</strong> Residents do not interact with CivicRecords AI directly. You use it internally to process their requests.</li>
+    <li><strong>It does not send data to the cloud.</strong> CivicRecords AI runs entirely on your city's local network or on-premises servers. No records or request data leave your infrastructure.</li>
+  </ul>
+
+  <h3>Who This Manual Is For</h3>
+  <p>
+    This manual is written for city staff members who use CivicRecords AI day to day: city clerks who process records requests, records officers who manage compliance, department liaisons who search for and provide departmental records, and city managers who oversee the process. You do not need any technical background to use this system or to follow this guide.
+  </p>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     2. SIGNING IN
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="signing-in">
+  <h2><span class="section-number">2</span> Signing In</h2>
+
+  <h3>How to Access CivicRecords AI</h3>
+  <p>
+    Open your web browser (Chrome, Edge, or Firefox are recommended) and navigate to the address provided by your IT department. In most installations, this is:
+  </p>
+  <p style="text-align:center; margin: 20px 0;">
+    <code style="font-size:1.1rem; padding: 8px 20px;">http://localhost:8080</code>
+  </p>
+  <p>
+    If your city has deployed CivicRecords AI on a shared network server, your IT administrator will provide the correct URL (for example, <code>http://records.yourcity.gov</code>).
+  </p>
+
+  <h3>The Login Screen</h3>
+  <p>
+    When you arrive at the login page, you will see two fields: <strong>Email</strong> and <strong>Password</strong>. Enter the credentials that were provided to you by your system administrator and select <strong>Sign In</strong>.
+  </p>
+
+  <h3>Password Requirements</h3>
+  <ul>
+    <li>At least 12 characters in length</li>
+    <li>At least one uppercase letter and one lowercase letter</li>
+    <li>At least one number</li>
+    <li>At least one special character (such as <code>!</code>, <code>@</code>, <code>#</code>, or <code>$</code>)</li>
+  </ul>
+
+  <div class="callout callout-note">
+    <div class="callout-icon">i</div>
+    <div class="callout-body">
+      <strong>Note</strong>
+      Your password expires every 90 days. The system will prompt you to change it before it expires.
+    </div>
+  </div>
+
+  <h3>If You Are Locked Out</h3>
+  <p>
+    After five consecutive failed login attempts, your account will be temporarily locked. Contact your IT administrator to have your account unlocked and your password reset. Do not attempt to create a new account&mdash;your administrator manages all user accounts.
+  </p>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     3. DASHBOARD OVERVIEW
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="dashboard">
+  <h2><span class="section-number">3</span> Dashboard Overview</h2>
+
+  <h3>What You See When You Log In</h3>
+  <p>
+    After signing in, you land on the Dashboard. This is your home base. It shows a summary of your active work:
+  </p>
+  <ul>
+    <li><strong>Open Requests</strong> &mdash; A count of requests currently assigned to you or your department that need action.</li>
+    <li><strong>Approaching Deadlines</strong> &mdash; Requests with statutory response deadlines within the next 5 business days.</li>
+    <li><strong>Recently Updated</strong> &mdash; A list of the most recently modified requests so you can quickly pick up where you left off.</li>
+    <li><strong>Pending Reviews</strong> &mdash; Exemption flags or draft response letters awaiting your review (visible to Reviewers and Admins).</li>
+  </ul>
+
+  <h3>Navigation Sidebar</h3>
+  <p>
+    The left side of the screen contains a navigation sidebar with the following items:
+  </p>
+  <ul>
+    <li><strong>Dashboard</strong> &mdash; Returns you to the home screen.</li>
+    <li><strong>Requests</strong> &mdash; View, create, and manage records requests.</li>
+    <li><strong>Search</strong> &mdash; Search across all indexed city records.</li>
+    <li><strong>Exemptions</strong> &mdash; Review AI-flagged exemptions (Reviewers and Admins only).</li>
+    <li><strong>Reports</strong> &mdash; Run reports on response times, volumes, and compliance metrics (Admins only).</li>
+    <li><strong>Settings</strong> &mdash; Account settings and system configuration (Admins only).</li>
+  </ul>
+
+  <h3>Your Role Determines What You Can See and Do</h3>
+  <p>
+    CivicRecords AI has four user roles. Each role has access to a specific set of features:
+  </p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Role</th>
+        <th>Can Search Records</th>
+        <th>Can Manage Requests</th>
+        <th>Can Review Exemptions</th>
+        <th>Can Approve Responses</th>
+        <th>Can Access Reports &amp; Settings</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Admin</strong></td>
+        <td>Yes</td>
+        <td>Yes (all departments)</td>
+        <td>Yes</td>
+        <td>Yes</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td><strong>Reviewer</strong></td>
+        <td>Yes</td>
+        <td>Yes (own department)</td>
+        <td>Yes</td>
+        <td>Yes</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><strong>Staff</strong></td>
+        <td>Yes</td>
+        <td>Yes (own department)</td>
+        <td>No</td>
+        <td>No</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><strong>Read-Only</strong></td>
+        <td>Yes</td>
+        <td>View only</td>
+        <td>No</td>
+        <td>No</td>
+        <td>No</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout callout-tip">
+    <div class="callout-icon">&#10003;</div>
+    <div class="callout-body">
+      <strong>Tip</strong>
+      If you need access to features outside your current role, contact your system administrator.
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     4. SEARCHING FOR RECORDS
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="searching">
+  <h2><span class="section-number">4</span> Searching for Records</h2>
+
+  <h3>The Search Bar</h3>
+  <p>
+    Navigate to the <strong>Search</strong> page from the sidebar. At the top of the page, you will find a large search bar. Type your query in plain, everyday English. You do not need to use special syntax or keywords. For example:
+  </p>
+  <ul>
+    <li><em>Stormwater permit applications from 2024</em></li>
+    <li><em>City council minutes discussing the park renovation</em></li>
+    <li><em>Contracts with Acme Construction over $50,000</em></li>
+  </ul>
+  <p>
+    Press <kbd>Enter</kbd> or select the search button to run your query.
+  </p>
+
+  <h3>Understanding Search Results</h3>
+  <p>Each result includes the following information:</p>
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Column</th>
+        <th>What It Means</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Title / Excerpt</strong></td>
+        <td>The name of the document and a short excerpt showing where your search terms appear.</td>
+      </tr>
+      <tr>
+        <td><strong>Source</strong></td>
+        <td>Which record collection the document came from (for example, "Council Minutes" or "Building Permits").</td>
+      </tr>
+      <tr>
+        <td><strong>Page Number</strong></td>
+        <td>The specific page within the document where the matching text was found.</td>
+      </tr>
+      <tr>
+        <td><strong>Confidence Score</strong></td>
+        <td>A percentage indicating how closely the result matches your query. Higher scores mean a stronger match. Scores above 80% are generally excellent matches.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Filtering Results</h3>
+  <p>
+    After running a search, use the filter panel on the left side of the results to narrow down what you see:
+  </p>
+  <ul>
+    <li><strong>Date Range</strong> &mdash; Show only documents from a specific time period.</li>
+    <li><strong>Document Type</strong> &mdash; Filter by type such as minutes, ordinances, permits, or contracts.</li>
+    <li><strong>Department</strong> &mdash; Show only documents belonging to a specific department.</li>
+    <li><strong>Source Collection</strong> &mdash; Limit results to a particular indexed collection.</li>
+  </ul>
+
+  <h3>Follow-Up Searches</h3>
+  <p>
+    If your initial search returns too many results or not quite the right ones, refine your query. The system remembers your search context within a session, so follow-up searches build on your previous query. Try being more specific, adding date ranges, or using different terms that describe the same concept.
+  </p>
+
+  <h3>AI Summaries &mdash; The "AI Draft" Label</h3>
+  <p>
+    When you view search results, you may see short summaries marked with an <strong>"AI Draft"</strong> label. These summaries are generated by the AI to help you quickly understand what each document contains. They are drafts&mdash;helpful starting points, but not official descriptions. Always open and review the original document before relying on any AI-generated summary.
+  </p>
+
+  <div class="callout callout-warning">
+    <div class="callout-icon">!</div>
+    <div class="callout-body">
+      <strong>Warning</strong>
+      AI summaries are generated text and may occasionally contain inaccuracies. Always verify information against the original source document.
+    </div>
+  </div>
+
+  <h3>Tips for Effective Searches</h3>
+  <ul>
+    <li>Use natural language. You do not need Boolean operators or quotation marks.</li>
+    <li>Include specific names, dates, or dollar amounts when you have them.</li>
+    <li>If a search returns no results, try broader terms or alternate spellings.</li>
+    <li>Use filters after an initial broad search to narrow results efficiently.</li>
+    <li>If you are searching for a specific document, try its title or document number.</li>
+  </ul>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     5. MANAGING RECORDS REQUESTS
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="requests">
+  <h2><span class="section-number">5</span> Managing Records Requests</h2>
+
+  <h3>Creating a New Request</h3>
+  <p>
+    To log a new public records request that has come in by mail, email, or in person, follow these steps:
+  </p>
+  <ol class="steps">
+    <li>Navigate to <strong>Requests</strong> in the sidebar and select <strong>New Request</strong>.</li>
+    <li>Enter the <strong>requester's name</strong> and contact information (email or mailing address).</li>
+    <li>Paste or type the <strong>full text of the request</strong> exactly as received from the requester.</li>
+    <li>Select the <strong>date received</strong>. This is the date the request arrived at your office, which starts the statutory clock.</li>
+    <li>Choose the <strong>receiving department</strong> from the dropdown. If the request spans multiple departments, select the primary department and note the others in the description.</li>
+    <li>Select <strong>Save</strong>. The request is created with a status of <span class="status-badge status-received">Received</span> and is now visible on your Requests list.</li>
+  </ol>
+
+  <div class="callout callout-tip">
+    <div class="callout-icon">&#10003;</div>
+    <div class="callout-body">
+      <strong>Tip</strong>
+      Copy and paste the original request text whenever possible. The AI uses this text to search for relevant records, so accuracy matters.
+    </div>
+  </div>
+
+  <h3>The 11 Request Statuses</h3>
+  <p>
+    Every request moves through a series of statuses. Here is a complete reference:
+  </p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="status-badge status-received">Received</span></td>
+        <td>The request has been logged in the system. No work has started yet.</td>
+      </tr>
+      <tr>
+        <td><span class="status-badge status-clarification">Clarification Needed</span></td>
+        <td>The request is unclear or too broad. You have contacted the requester for more information.</td>
+      </tr>
+      <tr>
+        <td><span class="status-badge status-assigned">Assigned</span></td>
+        <td>The request has been assigned to a specific staff member or department for processing.</td>
+      </tr>
+      <tr>
+        <td><span class="status-badge status-searching">Searching</span></td>
+        <td>Staff are actively searching for responsive records. The AI may be running searches in the background.</td>
+      </tr>
+      <tr>
+        <td><span class="status-badge status-in-review">In Review</span></td>
+        <td>Potentially responsive records have been found and are being reviewed for exemptions and relevance.</td>
+      </tr>
+      <tr>
+        <td><span class="status-badge status-ready">Ready for Release</span></td>
+        <td>Records have been reviewed and are ready to be compiled into a response. No outstanding exemption questions remain.</td>
+      </tr>
+      <tr>
+        <td><span class="status-badge status-drafted">Drafted</span></td>
+        <td>A response letter has been drafted (often with AI assistance) and is awaiting supervisor review.</td>
+      </tr>
+      <tr>
+        <td><span class="status-badge status-approved">Approved</span></td>
+        <td>A supervisor or reviewer has approved the response letter and the records package for release.</td>
+      </tr>
+      <tr>
+        <td><span class="status-badge status-fulfilled">Fulfilled</span></td>
+        <td>The responsive records have been compiled, redacted as needed, and packaged for delivery.</td>
+      </tr>
+      <tr>
+        <td><span class="status-badge status-sent">Sent</span></td>
+        <td>The response and records have been sent to the requester.</td>
+      </tr>
+      <tr>
+        <td><span class="status-badge status-closed">Closed</span></td>
+        <td>The request is complete. No further action is required.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Status Workflow</h3>
+  <p>
+    Requests generally follow this path, though some may skip steps or loop back:
+  </p>
+  <div class="workflow">
+    <span class="wf-node">Received</span>
+    <span class="wf-arrow">&rarr;</span>
+    <span class="wf-node">Assigned</span>
+    <span class="wf-arrow">&rarr;</span>
+    <span class="wf-node">Searching</span>
+    <span class="wf-arrow">&rarr;</span>
+    <span class="wf-node">In Review</span>
+    <span class="wf-arrow">&rarr;</span>
+    <span class="wf-node">Ready for Release</span>
+    <span class="wf-arrow">&rarr;</span>
+    <span class="wf-node">Drafted</span>
+    <span class="wf-arrow">&rarr;</span>
+    <span class="wf-node">Approved</span>
+    <span class="wf-arrow">&rarr;</span>
+    <span class="wf-node">Fulfilled</span>
+    <span class="wf-arrow">&rarr;</span>
+    <span class="wf-node">Sent</span>
+    <span class="wf-arrow">&rarr;</span>
+    <span class="wf-node">Closed</span>
+  </div>
+  <p style="font-size:0.85rem; color: var(--gray-600);">
+    <strong>Alternate paths:</strong> From <em>Received</em>, a request may move to <em>Clarification Needed</em> and then back to <em>Received</em> once clarified. From <em>Drafted</em>, a reviewer may send the request back to <em>In Review</em> if issues are found. At any point, a request can be moved to <em>Closed</em> if withdrawn by the requester.
+  </p>
+
+  <h3>Assigning Requests</h3>
+  <p>
+    To assign a request to a staff member, open the request detail page and select the <strong>Assign</strong> button. Choose a staff member from the dropdown list. The assignee will see the request appear on their Dashboard under "Open Requests." You can reassign a request at any time.
+  </p>
+
+  <h3>Attaching Documents from Search Results</h3>
+  <p>
+    When you find responsive records through the Search feature, you can attach them directly to a request:
+  </p>
+  <ol class="steps">
+    <li>From the search results, select the document you want to attach.</li>
+    <li>Select the <strong>Attach to Request</strong> button that appears in the document preview.</li>
+    <li>Choose the request you want to attach the document to from the list of open requests.</li>
+    <li>The document is now linked to the request and will appear in its <strong>Attached Records</strong> tab.</li>
+  </ol>
+
+  <h3>Statutory Deadlines and Alerts</h3>
+  <p>
+    CivicRecords AI automatically calculates statutory response deadlines based on your state's public records law. You will see:
+  </p>
+  <ul>
+    <li>A <strong>deadline date</strong> displayed prominently on each request.</li>
+    <li>A <strong>countdown</strong> showing business days remaining.</li>
+    <li><strong>Color-coded alerts</strong>: green (more than 5 days), amber (5 or fewer days), red (overdue).</li>
+  </ul>
+
+  <div class="callout callout-danger">
+    <div class="callout-icon">!!</div>
+    <div class="callout-body">
+      <strong>Important</strong>
+      Statutory deadlines are calculated automatically, but they are only as accurate as the "date received" you entered when creating the request. Always double-check this date.
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     6. REVIEWING EXEMPTION FLAGS
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="exemptions">
+  <h2><span class="section-number">6</span> Reviewing Exemption Flags</h2>
+
+  <h3>What Exemption Flags Are</h3>
+  <p>
+    When CivicRecords AI analyzes records attached to a request, it may detect information that could be exempt from public disclosure under your state's laws. When this happens, it creates an <strong>exemption flag</strong>&mdash;a suggestion that a specific piece of content might need to be redacted or withheld. The system suggests; you decide.
+  </p>
+
+  <h3>Reviewing a Flag: Accept or Reject</h3>
+  <p>
+    Navigate to the <strong>Exemptions</strong> page from the sidebar, or open a specific request and go to its <strong>Exemptions</strong> tab. For each flag, you will see:
+  </p>
+  <ul>
+    <li>The <strong>highlighted text</strong> that the system flagged.</li>
+    <li>The <strong>exemption category</strong> (for example, "Social Security Number" or "Attorney-Client Privilege").</li>
+    <li>The <strong>state statute</strong> that may apply.</li>
+    <li>A <strong>confidence score</strong> showing how certain the AI is about this flag.</li>
+  </ul>
+  <p>
+    You have two choices for each flag:
+  </p>
+  <ul>
+    <li><strong>Accept</strong> &mdash; You agree that this content should be redacted or withheld. The system will mark it for redaction in the final response.</li>
+    <li><strong>Reject</strong> &mdash; You determine that this content is not exempt and should be released. The flag is dismissed.</li>
+  </ul>
+
+  <h3>PII Flags vs. Statutory Flags</h3>
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Flag Type</th>
+        <th>What It Detects</th>
+        <th>Examples</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>PII (Personal Information)</strong></td>
+        <td>Personally identifiable information that may need to be redacted for privacy.</td>
+        <td>Social Security numbers, driver's license numbers, personal phone numbers, dates of birth, home addresses, medical information</td>
+      </tr>
+      <tr>
+        <td><strong>Statutory</strong></td>
+        <td>Content that may be exempt under a specific state statute.</td>
+        <td>Attorney-client privileged communications, law enforcement investigation details, trade secrets, personnel evaluation records, draft deliberative documents</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Understanding Confidence Scores</h3>
+  <p>
+    Each flag includes a confidence score from 0% to 100%. This score reflects how certain the AI is that the flagged content is actually exempt:
+  </p>
+  <ul>
+    <li><strong>90&ndash;100%</strong> &mdash; Very high confidence. The AI strongly believes this is exempt (for example, a clearly formatted Social Security number).</li>
+    <li><strong>70&ndash;89%</strong> &mdash; Moderate confidence. The content likely qualifies, but context matters. Review carefully.</li>
+    <li><strong>Below 70%</strong> &mdash; Lower confidence. The AI detected a possible match but is less certain. Give these flags extra scrutiny.</li>
+  </ul>
+
+  <div class="callout callout-warning">
+    <div class="callout-icon">!</div>
+    <div class="callout-body">
+      <strong>Why Every Flag Needs Human Review</strong>
+      The AI analyzes text patterns and statutory language, but it cannot understand context the way you can. A high confidence score does not mean automatic redaction. Only a trained staff member or attorney can make the final exemption determination. Always review the surrounding context before accepting or rejecting a flag.
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     7. RESPONSE LETTERS
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="response-letters">
+  <h2><span class="section-number">7</span> Response Letters</h2>
+
+  <h3>Generating a Draft Response Letter</h3>
+  <p>
+    Once you have reviewed all records and exemption flags for a request, you can generate a draft response letter:
+  </p>
+  <ol class="steps">
+    <li>Open the request and navigate to the <strong>Response</strong> tab.</li>
+    <li>Select <strong>Generate Draft</strong>. The AI will compose a response letter based on the request details, the records found, and any exemptions that were accepted.</li>
+    <li>The draft appears in the editor within a few seconds. It is clearly marked with an <strong>"AI Draft"</strong> label at the top.</li>
+  </ol>
+
+  <h3>The AI Disclaimer</h3>
+  <p>
+    Every AI-generated letter includes a disclaimer at the top of the editing view:
+  </p>
+  <div class="callout callout-note">
+    <div class="callout-icon">i</div>
+    <div class="callout-body">
+      <strong>AI Draft Notice</strong>
+      This letter was drafted by CivicRecords AI and has not been reviewed by staff. It may contain errors, omit relevant information, or cite incorrect statutes. A staff member must review and approve this letter before it is sent.
+    </div>
+  </div>
+  <p>
+    This label is visible only to staff during the editing process. It is automatically removed from the final version sent to the requester.
+  </p>
+
+  <h3>Editing the Draft</h3>
+  <p>
+    The draft letter opens in a rich text editor. You can:
+  </p>
+  <ul>
+    <li>Edit any text, including the greeting, body, and closing.</li>
+    <li>Add or remove references to specific records or exemptions.</li>
+    <li>Correct statute citations.</li>
+    <li>Adjust the tone or add context that the AI may have missed.</li>
+    <li>Add fee estimates or payment instructions.</li>
+  </ul>
+
+  <h3>Getting Supervisor Approval</h3>
+  <p>
+    After editing the draft, you submit it for supervisor review:
+  </p>
+  <ol class="steps">
+    <li>Select <strong>Submit for Approval</strong> at the bottom of the editor.</li>
+    <li>The request status changes to <span class="status-badge status-drafted">Drafted</span>.</li>
+    <li>A Reviewer or Admin receives a notification that a response letter is ready for review.</li>
+  </ol>
+
+  <h3>The Approval Workflow</h3>
+  <p>
+    The reviewer opens the response letter and has three options:
+  </p>
+  <ul>
+    <li><strong>Approve</strong> &mdash; The letter is approved for release. The status changes to <span class="status-badge status-approved">Approved</span>.</li>
+    <li><strong>Request Changes</strong> &mdash; The reviewer adds comments and returns the letter to the staff member for revision. The status returns to <span class="status-badge status-in-review">In Review</span>.</li>
+    <li><strong>Reject</strong> &mdash; The draft is rejected entirely. The staff member must create a new draft from scratch.</li>
+  </ul>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     8. TIMELINE & MESSAGING
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="timeline">
+  <h2><span class="section-number">8</span> Timeline &amp; Messaging</h2>
+
+  <h3>Viewing the Request Timeline</h3>
+  <p>
+    Every request has a <strong>Timeline</strong> tab that shows a chronological log of everything that has happened:
+  </p>
+  <ul>
+    <li>When the request was created and by whom.</li>
+    <li>Every status change, with timestamps and the staff member who made the change.</li>
+    <li>Documents that were attached or removed.</li>
+    <li>Exemption flags that were reviewed.</li>
+    <li>Messages sent to or received from the requester.</li>
+    <li>Internal notes added by staff.</li>
+  </ul>
+  <p>
+    The timeline is read-only&mdash;you cannot edit or delete entries. This ensures a complete, tamper-proof record of every action taken on the request.
+  </p>
+
+  <h3>Adding Notes to the Timeline</h3>
+  <p>
+    To add an internal note (visible only to staff):
+  </p>
+  <ol class="steps">
+    <li>Open the request and go to the <strong>Timeline</strong> tab.</li>
+    <li>Select the <strong>Add Note</strong> button.</li>
+    <li>Type your note in the text field. You can document research findings, record phone conversations with the requester, or leave instructions for colleagues.</li>
+    <li>Select <strong>Save Note</strong>. The note appears in the timeline with your name and a timestamp.</li>
+  </ol>
+
+  <h3>Sending Messages to Requesters</h3>
+  <p>
+    You can send messages to the requester directly from within a request:
+  </p>
+  <ol class="steps">
+    <li>Open the request and go to the <strong>Messages</strong> tab.</li>
+    <li>Select <strong>New Message</strong>.</li>
+    <li>Type your message. Common uses include requesting clarification, providing a status update, or informing the requester about fees.</li>
+    <li>Select <strong>Send</strong>. The message is delivered to the requester's email address and recorded in the timeline.</li>
+  </ol>
+
+  <h3>Internal vs. External Messages</h3>
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>Internal Notes</th>
+        <th>External Messages</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Visible to</strong></td>
+        <td>Staff members only</td>
+        <td>Staff and the requester</td>
+      </tr>
+      <tr>
+        <td><strong>Delivered via</strong></td>
+        <td>Appears in the timeline only</td>
+        <td>Sent to the requester's email and appears in the timeline</td>
+      </tr>
+      <tr>
+        <td><strong>Use for</strong></td>
+        <td>Research notes, internal coordination, staff-to-staff instructions</td>
+        <td>Status updates, clarification requests, fee notifications</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout callout-tip">
+    <div class="callout-icon">&#10003;</div>
+    <div class="callout-body">
+      <strong>Tip</strong>
+      Before sending an external message, double-check that you have selected the correct message type. Internal notes cannot be converted to external messages after they are saved, and external messages cannot be unsent.
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     9. FEE TRACKING
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="fees">
+  <h2><span class="section-number">9</span> Fee Tracking</h2>
+
+  <h3>Adding Fee Line Items</h3>
+  <p>
+    Many public records laws allow you to charge fees for search time, copying, and postage. To add fees to a request:
+  </p>
+  <ol class="steps">
+    <li>Open the request and go to the <strong>Fees</strong> tab.</li>
+    <li>Select <strong>Add Fee Item</strong>.</li>
+    <li>Choose the fee type from the dropdown (Search Time, Copying, Postage, Media, or Custom).</li>
+    <li>Enter the quantity and per-unit cost. The system calculates the line total automatically.</li>
+    <li>Select <strong>Save</strong>. The fee appears in the fee schedule for this request.</li>
+  </ol>
+
+  <h3>Fee Schedules</h3>
+  <p>
+    Your administrator configures the default fee schedule based on your jurisdiction's rules. Common fee categories include:
+  </p>
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Fee Type</th>
+        <th>Typical Rate</th>
+        <th>Basis</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Search Time</td>
+        <td>Varies by jurisdiction</td>
+        <td>Per hour or per quarter-hour</td>
+      </tr>
+      <tr>
+        <td>Copying (paper)</td>
+        <td>$0.10 &ndash; $0.25 per page</td>
+        <td>Per page</td>
+      </tr>
+      <tr>
+        <td>Copying (electronic)</td>
+        <td>Varies</td>
+        <td>Per file or per request</td>
+      </tr>
+      <tr>
+        <td>Postage</td>
+        <td>Actual cost</td>
+        <td>Per shipment</td>
+      </tr>
+      <tr>
+        <td>Media (CD/USB)</td>
+        <td>Actual cost</td>
+        <td>Per item</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout callout-note">
+    <div class="callout-icon">i</div>
+    <div class="callout-body">
+      <strong>Note</strong>
+      Fee rates are set by your administrator and follow your jurisdiction's fee ordinance or statute. If you believe a rate is incorrect, contact your administrator rather than overriding it manually.
+    </div>
+  </div>
+
+  <h3>Estimated vs. Actual Fees</h3>
+  <p>
+    When you first add fees to a request, they are marked as <strong>Estimated</strong>. Estimated fees can be communicated to the requester so they know the approximate cost before you begin work. Once the work is complete and you know the exact amounts, update each line item to <strong>Actual</strong>. The system tracks both amounts so you have a clear record of what was estimated versus what was charged.
+  </p>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     10. DEPARTMENT ACCESS
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="departments">
+  <h2><span class="section-number">10</span> Department Access</h2>
+
+  <h3>What Departments Mean for Your View</h3>
+  <p>
+    In CivicRecords AI, every user is assigned to one or more departments (such as Finance, Public Works, or the City Clerk's office). Your department assignment controls which requests you can see and work on.
+  </p>
+
+  <h3>You Only See Your Department's Requests</h3>
+  <p>
+    When you log in and go to the Requests page, you see only requests that are assigned to your department. This keeps your workspace focused and protects interdepartmental confidentiality. If a request involves records from multiple departments, each department sees only its portion of the work.
+  </p>
+
+  <h3>Shared Documents</h3>
+  <p>
+    Some record collections are marked as <strong>shared</strong> by your administrator. Documents in shared collections are visible to all staff members regardless of department. This is common for records like city council minutes, adopted budgets, and published ordinances that are already public.
+  </p>
+
+  <h3>How Admins See Everything</h3>
+  <p>
+    Users with the <strong>Admin</strong> role can see requests from all departments. This allows city clerks and records officers who manage the overall program to have visibility across the entire organization, assign requests between departments, and generate city-wide reports.
+  </p>
+
+  <div class="callout callout-note">
+    <div class="callout-icon">i</div>
+    <div class="callout-body">
+      <strong>Note</strong>
+      Department-level access controls are part of Phase 2 of CivicRecords AI. If your installation has not yet enabled department filtering, all staff members may see all requests. Contact your administrator for your city's current configuration.
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     11. QUICK REFERENCE
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="quick-reference">
+  <h2><span class="section-number">11</span> Quick Reference</h2>
+
+  <h3>Keyboard Shortcuts</h3>
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Shortcut</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><kbd>/</kbd></td><td>Focus the search bar from any page</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>K</kbd></td><td>Open the command palette (quick navigation)</td></tr>
+      <tr><td><kbd>N</kbd></td><td>Create a new request (from the Requests page)</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Close the current dialog or panel</td></tr>
+      <tr><td><kbd>?</kbd></td><td>Show keyboard shortcuts help overlay</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Status Transition Table (Compact)</h3>
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>From Status</th>
+        <th>Can Move To</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="status-badge status-received">Received</span></td><td>Clarification Needed, Assigned, Closed</td></tr>
+      <tr><td><span class="status-badge status-clarification">Clarification Needed</span></td><td>Received, Closed</td></tr>
+      <tr><td><span class="status-badge status-assigned">Assigned</span></td><td>Searching, Closed</td></tr>
+      <tr><td><span class="status-badge status-searching">Searching</span></td><td>In Review, Closed</td></tr>
+      <tr><td><span class="status-badge status-in-review">In Review</span></td><td>Ready for Release, Searching, Closed</td></tr>
+      <tr><td><span class="status-badge status-ready">Ready for Release</span></td><td>Drafted, Closed</td></tr>
+      <tr><td><span class="status-badge status-drafted">Drafted</span></td><td>Approved, In Review, Closed</td></tr>
+      <tr><td><span class="status-badge status-approved">Approved</span></td><td>Fulfilled, In Review</td></tr>
+      <tr><td><span class="status-badge status-fulfilled">Fulfilled</span></td><td>Sent</td></tr>
+      <tr><td><span class="status-badge status-sent">Sent</span></td><td>Closed</td></tr>
+      <tr><td><span class="status-badge status-closed">Closed</span></td><td>&mdash; (terminal status)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Common Tasks Checklist</h3>
+  <ul>
+    <li>Log a new request: Requests &rarr; New Request</li>
+    <li>Search for records: Search &rarr; type your query</li>
+    <li>Attach a found record to a request: Search results &rarr; Attach to Request</li>
+    <li>Review exemption flags: Exemptions &rarr; Accept or Reject each flag</li>
+    <li>Generate a response letter: Request &rarr; Response tab &rarr; Generate Draft</li>
+    <li>Submit a letter for approval: Response tab &rarr; Submit for Approval</li>
+    <li>Send a message to a requester: Request &rarr; Messages tab &rarr; New Message</li>
+    <li>Add fees: Request &rarr; Fees tab &rarr; Add Fee Item</li>
+    <li>Check deadlines: Dashboard &rarr; Approaching Deadlines panel</li>
+  </ul>
+
+  <h3>Glossary of Terms</h3>
+  <ul class="glossary-list">
+    <li><span class="term">AI Draft</span> &mdash; A label indicating that text (such as a summary or response letter) was generated by the CivicRecords AI engine and has not yet been reviewed by a staff member.</li>
+    <li><span class="term">Confidence Score</span> &mdash; A percentage (0&ndash;100%) indicating how certain the AI is about a search result's relevance or an exemption flag's accuracy. Higher is more certain.</li>
+    <li><span class="term">Department</span> &mdash; An organizational unit within your city (such as Finance, Public Works, or City Clerk). Departments control which requests and records are visible to which staff members.</li>
+    <li><span class="term">Exemption</span> &mdash; A legal basis under state law for withholding or redacting part of a public record. Common examples include personal privacy, attorney-client privilege, and law enforcement investigation records.</li>
+    <li><span class="term">Exemption Flag</span> &mdash; A suggestion from the AI that a specific piece of text in a document may qualify for an exemption. Flags must be reviewed and either accepted or rejected by a staff member.</li>
+    <li><span class="term">Human-in-the-Loop</span> &mdash; The principle that the AI assists but never decides. Every exemption determination, every response letter, and every record release requires a human decision.</li>
+    <li><span class="term">PII (Personally Identifiable Information)</span> &mdash; Information that can identify a specific person, such as Social Security numbers, driver's license numbers, dates of birth, and home addresses.</li>
+    <li><span class="term">Redaction</span> &mdash; The process of permanently removing or obscuring exempt information from a document before releasing it to the public.</li>
+    <li><span class="term">Requester</span> &mdash; The person or organization that submitted the public records request.</li>
+    <li><span class="term">RRF (Records Request Form)</span> &mdash; A standardized form used to submit a public records request. Some jurisdictions require specific forms; others accept requests in any written format.</li>
+    <li><span class="term">Source Collection</span> &mdash; A set of related documents that have been indexed by CivicRecords AI for searching, such as "Council Minutes 2020&ndash;2025" or "Building Permits."</li>
+    <li><span class="term">Statutory Deadline</span> &mdash; The maximum number of business days your jurisdiction allows for responding to a public records request, as defined by state law. This varies by state.</li>
+    <li><span class="term">Timeline</span> &mdash; A chronological, tamper-proof log of all actions taken on a records request, including status changes, messages, notes, and document attachments.</li>
+  </ul>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     12. GETTING HELP
+     ════════════════════════════════════════════════════════ -->
+<div class="section" id="getting-help">
+  <h2><span class="section-number">12</span> Getting Help</h2>
+
+  <h3>Contact Your IT Administrator</h3>
+  <p>
+    For issues related to your account (password resets, role changes, department assignments) or to the system itself (the application is down, pages are not loading, search is not returning results), contact your city's IT administrator. They manage the CivicRecords AI installation and can resolve most issues.
+  </p>
+
+  <h3>Community Discussions</h3>
+  <p>
+    CivicRecords AI is an open-source project with an active community. If you have questions about how to use a feature, want to suggest an improvement, or want to see how other cities are using the tool, visit the project's GitHub Discussions page:
+  </p>
+  <p style="margin: 16px 0;">
+    <a href="https://github.com/scottconverse/civicrecords-ai/discussions" style="color: var(--blue-700); font-weight: 600;">
+      github.com/scottconverse/civicrecords-ai/discussions
+    </a>
+  </p>
+
+  <h3>Reporting Bugs</h3>
+  <p>
+    If you encounter a bug&mdash;something that does not work as described in this manual&mdash;please report it so it can be fixed. To report a bug:
+  </p>
+  <ol class="steps">
+    <li>Note the exact steps you took before the problem occurred.</li>
+    <li>Take a screenshot if possible (press <kbd>PrtScn</kbd> on your keyboard).</li>
+    <li>Contact your IT administrator with the details. They will determine whether it is a local configuration issue or a bug in the software.</li>
+    <li>If it is a software bug, your administrator can file an issue on the project's GitHub Issues page: <a href="https://github.com/scottconverse/civicrecords-ai/issues" style="color: var(--blue-700);">github.com/scottconverse/civicrecords-ai/issues</a></li>
+  </ol>
+
+  <div class="callout callout-tip">
+    <div class="callout-icon">&#10003;</div>
+    <div class="callout-body">
+      <strong>Tip</strong>
+      The more detail you provide when reporting an issue, the faster it can be resolved. Include what you were trying to do, what you expected to happen, and what actually happened.
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Footer ────────────────────────────────────────────── -->
+<div style="margin-top: 64px; padding-top: 24px; border-top: 2px solid var(--gray-200); text-align: center; color: var(--gray-500); font-size: 0.82rem;">
+  <p>CivicRecords AI &mdash; Staff User Manual &mdash; Version 1.1.0 &mdash; April 2026</p>
+  <p>An open-source project for transparent, efficient public records management.</p>
+</div>
+
+</div><!-- /.content -->
+</div><!-- /.main -->
+
+</body>
+</html>
