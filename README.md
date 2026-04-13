@@ -136,18 +136,26 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 
 ## Status
 
-**v1.0.1** — Hardened release with security review remediations, GPU acceleration support, and cross-platform testing.
+**v1.1.0** — Phase 2 release with department access controls, 50-state exemption rules, and compliance templates.
 
+**New in v1.1.0:**
+- Department-level access controls — staff scoped to own department, admins see all
+- Department CRUD API with audit logging
+- 50-state + DC exemption rule coverage (180 rules across 51 jurisdictions)
+- 5 compliance template documents (AI Use Disclosure, Response Letter Disclosure, CAIA Impact Assessment, AI Governance Policy, Data Residency Attestation)
+- Template render endpoint with city profile variable substitution
+- Exemption auditability dashboard with acceptance/rejection rates and CSV/JSON export
+- Model registry CRUD endpoints (spec 6.7 compliance metadata)
+
+**Carried from v1.0.x:**
 - 11 staff workbench pages with shadcn/ui design system
-- 29 database tables, ~25 API endpoints
-- 104 automated tests passing
+- 29 database tables, ~30 API endpoints
+- 144 automated tests passing
 - Guided onboarding, systems catalog, connector framework
 - Request timeline, messaging, fee tracking, response letter generation
 - Operational analytics and notification service
 - AMD GPU/NPU hardware auto-detection (ROCm on Linux, DirectML on Windows)
-- Login rate limiting (5 requests/minute per IP)
-- Audit log archival before retention cleanup
-- Public registration removed — users created by admin only
+- Login rate limiting, audit log archival, admin-only user creation
 - Tested on Windows 11 (Docker Desktop) and Ubuntu 22.04 (Docker Engine)
 
 **Roadmap:**
@@ -155,7 +163,7 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 | Phase | Version | Focus | Key Deliverables |
 |-------|---------|-------|-----------------|
 | **Phase 1** | **v1.0.x** | MVP (shipped) | AI search, request workflow, exemption detection, audit logging, onboarding, connector framework |
-| **Phase 2** | **v1.1.0** | Department access & state rules | Department-level access controls, per-state exemption rule sets beyond pilot states, compliance template documents (AI Use Disclosure, CAIA Impact Assessment, AI Governance Policy, Data Residency Attestation) |
+| **Phase 2** | **v1.1.0** | Department access & state rules (shipped) | Department-level access controls, 50-state exemption rules, compliance template documents, model registry, exemption auditability dashboard |
 | **Phase 3** | **v1.2.0** | Connectors & integration | PostgreSQL, MySQL, MSSQL, SQLite, IMAP email, SMB/NFS file shares, SharePoint, REST API connectors |
 | **Phase 3+** | **v2.0.0** | Federation | Instance discovery and registration, cross-instance search, federated audit log aggregation, trust relationship management UI |
 
