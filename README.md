@@ -22,7 +22,7 @@ No open-source tool exists for the **responder side** of open records at the mun
 - **Operational Analytics** — Real-time metrics: average response time, deadline compliance rate, overdue requests, status breakdown
 - **Notification Service** — Template-based notification system for request lifecycle events
 - **Compliance by Design** — Hash-chained audit logs, human-in-the-loop enforcement, AI content labeling, data sovereignty verification. Designed for Colorado CAIA and 50-state regulatory compliance. CJIS compliance gate for public safety connectors
-- **Civic Design System** — Professional UI built with shadcn/ui, civic blue design tokens, sidebar navigation, WCAG 2.2 AA accessibility (44px touch targets, skip navigation, icon+color status badges)
+- **Civic Design System** — Professional UI built with shadcn/ui, civic blue design tokens, sidebar navigation. WCAG 2.2 AA targeted (44px touch targets, skip navigation, icon+color status badges — accessibility audit pending)
 - **Federation-Ready** — REST API with service accounts enables future cross-jurisdiction record discovery between CivicRecords AI instances
 
 ## Quick Start
@@ -137,12 +137,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, 
 
 ## User Roles
 
-| Role | Permissions |
-|------|-------------|
-| **Admin** | Full access: user management, system config, rule management, audit logs, onboarding |
-| **Staff** | Search, create requests, attach documents, scan for exemptions, review flags, manage fees |
-| **Reviewer** | Everything Staff can do + approve/reject responses and exemption flags |
-| **Read-Only** | View search results and request status only |
+| Role | Permissions | Phase |
+|------|-------------|-------|
+| **Admin** | Full access: user management, system config, rule management, audit logs, onboarding | Built |
+| **Staff** | Search, create requests, attach documents, scan for exemptions, review flags, manage fees | Built |
+| **Reviewer** | Everything Staff can do + approve/reject responses and exemption flags | Built |
+| **Read-Only** | View search results and request status only | Built |
+| **Liaison** | Scoped to assigned department, attach documents and add notes | MVP-NOW |
+| **Public** | Submit requests, track own requests, search published records | v1.1 |
 
 Service accounts with hashed API keys enable instance-to-instance federation access.
 
@@ -170,13 +172,14 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 - Login rate limiting, audit log archival, admin-only user creation
 - Tested on Windows 11 (Docker Desktop) and Ubuntu 22.04 (Docker Engine)
 
-**Roadmap:**
+**Roadmap (per [canonical spec](docs/UNIFIED-SPEC.md)):**
 
-| Phase | Version | Focus | Key Deliverables |
-|-------|---------|-------|-----------------|
-| **Phase 1** | **v1.0.x** | MVP (shipped) | AI search, request workflow, exemption detection, audit logging, onboarding, connector framework |
-| **Phase 2** | **v1.1.0** | Department access & state rules (shipped) | Department-level access controls, 50-state exemption rules, compliance template documents, model registry, exemption auditability dashboard |
-| **Phase 3** | **v1.2.0** | Connectors & integration | PostgreSQL, MySQL, MSSQL, SQLite, IMAP email, SMB/NFS file shares, SharePoint, REST API connectors |
-| **Phase 3+** | **v2.0.0** | Federation | Instance discovery and registration, cross-instance search, federated audit log aggregation, trust relationship management UI |
+| Phase | Focus | Key Deliverables | Status |
+|-------|-------|-----------------|--------|
+| **Phase 0** | Design foundation | shadcn/ui, design tokens, sidebar shell, component library | In progress |
+| **Phase 1** | Staff workbench redesign | Redesign all staff pages with new design system, WCAG 2.2 AA | In progress |
+| **Phase 2** | New backend features | Fees, notifications (SMTP), response letters, context manager, analytics, liaison role, department scoping, audit retention | Partially built |
+| **Phase 3** | Public portal | Public homepage, search, guided request wizard, request tracker, help pages | Planned (v1.1) |
+| **Phase 4** | Transparency layer | Open records library, reporting dashboards, public archive, federation | Planned (v2.0) |
 
-*v1 is an internal staff tool. Public-facing submission portal is not in the current spec and would be Phase 3+ at earliest.*
+*Note: Current build (v1.1.0) includes backend work from Phases 0-2 but has not completed the full scope of any phase per the canonical spec. A detailed reconciliation is in progress. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements.*
