@@ -5,19 +5,9 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.exemptions.patterns import scan_text as _scan_text_pii
 from app.models.document import DocumentChunk
 from app.models.exemption import ExemptionFlag, ExemptionRule, FlagStatus, RuleType
-
-
-# Built-in PII patterns (always active regardless of state rules)
-BUILTIN_PII_RULES = [
-    {"category": "PII - SSN", "pattern": r"\b\d{3}-\d{2}-\d{4}\b", "confidence": 0.95},
-    {"category": "PII - SSN (no dashes)", "pattern": r"\b\d{9}\b", "confidence": 0.6},
-    {"category": "PII - Phone", "pattern": r"\b(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b", "confidence": 0.8},
-    {"category": "PII - Email", "pattern": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "confidence": 0.85},
-    {"category": "PII - Credit Card", "pattern": r"\b(?:\d{4}[-\s]?){3}\d{4}\b", "confidence": 0.9},
-    {"category": "PII - Date of Birth", "pattern": r"\b(?:DOB|Date of Birth|born)\s*:?\s*\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b", "confidence": 0.85},
-]
 
 
 @dataclass
@@ -52,19 +42,18 @@ def scan_text_with_keywords(text: str, keywords: str) -> list[str]:
     return matches
 
 
-def scan_chunk_builtin(text: str) -> list[FlagResult]:
-    """Scan text with built-in PII rules."""
+def scan_chunk_builtin(text: str, state_code: str | None = None) -> list[FlagResult]:
+    """Scan text with built-in PII rules via patterns.py (single source of truth)."""
+    pii_matches = _scan_text_pii(text, state_code=state_code)
     flags = []
-    for rule in BUILTIN_PII_RULES:
-        matches = scan_text_with_regex(text, rule["pattern"])
-        for match in matches:
-            flags.append(FlagResult(
-                category=rule["category"],
-                matched_text=match if len(match) < 200 else match[:200],
-                confidence=rule["confidence"],
-                rule_id=None,
-                rule_type="regex",
-            ))
+    for m in pii_matches:
+        flags.append(FlagResult(
+            category=m.category,
+            matched_text=m.matched_text if len(m.matched_text) < 200 else m.matched_text[:200],
+            confidence=m.confidence,
+            rule_id=None,
+            rule_type="regex",
+        ))
     return flags
 
 
@@ -74,7 +63,7 @@ async def scan_chunk_with_rules(
     state_code: str | None = None,
 ) -> list[FlagResult]:
     """Scan text with database-configured rules for a state."""
-    flags = scan_chunk_builtin(text)
+    flags = scan_chunk_builtin(text, state_code=state_code)
 
     if state_code:
         result = await session.execute(

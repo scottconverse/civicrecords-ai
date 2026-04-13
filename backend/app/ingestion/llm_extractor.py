@@ -56,7 +56,9 @@ async def extract_text_from_scanned_pdf(pdf_path: Path, prefer_multimodal: bool 
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
                 tmp.write(img_bytes.read())
                 tmp_path = Path(tmp.name)
-            text = await extract_text_from_image(tmp_path, prefer_multimodal, model)
+            try:
+                text = await extract_text_from_image(tmp_path, prefer_multimodal, model)
+            finally:
+                tmp_path.unlink(missing_ok=True)
             pages.append({"text": text, "page_number": i})
-            tmp_path.unlink(missing_ok=True)
     return pages

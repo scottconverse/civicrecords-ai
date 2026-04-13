@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import uuid
 from datetime import datetime, timezone
@@ -29,7 +30,7 @@ async def ingest_file(
     chunk_overlap: int = 50,
     embed_model: str = "nomic-embed-text",
 ) -> Document:
-    file_hash = compute_file_hash(file_path)
+    file_hash = await asyncio.to_thread(compute_file_hash, file_path)
     file_size = file_path.stat().st_size
 
     existing = await session.execute(
@@ -67,7 +68,7 @@ async def ingest_file(
             parser = detect_parser(file_path)
             if parser is None:
                 raise ValueError(f"No parser for file type: {file_path.suffix}")
-            result = parser.parse(file_path)
+            result = await asyncio.to_thread(parser.parse, file_path)
             if result.metadata.get("likely_scanned") and result.file_type == "pdf":
                 pages_data = await extract_text_from_scanned_pdf(file_path)
             else:

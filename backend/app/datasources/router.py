@@ -65,8 +65,10 @@ async def upload_file(file: UploadFile = File(...), session: AsyncSession = Depe
     raw_name = file.filename or "upload"
     safe_name = PurePosixPath(raw_name).name or "upload"
     dest = upload_dir / f"{_uuid.uuid4().hex}_{safe_name}"
-    content = await file.read()
-    dest.write_bytes(content)
+    import aiofiles
+    async with aiofiles.open(dest, "wb") as f:
+        while chunk := await file.read(8192):
+            await f.write(chunk)
     tmp_path = str(dest)
     result = await session.execute(select(DataSource).where(DataSource.name == "_uploads", DataSource.source_type == SourceType.UPLOAD))
     upload_source = result.scalar_one_or_none()

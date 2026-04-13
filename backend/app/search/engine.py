@@ -137,27 +137,30 @@ async def hybrid_search(
     score_map = {cid: score / max_score if max_score > 0 else 0.0 for cid, score in top_fused}
     top_chunk_ids = [cid for cid, _ in top_fused]
 
+    # Batch fetch all chunks+documents in a single query, then restore rank order
+    result = await session.execute(
+        select(DocumentChunk, Document)
+        .join(Document, DocumentChunk.document_id == Document.id)
+        .where(DocumentChunk.id.in_(top_chunk_ids))
+    )
+    rows = result.all()
+    chunk_map = {chunk.id: (chunk, doc) for chunk, doc in rows}
+
     hits = []
     for rank, chunk_id in enumerate(top_chunk_ids):
-        # Fetch chunk with document join
-        result = await session.execute(
-            select(DocumentChunk, Document)
-            .join(Document, DocumentChunk.document_id == Document.id)
-            .where(DocumentChunk.id == chunk_id)
-        )
-        row = result.one_or_none()
-        if row:
-            chunk, doc = row
-            hits.append(SearchHit(
-                chunk_id=chunk.id,
-                document_id=doc.id,
-                filename=doc.filename,
-                file_type=doc.file_type,
-                source_path=doc.source_path,
-                page_number=chunk.page_number,
-                content_text=chunk.content_text,
-                similarity_score=score_map.get(chunk_id, 0.0),
-                rank=rank + 1,
-            ))
+        if chunk_id not in chunk_map:
+            continue
+        chunk, doc = chunk_map[chunk_id]
+        hits.append(SearchHit(
+            chunk_id=chunk.id,
+            document_id=doc.id,
+            filename=doc.filename,
+            file_type=doc.file_type,
+            source_path=doc.source_path,
+            page_number=chunk.page_number,
+            content_text=chunk.content_text,
+            similarity_score=score_map.get(chunk_id, 0.0),
+            rank=rank + 1,
+        ))
 
     return hits
