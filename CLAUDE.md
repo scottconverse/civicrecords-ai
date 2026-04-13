@@ -40,6 +40,15 @@ Every sub-project must pass ALL verification gates before merge:
 - [ ] No hardcoded secrets or credentials in code
 - [ ] Audit logging verified (actions create log entries)
 
+## Post-Push Verification
+
+After every `git push`, verify the remote state matches what you expect — not the git output, the actual result:
+- `git log origin/master --oneline -3` to confirm commits landed
+- `git diff HEAD origin/master` to confirm nothing diverged
+- If a specific file matters, verify it exists on remote
+
+Same principle applies to all deployment actions: verify the outcome, not the action. Seed scripts must be run against the production database and verified in the running UI. Connectors must be wired into the pipeline with integration tests. Code that exists but has no caller is not shipped.
+
 ## Code Standards
 
 - Python: Follow existing patterns. Use async/await consistently. Type hints on all public functions.
