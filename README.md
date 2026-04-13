@@ -18,7 +18,7 @@ No open-source tool exists for the **responder side** of open records at the mun
 - **Request Management** — Full lifecycle tracking with 11 statuses: intake, clarification, assignment, search, review, drafting, approval, fulfillment, closure. Timeline, messaging, fee tracking, and response letter generation
 - **Guided Onboarding** — 3-phase wizard helps cities configure their profile, identify data systems across 12 municipal domains, and surface coverage gaps
 - **Municipal Systems Catalog** — Curated knowledge base of 25+ municipal software vendors across 12 functional domains (finance, public safety, permitting, HR, etc.) with discovery hints and connector templates
-- **Universal Connector Framework** — Standardized protocol (authenticate/discover/fetch/health_check) for connecting to city data sources. File system connector included; email, REST API, and ODBC connectors planned
+- **Universal Connector Framework** — Standardized protocol (authenticate/discover/fetch/health_check) for connecting to city data sources. File system connector included; Phase 3 adds SQL databases (PostgreSQL, MySQL, MSSQL, SQLite), IMAP email, SMB/NFS file shares, SharePoint, and REST API connectors
 - **Operational Analytics** — Real-time metrics: average response time, deadline compliance rate, overdue requests, status breakdown
 - **Notification Service** — Template-based notification system for request lifecycle events
 - **Compliance by Design** — Hash-chained audit logs, human-in-the-loop enforcement, AI content labeling, data sovereignty verification. Designed for Colorado CAIA and 50-state regulatory compliance. CJIS compliance gate for public safety connectors
@@ -131,7 +131,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, 
 | **Staff** | Search, create requests, attach documents, scan for exemptions, review flags, manage fees |
 | **Reviewer** | Everything Staff can do + approve/reject responses and exemption flags |
 | **Read-Only** | View search results and request status only |
-| **Liaison** *(v1.1)* | Scoped to assigned department, attach documents and add notes |
+
+Service accounts with hashed API keys enable instance-to-instance federation access.
 
 ## Status
 
@@ -150,5 +151,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, 
 - Tested on Windows 11 (Docker Desktop) and Ubuntu 22.04 (Docker Engine)
 
 **Roadmap:**
-- **v1.1** — Public submission portal, network discovery engine, REST API/ODBC connectors, Tier 2 NER redaction
-- **v2.0** — Open records library, visual AI (face/plate blurring), RPA bridge, federation
+
+| Phase | Focus | Key Deliverables |
+|-------|-------|-----------------|
+| **Phase 2** | Department access & state rules | Department-level access controls, per-state exemption rule sets beyond pilot states, compliance template documents (AI Use Disclosure, CAIA Impact Assessment, AI Governance Policy, Data Residency Attestation) |
+| **Phase 3** | Connectors & integration | PostgreSQL, MySQL, MSSQL, SQLite, IMAP email, SMB/NFS file shares, SharePoint, REST API connectors |
+| **Phase 3+** | Federation | Instance discovery and registration, cross-instance search, federated audit log aggregation, trust relationship management UI |
+
+*Note: v1 is an internal staff tool. Public-facing submission portal is not in the current spec and would be Phase 3+ at earliest.*
