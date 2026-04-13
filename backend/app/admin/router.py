@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -8,7 +10,9 @@ from app.config import APP_VERSION, settings
 from app.database import get_async_session
 from app.models.audit import AuditLog
 from app.models.document import ModelRegistry
+from app.models.fees import FeeSchedule
 from app.models.user import User, UserRole
+from app.schemas.fee_schedule import FeeScheduleCreate, FeeScheduleRead, FeeScheduleUpdate
 from app.schemas.model_registry import ModelRegistryCreate, ModelRegistryRead, ModelRegistryUpdate
 from app.schemas.user import UserRead
 from app.audit.logger import write_audit_log
@@ -260,4 +264,99 @@ async def delete_model_registry(
         session=session, action="delete_model_registry", resource_type="model_registry",
         resource_id=str(model_id), user_id=user.id,
         details={"model_name": model.model_name},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fee Schedules
+# ---------------------------------------------------------------------------
+
+@router.get("/fee-schedules", response_model=list[FeeScheduleRead])
+async def list_fee_schedules(
+    jurisdiction: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.ADMIN)),
+):
+    """List all fee schedules. Admin only."""
+    stmt = select(FeeSchedule).order_by(FeeSchedule.created_at.desc())
+    if jurisdiction:
+        stmt = stmt.where(FeeSchedule.jurisdiction == jurisdiction)
+    stmt = stmt.offset(offset).limit(limit)
+    result = await session.execute(stmt)
+    return result.scalars().all()
+
+
+@router.post("/fee-schedules", response_model=FeeScheduleRead, status_code=201)
+async def create_fee_schedule(
+    data: FeeScheduleCreate,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.ADMIN)),
+):
+    """Create a new fee schedule. Admin only."""
+    schedule = FeeSchedule(
+        jurisdiction=data.jurisdiction,
+        fee_type=data.fee_type,
+        amount=data.amount,
+        description=data.description,
+        effective_date=data.effective_date,
+        created_by=user.id,
+    )
+    session.add(schedule)
+    await session.commit()
+    await session.refresh(schedule)
+
+    await write_audit_log(
+        session=session, action="create_fee_schedule", resource_type="fee_schedule",
+        resource_id=str(schedule.id), user_id=user.id,
+        details={"jurisdiction": data.jurisdiction, "fee_type": data.fee_type, "amount": data.amount},
+    )
+    return schedule
+
+
+@router.patch("/fee-schedules/{schedule_id}", response_model=FeeScheduleRead)
+async def update_fee_schedule(
+    schedule_id: uuid.UUID,
+    data: FeeScheduleUpdate,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.ADMIN)),
+):
+    """Update a fee schedule. Admin only."""
+    schedule = await session.get(FeeSchedule, schedule_id)
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Fee schedule not found")
+
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(schedule, field, value)
+
+    await session.commit()
+    await session.refresh(schedule)
+
+    await write_audit_log(
+        session=session, action="update_fee_schedule", resource_type="fee_schedule",
+        resource_id=str(schedule.id), user_id=user.id,
+        details=data.model_dump(exclude_none=True),
+    )
+    return schedule
+
+
+@router.delete("/fee-schedules/{schedule_id}", status_code=204)
+async def delete_fee_schedule(
+    schedule_id: uuid.UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.ADMIN)),
+):
+    """Delete a fee schedule. Admin only."""
+    schedule = await session.get(FeeSchedule, schedule_id)
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Fee schedule not found")
+
+    await session.delete(schedule)
+    await session.commit()
+
+    await write_audit_log(
+        session=session, action="delete_fee_schedule", resource_type="fee_schedule",
+        resource_id=str(schedule_id), user_id=user.id,
+        details={"jurisdiction": schedule.jurisdiction, "fee_type": schedule.fee_type},
     )
