@@ -68,7 +68,7 @@ async def system_status(
         redis_status = "unreachable"
 
     return SystemStatus(
-        version="0.1.0",
+        version="1.0.0",
         database=db_status,
         ollama=ollama_status,
         redis=redis_status,

@@ -28,7 +28,7 @@ subtitle.style.font.size = Pt(14)
 meta = doc.add_table(rows=4, cols=2)
 meta.style = 'Light Shading Accent 1'
 for i, (k, v) in enumerate([
-    ('Project', 'CivicRecords AI v0.1.0'),
+    ('Project', 'CivicRecords AI v1.0.0'),
     ('Date', 'April 12, 2026'),
     ('Prepared by', 'Claude Opus 4.6 (automated QA)'),
     ('Environment', 'Windows 11 Pro, Docker Desktop 4.68.0, Python 3.12.8'),

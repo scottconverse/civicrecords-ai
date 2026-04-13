@@ -50,7 +50,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="CivicRecords AI",
         description="AI-powered open records support for American cities",
-        version="0.1.0",
+        version="1.0.0",
         lifespan=lifespan,
     )
 
@@ -95,7 +95,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health():
-        return {"status": "ok", "version": "0.1.0"}
+        return {"status": "ok", "version": "1.0.0"}
 
     return app
 

@@ -6,11 +6,11 @@ from app.models.request import RequestStatus, InclusionStatus
 
 
 class RequestCreate(BaseModel):
-    requester_name: str
-    requester_email: str | None = None
-    requester_phone: str | None = None
-    requester_type: str | None = None
-    description: str
+    requester_name: str = Field(..., max_length=255)
+    requester_email: str | None = Field(None, max_length=255)
+    requester_phone: str | None = Field(None, max_length=50)
+    requester_type: str | None = Field(None, max_length=100)
+    description: str = Field(..., max_length=10000)
     statutory_deadline: datetime | None = None
     priority: str = "normal"
     department_id: uuid.UUID | None = None

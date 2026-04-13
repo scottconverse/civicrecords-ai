@@ -33,12 +33,13 @@ async def get_operational_metrics(
     total_closed = sum(v for k, v in by_status.items() if k in closed_statuses)
     total_open = sum(v for k, v in by_status.items() if k not in closed_statuses)
 
-    # Overdue
+    # Overdue — use text cast to avoid PostgreSQL enum mismatch
+    from sqlalchemy import cast, String, text
     overdue_result = await session.execute(
         select(func.count()).where(
             RecordsRequest.statutory_deadline < now,
-            RecordsRequest.status.notin_(
-                [RequestStatus.FULFILLED, RequestStatus.SENT, RequestStatus.CLOSED]
+            cast(RecordsRequest.status, String).notin_(
+                ["fulfilled", "sent", "closed"]
             ),
         )
     )

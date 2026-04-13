@@ -10,7 +10,7 @@ async def test_admin_status_returns_system_info(client: AsyncClient, admin_token
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["version"] == "0.1.0"
+    assert data["version"] == "1.0.0"
     assert data["database"] == "connected"
     assert isinstance(data["user_count"], int)
     assert isinstance(data["audit_log_count"], int)

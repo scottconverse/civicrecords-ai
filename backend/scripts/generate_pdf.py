@@ -363,7 +363,7 @@ def on_page(canvas, doc):
     canvas.setFillColor(GRAY)
     canvas.setFont("Helvetica", 8)
     canvas.drawString(inch, 0.5 * inch,
-        "CivicRecords AI — Technical Documentation v0.1.0")
+        "CivicRecords AI — Technical Documentation v1.0.0")
     canvas.drawRightString(doc.pagesize[0] - inch, 0.5 * inch,
         f"Page {doc.page}")
     canvas.setStrokeColor(colors.HexColor("#cbd5e1"))
@@ -382,7 +382,7 @@ def build_title_page(s, W):
     story.append(Spacer(1, 0.25 * inch))
 
     # Project badge row
-    badge_data = [["Open Source", "Apache 2.0", "v0.1.0", "Python 3.12"]]
+    badge_data = [["Open Source", "Apache 2.0", "v1.0.0", "Python 3.12"]]
     badge_style = TableStyle([
         ("BACKGROUND",    (0, 0), (-1, -1), BLUE),
         ("TEXTCOLOR",     (0, 0), (-1, -1), WHITE),
@@ -414,7 +414,7 @@ def build_title_page(s, W):
     ], [
         Paragraph("Technical Documentation", s["DocSubtitle"]),
     ], [
-        Paragraph("Version 0.1.0  ·  April 2026", s["DocVersion"]),
+        Paragraph("Version 1.0.0  ·  April 2026", s["DocVersion"]),
     ]]
     title_style = TableStyle([
         ("BACKGROUND",    (0, 0), (-1, -1), NAVY),
@@ -1085,7 +1085,7 @@ def build_deployment(s):
     story.append(Spacer(1, 12))
     story.append(HRFlowable(width="100%", thickness=1, color=BLUE, spaceAfter=8))
     story.append(Paragraph(
-        "CivicRecords AI v0.1.0  ·  Apache License 2.0  ·  "
+        "CivicRecords AI v1.0.0  ·  Apache License 2.0  ·  "
         "https://github.com/scottconverse/civicrecords-ai",
         ParagraphStyle("FootNote", parent=s["Body"], fontSize=9,
                        textColor=GRAY, alignment=TA_CENTER)))
@@ -1105,7 +1105,7 @@ def main():
         rightMargin=inch,
         topMargin=inch,
         bottomMargin=0.75 * inch,
-        title="CivicRecords AI — Technical Documentation v0.1.0",
+        title="CivicRecords AI — Technical Documentation v1.0.0",
         author="CivicRecords AI Project",
         subject="Technical Reference",
     )

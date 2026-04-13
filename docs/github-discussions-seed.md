@@ -8,7 +8,7 @@ Hey everyone! 👋
 
 CivicRecords AI is an open-source, locally-hosted AI system that helps municipal staff respond to open records requests (FOIA, CORA, and state equivalents). Every piece of data stays on your city's own hardware — no cloud, no subscriptions, no vendor lock-in.
 
-**Current status:** v0.1.0 — feature-complete MVP with:
+**Current status:** v1.0.0 — production-ready release with:
 - Hybrid AI search (semantic + keyword) across ingested city documents
 - Records request tracking with statutory deadline management
 - Exemption detection (PII regex + state-specific keyword rules + optional LLM)

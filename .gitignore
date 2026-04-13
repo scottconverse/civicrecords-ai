@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+.pytest_cache/
 *.pyc
 *.pyo
 *.egg-info/
@@ -30,3 +31,6 @@ Thumbs.db
 # Superpowers
 .superpowers/
 .~lock.*
+
+# Claude Code
+.claude/

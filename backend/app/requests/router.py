@@ -693,7 +693,7 @@ async def _try_llm_generation(
 )
 async def generate_response_letter(
     request_id: uuid.UUID,
-    data: ResponseLetterCreate,
+    data: ResponseLetterCreate | None = None,
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(require_role(UserRole.STAFF)),
 ):
