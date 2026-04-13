@@ -1,10 +1,13 @@
 import tempfile
+import zipfile
 from pathlib import Path
 import pytest
 from app.ingestion.parsers import detect_parser, is_image_file
 from app.ingestion.parsers.text import TextParser
 from app.ingestion.parsers.csv_parser import CsvParser
 from app.ingestion.parsers.html import HtmlParser
+from app.ingestion.parsers.docx import DocxParser
+from app.ingestion.parsers.xlsx import XlsxParser
 
 def test_text_parser():
     with tempfile.NamedTemporaryFile(suffix=".txt", mode="w", delete=False, encoding="utf-8") as f:
@@ -52,3 +55,113 @@ def test_is_image_file():
     assert is_image_file(Path("photo.png")) is True
     assert is_image_file(Path("doc.pdf")) is False
     assert is_image_file(Path("file.txt")) is False
+
+
+# --- DOCX macro stripping tests ---
+
+def _create_docx(path: Path, text: str = "Test paragraph"):
+    """Create a minimal valid .docx file using python-docx."""
+    from docx import Document as DocxDocument
+    doc = DocxDocument()
+    doc.add_paragraph(text)
+    doc.save(str(path))
+
+
+def _inject_vba_entry(docx_path: Path, entry_name: str = "word/vbaProject.bin"):
+    """Inject a fake VBA entry into an existing .docx ZIP archive."""
+    tmp = docx_path.with_suffix(".tmp")
+    with zipfile.ZipFile(docx_path, "r") as zin:
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.namelist():
+                zout.writestr(item, zin.read(item))
+            zout.writestr(entry_name, b"FAKE_VBA_MACRO_CONTENT")
+    tmp.replace(docx_path)
+
+
+def test_docx_parser_basic():
+    """DocxParser extracts text from a clean .docx file."""
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / "test.docx"
+        _create_docx(path, "Hello from DOCX parser test")
+        parser = DocxParser()
+        result = parser.parse(path)
+        assert "Hello from DOCX parser test" in result.full_text
+        assert result.metadata["paragraph_count"] >= 1
+        assert "macros_stripped" not in result.metadata
+
+
+def test_docx_macro_stripping():
+    """DocxParser strips VBA macros and sets metadata flag."""
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / "macro.docx"
+        _create_docx(path, "Content with macros")
+        _inject_vba_entry(path, "word/vbaProject.bin")
+        # Confirm the VBA entry is in the file
+        with zipfile.ZipFile(path) as z:
+            assert "word/vbaProject.bin" in z.namelist()
+        parser = DocxParser()
+        result = parser.parse(path)
+        assert "Content with macros" in result.full_text
+        assert result.metadata["macros_stripped"] is True
+        assert "word/vbaProject.bin" in result.metadata["stripped_entries"]
+
+
+def test_docx_clean_file_no_stripping():
+    """Clean .docx has no macros_stripped metadata."""
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / "clean.docx"
+        _create_docx(path, "Clean document")
+        parser = DocxParser()
+        result = parser.parse(path)
+        assert result.metadata.get("macros_stripped") is None
+
+
+# --- XLSX macro stripping tests ---
+
+def _create_xlsx(path: Path, data: list[list[str]] | None = None):
+    """Create a minimal valid .xlsx file using openpyxl."""
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    for row in (data or [["Name", "Value"], ["Test", "123"]]):
+        ws.append(row)
+    wb.save(str(path))
+
+
+def _inject_xlsx_vba(xlsx_path: Path):
+    """Inject a fake VBA entry into an existing .xlsx ZIP archive."""
+    tmp = xlsx_path.with_suffix(".tmp")
+    with zipfile.ZipFile(xlsx_path, "r") as zin:
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.namelist():
+                zout.writestr(item, zin.read(item))
+            zout.writestr("xl/vbaProject.bin", b"FAKE_VBA_MACRO_CONTENT")
+    tmp.replace(xlsx_path)
+
+
+def test_xlsx_parser_basic():
+    """XlsxParser extracts text from a clean .xlsx file."""
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / "test.xlsx"
+        _create_xlsx(path, [["City", "State"], ["Denver", "CO"]])
+        parser = XlsxParser()
+        result = parser.parse(path)
+        assert "Denver" in result.full_text
+        assert result.metadata["sheet_count"] == 1
+        assert "macros_stripped" not in result.metadata
+
+
+def test_xlsx_macro_stripping():
+    """XlsxParser strips VBA macros and sets metadata flag."""
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / "macro.xlsx"
+        _create_xlsx(path, [["Data", "Here"]])
+        _inject_xlsx_vba(path)
+        with zipfile.ZipFile(path) as z:
+            assert "xl/vbaProject.bin" in z.namelist()
+        parser = XlsxParser()
+        result = parser.parse(path)
+        assert "Data" in result.full_text
+        assert result.metadata["macros_stripped"] is True
+        assert "xl/vbaProject.bin" in result.metadata["stripped_entries"]

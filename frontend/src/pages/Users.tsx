@@ -35,6 +35,11 @@ interface User {
   department_id: string | null;
 }
 
+interface Department {
+  id: string;
+  name: string;
+}
+
 const ROLE_COLORS: Record<string, string> = {
   admin: "bg-purple-100 text-purple-800",
   staff: "bg-green-100 text-green-800",
@@ -54,6 +59,7 @@ function formatLastLogin(dateStr: string | null): string {
 
 export default function Users({ token }: { token: string }) {
   const [users, setUsers] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -72,7 +78,14 @@ export default function Users({ token }: { token: string }) {
     }
   };
 
-  useEffect(() => { loadData(); }, [token]);
+  useEffect(() => {
+    loadData();
+    apiFetch<Department[]>("/departments/", { token })
+      .then(setDepartments)
+      .catch(() => setDepartments([]));
+  }, [token]);
+
+  const deptMap = new Map(departments.map((d) => [d.id, d.name]));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +137,7 @@ export default function Users({ token }: { token: string }) {
       header: "Department",
       render: (u) => (
         <span className="text-sm text-muted-foreground">
-          {u.department_id ? u.department_id.toString().slice(0, 8) + "..." : "None"}
+          {u.department_id ? deptMap.get(u.department_id) || "Unknown" : "Unassigned"}
         </span>
       ),
     },

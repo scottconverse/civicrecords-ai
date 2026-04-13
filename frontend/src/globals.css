@@ -42,15 +42,15 @@
     @apply border-border;
   }
 
-  /* WCAG 2.2 AA: 44px minimum touch target for interactive elements */
+  /* WCAG 2.2 AA: 44×44px minimum touch target for interactive elements */
   button,
   [role="button"],
   input:not([type="hidden"]),
   select,
   textarea,
-  a.nav-link,
   [tabindex]:not([tabindex="-1"]) {
     min-height: 44px;
+    min-width: 44px;
   }
 
   input:not([type="hidden"]),
