@@ -22,6 +22,7 @@ class ExemptionRuleRead(BaseModel):
     rule_definition: str
     description: str | None
     enabled: bool
+    version: int = 1
     created_by: uuid.UUID
     created_at: datetime
     model_config = {"from_attributes": True}
