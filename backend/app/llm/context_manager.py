@@ -2,8 +2,13 @@
 
 Assembles prompts within configurable token budgets for Ollama.
 Adapted from context-mode architectural patterns.
+
+Includes prompt injection defense: document content is sanitized before
+inclusion in LLM prompts to prevent adversarial text from manipulating
+model behavior.
 """
 
+import re
 from dataclasses import dataclass, field
 
 
@@ -47,6 +52,65 @@ class ContextBlock:
 def estimate_tokens(text: str) -> int:
     """Rough token estimate: 1 token ~ 4 characters."""
     return max(1, len(text) // 4)
+
+
+# ── Prompt Injection Defense ──────────────────────────────────────────────────
+
+# Patterns that attempt to override system instructions or inject new roles
+_ROLE_OVERRIDE_PATTERNS = re.compile(
+    r"(?:ignore\s+(?:previous|above|all)\s+instructions"
+    r"|you\s+are\s+now\s+(?:a|an|the)\b"
+    r"|forget\s+(?:everything|your|all)\s+(?:previous|prior)"
+    r"|disregard\s+(?:previous|above|all|your)[\s\w]*(?:instructions|rules|guidelines)"
+    r"|new\s+instructions?\s*:"
+    r"|override\s+(?:system|safety|previous)"
+    r"|act\s+as\s+(?:a|an|if)\b"
+    r"|pretend\s+(?:you\s+are|to\s+be)"
+    r"|from\s+now\s+on\s+you\s+(?:are|will|must|should))",
+    re.IGNORECASE,
+)
+
+# Delimiter injection patterns that try to break out of content boundaries
+_DELIMITER_PATTERNS = re.compile(
+    r"<\|(?:system|user|assistant|im_start|im_end|endoftext)[|>]"
+    r"|```\s*(?:system|instructions?|override)"
+    r"|\[INST\]|\[/INST\]"
+    r"|<<\s*SYS\s*>>|<<\s*/SYS\s*>>"
+    r"|<\s*/?(?:system|instruction|prompt)\s*>",
+    re.IGNORECASE,
+)
+
+# Excessive repetition (common jailbreak technique)
+_REPETITION_PATTERN = re.compile(r"(.{10,}?)\1{4,}")
+
+
+def sanitize_for_llm(text: str) -> str:
+    """Sanitize document content before inclusion in LLM prompts.
+
+    Strips or neutralizes patterns that could manipulate LLM behavior:
+    - Role override phrases ("ignore previous instructions", "you are now", etc.)
+    - Delimiter injection (<|system|>, [INST], <<SYS>>, etc.)
+    - Excessive repetition (repeated strings used to overwhelm context)
+
+    This is a defense-in-depth measure. It does not guarantee safety against
+    all adversarial inputs, but raises the bar significantly against known
+    prompt injection techniques found in documents.
+    """
+    if not text:
+        return text
+
+    # Replace role override attempts with a neutralized marker
+    sanitized = _ROLE_OVERRIDE_PATTERNS.sub("[CONTENT FILTERED]", text)
+
+    # Replace delimiter injection attempts
+    sanitized = _DELIMITER_PATTERNS.sub("[CONTENT FILTERED]", sanitized)
+
+    # Collapse excessive repetition to a single instance + note
+    sanitized = _REPETITION_PATTERN.sub(
+        lambda m: m.group(1) + " [REPEATED CONTENT TRUNCATED]", sanitized
+    )
+
+    return sanitized
 
 
 def assemble_context(
@@ -94,10 +158,11 @@ def assemble_context(
             tokens_used += req_block.estimated_tokens
 
     # 3. Retrieved chunks (top-k that fit)
+    # Chunks come from document content — sanitize before LLM inclusion
     if chunks:
         chunk_budget = budget.retrieved_chunks
         for chunk_text in chunks:
-            block = ContextBlock("chunk", chunk_text)
+            block = ContextBlock("chunk", sanitize_for_llm(chunk_text))
             if block.estimated_tokens <= chunk_budget:
                 blocks.append(block)
                 chunk_budget -= block.estimated_tokens
@@ -106,10 +171,11 @@ def assemble_context(
                 break  # Budget exhausted
 
     # 4. Exemption rules
+    # Rules are admin-configured but sanitize defensively
     if exemption_rules:
         rule_budget = budget.exemption_rules
         for rule_text in exemption_rules:
-            block = ContextBlock("rule", rule_text)
+            block = ContextBlock("rule", sanitize_for_llm(rule_text))
             if block.estimated_tokens <= rule_budget:
                 blocks.append(block)
                 rule_budget -= block.estimated_tokens

@@ -8,9 +8,9 @@
 
 | Status | Count |
 |--------|-------|
-| Built | 7 |
+| Built | 8 |
 | Partial | 8 |
-| Missing | 1 |
+| Missing | 0 |
 
 ## Detailed Findings
 
@@ -144,13 +144,15 @@
 
 ### 8. Prompt Injection Defense
 
-**Status: Missing**
-**Notes:** No prompt injection defense code exists in the codebase. Searched for: `prompt injection`, `sanitize` (in LLM context), `injection defense`, `content sanitization`, `escape_content`, `clean_text`, `strip_injection`. The only hits were:
-- A PDF generation script that mentions "prompt injection" as a feature claim in documentation (not actual code)
-- A `datasources/router.py` filename sanitization (path traversal defense, not LLM injection)
-- The LLM context manager assembles prompts but does not sanitize document content before inclusion
+**Status: Built** (completed 2026-04-13)
+**File:** `backend/app/llm/context_manager.py`
+**Tests:** `backend/tests/test_prompt_injection.py` (19 tests)
+**Notes:** `sanitize_for_llm()` function added. Strips three categories of injection patterns before document content enters LLM prompts:
+- Role override phrases ("ignore previous instructions", "you are now", "pretend you are", "disregard", "act as if", "from now on you")
+- Delimiter injection (`<|system|>`, `[INST]`, `<<SYS>>`, `<system>`, `` ```system ``)
+- Excessive repetition (common jailbreak technique — collapsed to single instance)
 
-Document text from `document_chunks` is passed directly into LLM prompts without any sanitization layer. This is a security gap.
+Applied to all document chunks and exemption rules in `assemble_context()`. System prompts are NOT sanitized (trusted content). Normal document text, legal language, and technical content pass through unchanged. 19 tests verify both filtering and preservation behavior.
 
 ---
 
@@ -266,7 +268,7 @@ Document text from `document_chunks` is passed directly into LLM prompts without
 
 ## Reconciliation Backlog (prioritized)
 
-1. **P0 — Prompt Injection Defense:** Add content sanitization layer in `app/llm/context_manager.py` that strips/escapes potential injection patterns from document chunks before LLM prompt assembly.
+1. ~~**P0 — Prompt Injection Defense:** COMPLETED 2026-04-13. `sanitize_for_llm()` in `context_manager.py`, 19 tests.~~
 
 2. **P0 — Add `liaison` and `public` roles** to `UserRole` enum in `backend/app/models/user.py`. Update auth dependencies to handle new roles.
 
