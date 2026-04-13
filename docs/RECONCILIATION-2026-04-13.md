@@ -291,3 +291,16 @@ Applied to all document chunks and exemption rules in `assemble_context()`. Syst
 10. ~~**P2 — Manual/Export Drop Connector:** COMPLETED 2026-04-13. ManualDropConnector (`app/connectors/manual_drop.py`) with extension allowlist, 100MB size limit, archive to _processed/, recursive scan option. 17 tests.~~
 
 11. ~~**P2 — WCAG touch targets:** COMPLETED 2026-04-13. Added `min-height: 44px` to all interactive elements (button, input, select, textarea, [role="button"]) in globals.css. Verified in browser — 0 violations (skip-to-content link is intentionally 1x1px per WCAG pattern).~~
+
+---
+
+## Open Items — Scope Assigned, Not Yet Built
+
+These items were identified during audit and reconciliation but have no milestone assignment. All are P2-class (no workflow blockers, no security risk, quality improvements). Assigned here so they don't get buried when Phase 3 starts.
+
+| # | Item | Source | Scope | Notes |
+|---|------|--------|-------|-------|
+| 12 | **Embedded macro stripping for DOCX/XLSX** | IMAP connector audit (reconciliation item 6 gap note) | **Pre-Phase 3** | DOCX/XLSX files pass the MIME allowlist but VBA macros are not stripped before ingestion. Mitigated by: macros don't execute in text extraction, downstream sanitize_for_llm() handles content injection. Full fix requires python-docx/openpyxl VBA removal. |
+| 13 | **Department UUID-to-name resolution in Users table** | QA audit Finding 3 follow-up | **Pre-Phase 3** | Users page Department column renders UUID fragment ("a3f8c1b2...") instead of department name. Fix: fetch department list on page load, resolve UUID to name in the table cell. |
+| 14 | **WCAG 44px width audit** | WCAG reconciliation item 11 caveat | **Pre-Phase 3** | Current fix enforces min-height: 44px globally. WCAG 2.2 AA requires 44x44px (height AND width). Inline elements, icon-only buttons, and narrow inputs could still be under 44px wide. Requires a targeted audit of icon buttons and compact UI elements. |
+| 15 | **Public API endpoints** | Reconciliation item 3 (P0) | **Phase 3 (v1.1)** | Unauthenticated endpoints for citizen-facing portal: request submission, status lookup, published records search. Deliberately deferred per CC-005. Opening item of Phase 3 build. |
