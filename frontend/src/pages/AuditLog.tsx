@@ -114,11 +114,22 @@ export default function AuditLog({ token }: { token: string }) {
         actions={
           <Button
             variant="outline"
-            onClick={() => {
-              const link = document.createElement("a");
-              link.href = `/api/audit/export`;
-              link.download = "audit-log.csv";
-              link.click();
+            onClick={async () => {
+              try {
+                const res = await fetch(`/api/audit/export?format=csv`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = "audit-log.csv";
+                link.click();
+                URL.revokeObjectURL(url);
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "Export failed");
+              }
             }}
           >
             <Download className="h-4 w-4 mr-2" />

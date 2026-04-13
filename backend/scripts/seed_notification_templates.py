@@ -51,6 +51,37 @@ NOTIFICATION_TEMPLATES = [
         "subject_template": "Request Closed — {request_id}",
         "body_template": "Dear {requester_name},\n\nYour records request {request_id} has been closed. If you have questions about this request or need additional records, please submit a new request.\n\nThank you,\n{city_name} Records Office",
     },
+    # --- Templates for status transitions dispatched by the router ---
+    {
+        "event_type": "request_searching",
+        "channel": "email",
+        "subject_template": "Search In Progress — Records Request {request_id}",
+        "body_template": "Dear {requester_name},\n\nWe are actively searching for records responsive to your request {request_id}. You will be notified when the search is complete.\n\nThank you,\n{city_name} Records Office",
+    },
+    {
+        "event_type": "request_in_review",
+        "channel": "email",
+        "subject_template": "Under Review — Records Request {request_id}",
+        "body_template": "Dear {requester_name},\n\nYour records request {request_id} is now under review. Our team is examining the responsive documents for any applicable exemptions before release.\n\nThank you,\n{city_name} Records Office",
+    },
+    {
+        "event_type": "request_ready_for_release",
+        "channel": "in_app",
+        "subject_template": "Ready for Release — {request_id}",
+        "body_template": "Records request {request_id} has been marked ready for release and is awaiting final approval.",
+    },
+    {
+        "event_type": "request_approved",
+        "channel": "email",
+        "subject_template": "Request Approved — Records Request {request_id}",
+        "body_template": "Dear {requester_name},\n\nYour records request {request_id} has been approved for release. You will receive the responsive documents shortly.\n\nThank you,\n{city_name} Records Office",
+    },
+    {
+        "event_type": "request_drafted",
+        "channel": "in_app",
+        "subject_template": "Response Drafted — {request_id}",
+        "body_template": "A draft response has been prepared for records request {request_id}. Please review and revise before submitting for approval.",
+    },
 ]
 
 
