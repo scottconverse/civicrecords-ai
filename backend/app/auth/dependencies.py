@@ -32,3 +32,20 @@ def require_role(minimum_role: UserRole):
         return user
 
     return _check_role
+
+
+def check_department_access(user: User, resource_department_id: uuid.UUID | None) -> None:
+    """Raise 403 if non-admin user tries to access resource in another department.
+
+    Call this in endpoint logic after loading the resource.
+    Shared resources (department_id=None) are accessible to everyone.
+    """
+    if user.role == UserRole.ADMIN:
+        return
+    if resource_department_id is None:
+        return  # shared resource
+    if user.department_id != resource_department_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: resource belongs to another department",
+        )
