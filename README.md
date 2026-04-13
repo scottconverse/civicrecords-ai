@@ -18,9 +18,9 @@ No open-source tool exists for the **responder side** of open records at the mun
 - **Request Management** — Full lifecycle tracking with 11 statuses: intake, clarification, assignment, search, review, drafting, approval, fulfillment, closure. Timeline, messaging, fee tracking, and response letter generation
 - **Guided Onboarding** — 3-phase wizard helps cities configure their profile, identify data systems across 12 municipal domains, and surface coverage gaps
 - **Municipal Systems Catalog** — Curated knowledge base of 25+ municipal software vendors across 12 functional domains (finance, public safety, permitting, HR, etc.) with discovery hints and connector templates
-- **Universal Connector Framework** — Standardized protocol (authenticate/discover/fetch/health_check) for connecting to city data sources. File system connector included; Phase 3 adds SQL databases (PostgreSQL, MySQL, MSSQL, SQLite), IMAP email, SMB/NFS file shares, SharePoint, and REST API connectors
+- **Universal Connector Framework** — Standardized protocol (authenticate/discover/fetch/health_check) for connecting to city data sources. File system connector built; SMTP/IMAP email and manual export drop connectors planned for MVP. SQL databases, SMB/NFS, SharePoint, and REST API connectors planned for v1.1+
 - **Operational Analytics** — Real-time metrics: average response time, deadline compliance rate, overdue requests, status breakdown
-- **Notification Service** — Template-based notification system for request lifecycle events
+- **Notification Service** — Template-based notification system for request lifecycle events (template CRUD and queue built; SMTP email delivery not yet implemented)
 - **Compliance by Design** — Hash-chained audit logs, human-in-the-loop enforcement, AI content labeling, data sovereignty verification. Designed for Colorado CAIA and 50-state regulatory compliance. CJIS compliance gate for public safety connectors
 - **Civic Design System** — Professional UI built with shadcn/ui, civic blue design tokens, sidebar navigation. WCAG 2.2 AA targeted (44px touch targets, skip navigation, icon+color status badges — accessibility audit pending)
 - **Federation-Ready** — REST API with service accounts enables future cross-jurisdiction record discovery between CivicRecords AI instances
