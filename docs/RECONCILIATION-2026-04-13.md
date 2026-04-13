@@ -8,8 +8,8 @@
 
 | Status | Count |
 |--------|-------|
-| Built | 8 |
-| Partial | 8 |
+| Built | 16 |
+| Partial | 0 |
 | Missing | 0 |
 
 ## Detailed Findings
@@ -59,10 +59,10 @@
 | Workflow API | `app/requests/` | `backend/app/requests/router.py` exists with full CRUD, timeline, messages, fees, response letters | Built |
 | Audit Logger | `app/audit/` | `backend/app/audit/` exists, `write_audit_log` used throughout | Built |
 | LLM Abstraction | `app/llm/` | `backend/app/llm/` exists with `context_manager.py` | Built |
-| Exemption Engine | `app/exemptions/` | `backend/app/exemptions/` exists with `engine.py`, `patterns.py`, `llm_reviewer.py`, `router.py` | Partial (see notes) |
+| Exemption Engine | `app/exemptions/` | `backend/app/exemptions/` exists with `engine.py`, `patterns.py`, `llm_reviewer.py`, `router.py`. Dashboard time-period filtering and rule version tracking added 2026-04-13. | Built (updated 2026-04-13) |
 | Context Manager | Token budgeting | `backend/app/llm/context_manager.py` with `TokenBudget` dataclass and `assemble_context()` | Built |
-| Notification Service | `app/notifications/` | `backend/app/notifications/` exists with `router.py` (template CRUD) and `service.py` (queue only) | Partial |
-| Fee Tracking | Fee endpoints | Fee line item endpoints exist on requests router (`/{request_id}/fees`) | Partial |
+| Notification Service | `app/notifications/` | Template CRUD, queue service, SMTP delivery via `smtp_delivery.py`, Celery beat task every 60s. Added 2026-04-13. | Built (updated 2026-04-13) |
+| Fee Tracking | Fee endpoints | Fee line item endpoints on requests router + fee schedules CRUD at `/admin/fee-schedules`. Added 2026-04-13. | Built (updated 2026-04-13) |
 | Response Generator | Response letter generation | Full implementation: template-based + Ollama LLM generation, CRUD for letters, approval workflow | Built |
 | Analytics API | `app/analytics/` | `backend/app/analytics/router.py` exists | Built |
 | Federation API | `app/service_accounts/` | `backend/app/service_accounts/` exists with router | Built |
@@ -129,17 +129,19 @@
 
 ### 6. FEE_SCHEDULES Table
 
-**Status: Partial**
-**File:** `backend/app/models/fees.py`
-**Notes:** The `FeeSchedule` model exists with proper fields (jurisdiction, fee_type, amount, description, effective_date, created_by). The `FeeLineItem` model references it via `fee_schedule_id` FK. However, there are NO dedicated CRUD endpoints for `fee_schedules`. The only fee endpoints are on the requests router (`/{request_id}/fees`) which manage `FeeLineItem` records. An admin needs CRUD endpoints to manage the fee schedule catalog itself (create/list/update/delete fee schedule entries).
+**Status: Built** (completed 2026-04-13)
+**Files:** `backend/app/models/fees.py`, `backend/app/admin/router.py`, `backend/app/schemas/fee_schedule.py`
+**Tests:** `backend/tests/test_fee_schedules.py` (5 tests)
+**Notes:** `FeeSchedule` model exists with CRUD endpoints at `GET/POST/PATCH/DELETE /admin/fee-schedules` (admin only, audit-logged). `FeeLineItem` endpoints remain on the requests router. Both models fully accessible via API.
 
 ---
 
 ### 7. Notification — Actual Email
 
-**Status: Partial**
-**File:** `backend/app/notifications/service.py`
-**Notes:** The notification service (`queue_notification()`) renders templates and creates `NotificationLog` entries with status "queued", but does NOT actually send email. The code explicitly comments: "Actual delivery (SMTP, etc.) will be handled by a Celery task once configured." No SMTP, smtplib, aiosmtplib, or sendmail code exists anywhere in the codebase. Email delivery is stubbed out.
+**Status: Built** (completed 2026-04-13)
+**Files:** `backend/app/notifications/smtp_delivery.py`, `backend/app/notifications/service.py`, `backend/app/ingestion/scheduler.py`
+**Tests:** `backend/tests/test_smtp_delivery.py` (6 tests)
+**Notes:** `send_email()` handles TLS/non-TLS, authenticated/unauthenticated SMTP. `deliver_queued_notifications()` processes all status="queued" entries, marks sent/failed with timestamps. Celery beat task fires every 60 seconds. SMTP settings in config.py (host, port, username, password, from_email, use_tls). NotificationLog model has subject/body fields for rendered content storage.
 
 ---
 
@@ -162,37 +164,38 @@ Applied to all document chunks and exemption rules in `assemble_context()`. Syst
 | Spec Requires (MVP-NOW) | Code Reality | Status |
 |--------------------------|-------------|--------|
 | File System/SMB | `backend/app/connectors/file_system.py` | Built |
-| SMTP/IMAP | Not implemented | Missing |
-| Manual/Export Drop | Not implemented | Missing |
+| SMTP/IMAP | `backend/app/connectors/imap_email.py` | Built (2026-04-13) |
+| Manual/Export Drop | `backend/app/connectors/manual_drop.py` | Built (2026-04-13) |
 | Base class | `backend/app/connectors/base.py` | Built |
 
-**Status: Partial**
-**Files:** `backend/app/connectors/base.py`, `backend/app/connectors/file_system.py`
-**Notes:** Only the File System connector is implemented. The base class defines the connector interface (abstract methods for `connector_type`, `test_connection`, `list_files`, `read_file`). SMTP/IMAP and Manual/Export Drop connectors are missing. The base class mentions `smtp` as a type identifier in its docstring but no implementation exists.
+**Status: Built** (completed 2026-04-13)
+**Files:** `base.py`, `file_system.py`, `imap_email.py`, `manual_drop.py`
+**Tests:** `test_imap_connector.py` (28 tests), `test_manual_drop.py` (19 tests)
+**Notes:** All three MVP-NOW connectors implemented with full connector protocol (authenticate/discover/fetch/health_check). IMAP connector has MIME allowlist, extension blocklist, 50MB size cap, asyncio.to_thread() for non-blocking I/O. Manual drop has extension allowlist, 100MB limit, archive-on-process. Both wired into task_ingest_source dispatch with integration tests. Known gap: embedded macro stripping deferred (item 12).
 
 ---
 
 ### 9a. Exemption Dashboard Time-Period Filtering
 
-**Status: Partial**
+**Status: Built** (completed 2026-04-13)
 **File:** `backend/app/exemptions/router.py`
-**Notes:** The canonical spec (Section 9, Compliance) requires the exemption auditability dashboard to show "flag acceptance/rejection rates by category, department, and time period." The `GET /exemptions/dashboard/accuracy` endpoint supports filtering by `category` (via aggregation) and `department_id` (via query parameter), but has NO time period filtering. There are no `date_from`, `date_to`, `time_period`, or date range parameters on the accuracy or export endpoints. This was identified during development and marked [SHIPPED] anyway.
+**Notes:** `date_from` and `date_to` query parameters added to both `GET /exemptions/dashboard/accuracy` and `GET /exemptions/dashboard/export`. Filters on `ExemptionFlag.created_at`. All three dimensions now supported: category, department, and time period.
 
 ---
 
 ### 9b. Exemption Rule Version Tracking
 
-**Status: Partial**
-**File:** `backend/app/models/exemption.py`
-**Notes:** The canonical spec (Section 9, Compliance) requires "documentation of exemption rule sources with version tracking." The `ExemptionRule` model has no `version` field — changes are tracked only via audit log entries (which record old and new values when a rule is updated). The `version` field exists on `DisclosureTemplate` but NOT on `ExemptionRule`. True version tracking would require a version column that increments on each rule definition change, enabling rollback and historical comparison. Currently only audit log provides change history, with no structured versioning.
+**Status: Built** (completed 2026-04-13)
+**Files:** `backend/app/models/exemption.py`, `backend/app/exemptions/router.py`, `backend/app/schemas/exemption.py`
+**Notes:** `version` integer field added to `ExemptionRule` model (default 1). `update_rule()` endpoint increments `rule.version` on every update. `ExemptionRuleRead` schema exposes the version field. Combined with audit log entries, provides both structured versioning and change history.
 
 ---
 
 ### 9c. scope_assessment Field
 
-**Status: Partial**
-**File:** `backend/app/models/request.py`
-**Notes:** The canonical spec marks `scope_assessment` as [MVP-NOW] on `records_requests` with values narrow/moderate/broad. The field EXISTS on the `RecordsRequest` model. However, API endpoint coverage for setting and reading this field has not been verified — the `RequestCreate` and `RequestUpdate` schemas may or may not expose it. Field exists in database; endpoint access status unknown.
+**Status: Built** (completed 2026-04-13)
+**Files:** `backend/app/schemas/request.py`, `backend/app/requests/router.py`
+**Notes:** `scope_assessment` added to `RequestCreate` (with regex pattern validation: narrow|moderate|broad), `RequestRead`, and `RequestUpdate`. Router passes it through on both create and update. Also wired `requester_phone`, `requester_type`, and `priority` on create which were in the schema but not passed through.
 
 ---
 
