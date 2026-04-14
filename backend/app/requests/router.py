@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -704,6 +705,176 @@ async def add_fee(
         details={"description": fee.description, "total": float(item.total)},
     )
     return item
+
+
+# ---------------------------------------------------------------------------
+# Fee estimation & waivers
+# ---------------------------------------------------------------------------
+
+
+class FeeEstimateRequest(BaseModel):
+    page_count: int
+    fee_schedule_id: uuid.UUID
+
+
+class FeeEstimateResponse(BaseModel):
+    page_count: int
+    unit_price: float
+    total: float
+    fee_type: str
+    description: str
+
+
+@router.post("/{request_id}/estimate-fees", response_model=FeeEstimateResponse)
+async def estimate_fees(
+    request_id: uuid.UUID,
+    body: FeeEstimateRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.STAFF)),
+):
+    """Estimate fees based on staff-entered page count and fee schedule.
+
+    Page count is a manual staff estimate — not inferred from ingested docs.
+    """
+    from app.models.fees import FeeSchedule
+
+    req = await session.get(RecordsRequest, request_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    check_department_access(user, req.department_id)
+
+    schedule = await session.get(FeeSchedule, body.fee_schedule_id)
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Fee schedule not found")
+
+    total = round(body.page_count * float(schedule.amount), 2)
+
+    return FeeEstimateResponse(
+        page_count=body.page_count,
+        unit_price=float(schedule.amount),
+        total=total,
+        fee_type=schedule.fee_type,
+        description=schedule.description or f"{schedule.fee_type} @ ${schedule.amount}/unit",
+    )
+
+
+class FeeWaiverCreateRequest(BaseModel):
+    waiver_type: str  # indigency/public_interest/media/government/other
+    reason: str
+
+
+class FeeWaiverReadResponse(BaseModel):
+    id: uuid.UUID
+    request_id: uuid.UUID
+    waiver_type: str
+    reason: str
+    status: str
+    review_notes: str | None = None
+    created_at: str
+
+    model_config = {"from_attributes": True}
+
+
+class FeeWaiverReviewRequest(BaseModel):
+    status: str  # approved/denied
+    review_notes: str | None = None
+
+
+@router.post("/{request_id}/fee-waiver", response_model=FeeWaiverReadResponse, status_code=201)
+async def create_fee_waiver(
+    request_id: uuid.UUID,
+    body: FeeWaiverCreateRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.STAFF)),
+):
+    """Request a fee waiver for this records request."""
+    from app.models.fees import FeeWaiver
+
+    req = await session.get(RecordsRequest, request_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    check_department_access(user, req.department_id)
+
+    if body.waiver_type not in ("indigency", "public_interest", "media", "government", "other"):
+        raise HTTPException(status_code=422, detail=f"Invalid waiver_type: {body.waiver_type}")
+
+    waiver = FeeWaiver(
+        request_id=request_id,
+        waiver_type=body.waiver_type,
+        reason=body.reason,
+        requested_by=user.id,
+    )
+    session.add(waiver)
+    await session.commit()
+    await session.refresh(waiver)
+
+    await write_audit_log(
+        session=session, action="fee_waiver_requested", resource_type="request",
+        resource_id=str(request_id), user_id=user.id,
+        details={"waiver_type": body.waiver_type},
+    )
+
+    return FeeWaiverReadResponse(
+        id=waiver.id,
+        request_id=waiver.request_id,
+        waiver_type=waiver.waiver_type,
+        reason=waiver.reason,
+        status=waiver.status,
+        review_notes=waiver.review_notes,
+        created_at=waiver.created_at.isoformat(),
+    )
+
+
+@router.patch("/{request_id}/fee-waiver/{waiver_id}", response_model=FeeWaiverReadResponse)
+async def review_fee_waiver(
+    request_id: uuid.UUID,
+    waiver_id: uuid.UUID,
+    body: FeeWaiverReviewRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.REVIEWER)),
+):
+    """Approve or deny a fee waiver. Reviewer/Admin only."""
+    from datetime import datetime, timezone
+    from app.models.fees import FeeWaiver
+
+    req = await session.get(RecordsRequest, request_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    waiver = await session.get(FeeWaiver, waiver_id)
+    if not waiver or waiver.request_id != request_id:
+        raise HTTPException(status_code=404, detail="Fee waiver not found")
+
+    if body.status not in ("approved", "denied"):
+        raise HTTPException(status_code=422, detail="Status must be 'approved' or 'denied'")
+
+    waiver.status = body.status
+    waiver.review_notes = body.review_notes
+    waiver.reviewed_by = user.id
+    waiver.reviewed_at = datetime.now(timezone.utc)
+
+    # If approved, update the request's fee_status
+    if body.status == "approved":
+        req.fee_status = "waived"
+
+    await session.commit()
+    await session.refresh(waiver)
+
+    await write_audit_log(
+        session=session, action=f"fee_waiver_{body.status}", resource_type="request",
+        resource_id=str(request_id), user_id=user.id,
+        details={"waiver_id": str(waiver_id), "status": body.status},
+    )
+
+    return FeeWaiverReadResponse(
+        id=waiver.id,
+        request_id=waiver.request_id,
+        waiver_type=waiver.waiver_type,
+        reason=waiver.reason,
+        status=waiver.status,
+        review_notes=waiver.review_notes,
+        created_at=waiver.created_at.isoformat(),
+    )
 
 
 # ---------------------------------------------------------------------------

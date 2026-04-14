@@ -8,7 +8,7 @@ from app.models.user import Base, User, UserRole
 
 # Phase 2 models
 from app.models.departments import Department
-from app.models.fees import FeeSchedule, FeeLineItem
+from app.models.fees import FeeSchedule, FeeLineItem, FeeWaiver
 from app.models.request_workflow import RequestTimeline, RequestMessage, ResponseLetter
 from app.models.notifications import NotificationTemplate, NotificationLog
 from app.models.prompts import PromptTemplate
@@ -23,7 +23,7 @@ __all__ = [
     "RecordsRequest", "RequestDocument", "DocumentCache", "RequestStatus", "InclusionStatus",
     "ExemptionRule", "ExemptionFlag", "DisclosureTemplate", "RuleType", "FlagStatus",
     # Phase 2
-    "Department", "FeeSchedule", "FeeLineItem",
+    "Department", "FeeSchedule", "FeeLineItem", "FeeWaiver",
     "RequestTimeline", "RequestMessage", "ResponseLetter",
     "NotificationTemplate", "NotificationLog",
     "PromptTemplate", "CityProfile",
