@@ -21,6 +21,10 @@ import {
   CheckCircle,
   AlertTriangle,
   MapPin,
+  MessageSquare,
+  ClipboardList,
+  Send,
+  SkipForward,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -84,7 +88,81 @@ export default function Onboarding({ token }: { token: string }) {
   const [profile, setProfile] = useState<CityProfile>(loadSavedProfile);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [mode, setMode] = useState<"form" | "interview">("form");
+  const [chatMessages, setChatMessages] = useState<{ role: "ai" | "user"; text: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [currentField, setCurrentField] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const startInterview = async () => {
+    setMode("interview");
+    setChatMessages([]);
+    setChatLoading(true);
+    try {
+      const res = await apiFetch<{ question: string; target_field: string | null; all_complete: boolean }>("/onboarding/interview", {
+        token, method: "POST", body: JSON.stringify({}),
+      });
+      setChatMessages([{ role: "ai", text: res.question }]);
+      setCurrentField(res.target_field);
+      if (res.all_complete) setCurrentField(null);
+    } catch {
+      setChatMessages([{ role: "ai", text: "Welcome! Let's set up your city profile. What is the name of your city?" }]);
+      setCurrentField("city_name");
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const sendAnswer = async () => {
+    if (!chatInput.trim() || !currentField) return;
+    const answer = chatInput.trim();
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", text: answer }]);
+    setChatLoading(true);
+
+    // Update city profile via PATCH
+    try {
+      const body: Record<string, string> = { [currentField]: answer };
+      await apiFetch("/city-profile", { token, method: "PATCH", body: JSON.stringify(body) });
+    } catch {
+      // Profile update failed — continue anyway, will retry on next save
+    }
+
+    // Get next question
+    try {
+      const res = await apiFetch<{ question: string; target_field: string | null; all_complete: boolean }>("/onboarding/interview", {
+        token, method: "POST",
+        body: JSON.stringify({ last_answer: answer, last_field: currentField }),
+      });
+      setChatMessages((prev) => [...prev, { role: "ai", text: res.question }]);
+      setCurrentField(res.target_field);
+      if (res.all_complete) setCurrentField(null);
+    } catch {
+      setChatMessages((prev) => [...prev, { role: "ai", text: "Thanks! Your profile has been updated." }]);
+      setCurrentField(null);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const skipQuestion = async () => {
+    setChatMessages((prev) => [...prev, { role: "user", text: "(skipped)" }]);
+    setChatLoading(true);
+    try {
+      const res = await apiFetch<{ question: string; target_field: string | null; all_complete: boolean }>("/onboarding/interview", {
+        token, method: "POST",
+        body: JSON.stringify({ last_answer: null, last_field: currentField }),
+      });
+      setChatMessages((prev) => [...prev, { role: "ai", text: res.question }]);
+      setCurrentField(res.target_field);
+      if (res.all_complete) setCurrentField(null);
+    } catch {
+      setCurrentField(null);
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   const updateProfile = (updates: Partial<CityProfile>) => {
     setProfile((prev) => ({ ...prev, ...updates }));
@@ -140,8 +218,86 @@ export default function Onboarding({ token }: { token: string }) {
     <div className="space-y-6 max-w-3xl">
       <PageHeader
         title="Welcome to CivicRecords AI"
-        description="Let's set up your city profile. This takes about 15-20 minutes."
+        description="Let's set up your city profile. Choose guided interview or manual form."
       />
+
+      {/* Mode toggle */}
+      <div className="flex gap-2">
+        <Button
+          variant={mode === "form" ? "default" : "outline"}
+          onClick={() => setMode("form")}
+          className="gap-2"
+        >
+          <ClipboardList className="h-4 w-4" />
+          Manual Form
+        </Button>
+        <Button
+          variant={mode === "interview" ? "default" : "outline"}
+          onClick={() => { if (mode !== "interview") startInterview(); }}
+          className="gap-2"
+        >
+          <MessageSquare className="h-4 w-4" />
+          Guided Interview
+        </Button>
+      </div>
+
+      {/* Interview chat UI */}
+      {mode === "interview" && (
+        <Card className="shadow-none">
+          <CardContent className="p-4">
+            <div className="space-y-3 max-h-[400px] overflow-y-auto mb-4">
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-foreground"
+                  }`}>
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-lg px-3 py-2 text-sm text-muted-foreground animate-pulse">
+                    Thinking...
+                  </div>
+                </div>
+              )}
+            </div>
+            {currentField && (
+              <div className="flex gap-2">
+                <Input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAnswer(); } }}
+                  placeholder="Type your answer..."
+                  disabled={chatLoading}
+                  className="flex-1"
+                />
+                <Button onClick={sendAnswer} disabled={chatLoading || !chatInput.trim()} size="icon">
+                  <Send className="h-4 w-4" />
+                </Button>
+                <Button onClick={skipQuestion} disabled={chatLoading} variant="ghost" size="sm" title="Skip this question">
+                  <SkipForward className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            {!currentField && chatMessages.length > 0 && (
+              <div className="text-center">
+                <Button onClick={() => navigate("/city-profile")} className="gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  View City Profile
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Form mode — Progress steps */}
+      {mode === "form" && (
+      <>
 
       {/* Progress steps */}
       <div className="flex items-center gap-2">
@@ -367,6 +523,9 @@ export default function Onboarding({ token }: { token: string }) {
           {step < 3 && <ChevronRight className="h-4 w-4 ml-1" />}
         </Button>
       </div>
+
+      </>
+      )}
     </div>
   );
 }

@@ -147,6 +147,9 @@ def create_app() -> FastAPI:
     from app.city_profile.router import router as city_profile_router
     app.include_router(city_profile_router)
 
+    from app.onboarding import onboarding_router
+    app.include_router(onboarding_router)
+
     from app.catalog.router import router as catalog_router
     app.include_router(catalog_router)
 
