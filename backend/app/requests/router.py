@@ -49,9 +49,8 @@ VALID_TRANSITIONS = {
     RequestStatus.IN_REVIEW: {RequestStatus.DRAFTED, RequestStatus.READY_FOR_RELEASE, RequestStatus.SEARCHING},
     RequestStatus.READY_FOR_RELEASE: {RequestStatus.DRAFTED, RequestStatus.IN_REVIEW, RequestStatus.APPROVED},
     RequestStatus.DRAFTED: {RequestStatus.IN_REVIEW, RequestStatus.APPROVED},
-    RequestStatus.APPROVED: {RequestStatus.FULFILLED, RequestStatus.SENT},
+    RequestStatus.APPROVED: {RequestStatus.FULFILLED},
     RequestStatus.FULFILLED: {RequestStatus.CLOSED},  # can only close
-    RequestStatus.SENT: {RequestStatus.CLOSED},
     RequestStatus.CLOSED: set(),  # terminal state — no transitions out
 }
 
@@ -166,7 +165,7 @@ async def request_stats(
             RecordsRequest.statutory_deadline.isnot(None),
             RecordsRequest.statutory_deadline <= three_days,
             RecordsRequest.statutory_deadline > now,
-            RecordsRequest.status.notin_([RequestStatus.FULFILLED, RequestStatus.CLOSED, RequestStatus.SENT]),
+            RecordsRequest.status.notin_([RequestStatus.FULFILLED, RequestStatus.CLOSED]),
             *dept_filter,
         )
     )).scalar() or 0
@@ -175,7 +174,7 @@ async def request_stats(
         select(func.count(RecordsRequest.id)).where(
             RecordsRequest.statutory_deadline.isnot(None),
             RecordsRequest.statutory_deadline < now,
-            RecordsRequest.status.notin_([RequestStatus.FULFILLED, RequestStatus.CLOSED, RequestStatus.SENT]),
+            RecordsRequest.status.notin_([RequestStatus.FULFILLED, RequestStatus.CLOSED]),
             *dept_filter,
         )
     )).scalar() or 0

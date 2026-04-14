@@ -137,7 +137,7 @@ const WORKFLOW_ACTIONS: Record<string, { label: string; action: string; variant:
     { label: "Submit for Review", action: "submit-review", variant: "default", icon: Eye },
   ],
   approved: [
-    { label: "Mark Fulfilled", action: "sent", variant: "default", icon: Send },
+    { label: "Mark Fulfilled", action: "fulfilled", variant: "default", icon: Send },
   ],
 };
 
@@ -205,7 +205,7 @@ export default function RequestDetail({ token }: { token: string }) {
   const handleAction = async (action: string) => {
     setActionLoading(true);
     try {
-      if (action === "searching") {
+      if (action === "searching" || action === "fulfilled") {
         await apiFetch(`/requests/${id}`, {
           token,
           method: "PATCH",

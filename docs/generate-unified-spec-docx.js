@@ -964,9 +964,9 @@ const doc = new Document({
         h1("Appendix A: Migration from v0.1.0"),
 
         h3("Status Value Migration"),
-        codeBlock("UPDATE records_requests SET status = 'fulfilled' WHERE status = 'sent';"),
         codeBlock("-- 'received', 'searching', 'in_review', 'drafted', 'approved' remain valid"),
         codeBlock("-- New: clarification_needed, assigned, ready_for_release, fulfilled, closed"),
+        codeBlock("-- Note: legacy 'sent' value removed in migration 010_remove_sent_status"),
 
         spacer(),
         h3("New Database Tables (12)"),

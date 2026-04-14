@@ -29,7 +29,7 @@ async def get_operational_metrics(
     }
 
     # Total open vs closed
-    closed_statuses = {"fulfilled", "sent", "closed"}
+    closed_statuses = {"fulfilled", "closed"}
     total_closed = sum(v for k, v in by_status.items() if k in closed_statuses)
     total_open = sum(v for k, v in by_status.items() if k not in closed_statuses)
 
@@ -39,7 +39,7 @@ async def get_operational_metrics(
         select(func.count()).where(
             RecordsRequest.statutory_deadline < now,
             cast(RecordsRequest.status, String).notin_(
-                ["fulfilled", "sent", "closed"]
+                ["fulfilled", "closed"]
             ),
         )
     )

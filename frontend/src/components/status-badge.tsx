@@ -35,7 +35,6 @@ const REQUEST_STATUS_MAP: Record<string, StatusConfig> = {
   drafted: { label: "Drafted", variant: "info", icon: FileText },
   approved: { label: "Approved", variant: "success", icon: ShieldCheck },
   fulfilled: { label: "Fulfilled", variant: "success", icon: Send },
-  sent: { label: "Fulfilled", variant: "success", icon: Send },
   closed: { label: "Closed", variant: "neutral", icon: Archive },
 };
 

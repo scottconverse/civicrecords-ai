@@ -19,7 +19,6 @@ class RequestStatus(str, enum.Enum):
     DRAFTED = "drafted"
     APPROVED = "approved"
     FULFILLED = "fulfilled"
-    SENT = "sent"  # legacy alias for fulfilled
     CLOSED = "closed"
 
 
