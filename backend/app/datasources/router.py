@@ -98,6 +98,41 @@ async def upload_file(file: UploadFile = File(...), session: AsyncSession = Depe
     task = task_ingest_file.delay(file_path=tmp_path, source_id=str(upload_source.id), user_id=str(user.id))
     return {"task_id": task.id, "filename": file.filename, "status": "queued"}
 
+@router.post("/documents/{document_id}/re-ingest")
+async def re_ingest_document(
+    document_id: uuid.UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(require_role(UserRole.STAFF)),
+):
+    """Re-ingest a failed document. Resets status to pending and queues for processing."""
+    doc = await session.get(Document, document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if doc.ingestion_status != IngestionStatus.FAILED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can only re-ingest failed documents (current: {doc.ingestion_status.value})",
+        )
+
+    doc.ingestion_status = IngestionStatus.PENDING
+    doc.ingestion_error = None
+    await session.commit()
+
+    from app.ingestion.tasks import task_ingest_file
+    task = task_ingest_file.delay(
+        file_path=doc.source_path,
+        source_id=str(doc.source_id),
+        user_id=str(user.id),
+    )
+
+    await write_audit_log(
+        session=session, action="re_ingest_document", resource_type="document",
+        resource_id=str(document_id), user_id=user.id,
+    )
+
+    return {"task_id": task.id, "document_id": str(document_id), "status": "queued"}
+
+
 @router.get("/stats", response_model=IngestionStats)
 async def ingestion_stats(session: AsyncSession = Depends(get_async_session), user: User = Depends(require_role(UserRole.STAFF))):
     total_sources = (await session.execute(select(func.count(DataSource.id)))).scalar() or 0

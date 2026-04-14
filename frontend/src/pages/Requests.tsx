@@ -187,6 +187,24 @@ export default function Requests({ token }: { token: string }) {
       render: (r) => <StatusBadge status={r.status} domain="request" />,
     },
     {
+      key: "priority",
+      header: "Priority",
+      render: (r) => {
+        const p = (r.priority as string) || "normal";
+        const colors: Record<string, string> = {
+          urgent: "bg-red-100 text-red-800",
+          expedited: "bg-amber-100 text-amber-800",
+          normal: "bg-gray-100 text-gray-600",
+          low: "bg-slate-100 text-slate-500",
+        };
+        return (
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors[p] || colors.normal}`}>
+            {p}
+          </span>
+        );
+      },
+    },
+    {
       key: "statutory_deadline",
       header: "Deadline",
       render: (r) => {

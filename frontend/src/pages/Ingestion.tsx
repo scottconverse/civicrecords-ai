@@ -7,7 +7,8 @@ import { DataTable, type Column } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { HardDrive, FileText, Layers, CheckCircle, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { HardDrive, FileText, Layers, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 
 interface Stats {
   total_sources: number;
@@ -54,16 +55,44 @@ export default function Ingestion({ token }: { token: string }) {
   const [docs, setDocs] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [retrying, setRetrying] = useState<string | null>(null);
 
+  const loadData = async () => {
+    try {
+      const [s, d] = await Promise.all([
+        apiFetch<Stats>("/datasources/stats", { token }),
+        apiFetch<Document[]>("/documents/?limit=50", { token }),
+      ]);
+      setStats(s);
+      setDocs(d);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadData(); }, [token]);
+
+  // Auto-refresh while any documents are processing
   useEffect(() => {
-    Promise.all([
-      apiFetch<Stats>("/datasources/stats", { token }),
-      apiFetch<Document[]>("/documents/?limit=50", { token }),
-    ])
-      .then(([s, d]) => { setStats(s); setDocs(d); })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [token]);
+    const hasProcessing = docs.some((d) => d.ingestion_status === "processing" || d.ingestion_status === "pending");
+    if (!hasProcessing) return;
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, [docs]);
+
+  const handleRetry = async (docId: string) => {
+    setRetrying(docId);
+    try {
+      await apiFetch(`/datasources/documents/${docId}/re-ingest`, { token, method: "POST" });
+      await loadData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Retry failed");
+    } finally {
+      setRetrying(null);
+    }
+  };
 
   const columns: Column<Document & Record<string, unknown>>[] = [
     {
@@ -95,6 +124,38 @@ export default function Ingestion({ token }: { token: string }) {
           {timeAgo(d.ingested_at)}
         </span>
       ),
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-24",
+      render: (d) => {
+        if (d.ingestion_status === "failed") {
+          return (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={retrying === d.id}
+              onClick={() => handleRetry(d.id)}
+              title={d.ingestion_error || "Retry ingestion"}
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${retrying === d.id ? "animate-spin" : ""}`} />
+              Retry
+            </Button>
+          );
+        }
+        if (d.ingestion_status === "processing") {
+          return (
+            <div className="flex items-center gap-2">
+              <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: "60%" }} />
+              </div>
+              <span className="text-xs text-muted-foreground">Processing</span>
+            </div>
+          );
+        }
+        return null;
+      },
     },
   ];
 

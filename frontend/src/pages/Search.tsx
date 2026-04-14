@@ -245,7 +245,20 @@ export default function Search({ token }: { token: string }) {
                     AI-generated draft — requires human review
                   </Badge>
                 </div>
-                <p className="text-sm text-foreground">{results.synthesized_answer}</p>
+                <p className="text-sm text-foreground">
+                  {results.synthesized_answer.split(/(\[Doc:\s*[^\]]+\])/).map((part, i) => {
+                    const citationMatch = part.match(/^\[Doc:\s*(.+?)(?:,\s*Page:\s*(\d+))?\]$/);
+                    if (citationMatch) {
+                      return (
+                        <span key={i} className="inline-flex items-center gap-0.5 mx-0.5 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs font-medium">
+                          <FileText className="h-3 w-3" />
+                          {citationMatch[1]}{citationMatch[2] ? `, p.${citationMatch[2]}` : ""}
+                        </span>
+                      );
+                    }
+                    return part;
+                  })}
+                </p>
               </CardContent>
             </Card>
           )}
