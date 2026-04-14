@@ -5,6 +5,59 @@ All notable changes to CivicRecords AI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-13
+
+### Added
+- **Department Scoping:** Department model with CRUD API, department assignment on users and data sources, department-based access control on requests
+- **50-State Exemption Rules:** 180 exemption rules across 51 jurisdictions (50 states + DC), seeded from canonical state public records law database
+- **Compliance Templates:** 5 seeded compliance documents (AI use disclosure, response letter disclosure, CAIA impact assessment, AI governance policy, data residency attestation)
+- **Model Registry:** Admin-managed Ollama model registry with context window tracking, active model selection, and automatic budget scaling in context manager
+- **Central LLM Client:** All LLM generation calls route through `app/llm/client.py` — enforces context manager budgeting, prompt injection sanitization, and model-registry context window scaling on every call. Refactored exemptions reviewer, search synthesizer, and ingestion extractor to use it
+- **Notification System:** 12 notification templates aligned with all router-dispatched event types, city_name sourced from city profile for email templates, queue_notification wired into 5 status transitions
+- **Users Edit/Deactivate:** PATCH /admin/users/{id} endpoint with self-demotion lockout and self-deactivation guard. Frontend edit dialog and deactivate button with confirmation
+- **Search Department Filter:** Department filtering on both semantic and keyword search engines via document-source-department join chain. Department dropdown in search UI
+- **Search CSV Export:** GET /search/export endpoint with authenticated download. Export button in search results
+- **Fee Estimation:** POST /requests/{id}/estimate-fees — staff enters page count, system calculates from fee schedule rates
+- **Fee Waivers:** FeeWaiver model with Alembic migration, create/approve/deny workflow, automatic fee_status update on approval. Waiver types: indigency, public interest, media, government, other
+- **Exemption Audit History:** GET /exemptions/rules/{id}/history returns audit log entries for any rule. Timeline UI in Exemptions page
+- **Exemption Rule Test Modal:** POST /exemptions/rules/{id}/test — tests regex or keyword rules against sample text with match positions. ReDoS protection via `regex` library with 2-second timeout. LLM-type rules rejected with 400
+- **Sources 3-Step Wizard:** Replaced single-step add dialog with guided wizard (source type selection, connection config per type, review + test connection). POST /datasources/test-connection validates connectivity without persisting credentials
+- **Dashboard Coverage Gaps:** GET /admin/coverage-gaps identifies jurisdictions without exemption rules, departments without assigned staff, and exemption categories without active rules. Warning card on dashboard when gaps > 0
+- **Search Citation Rendering:** AI summary panel renders [Doc: filename, Page: N] citations as styled inline badges instead of plain text
+- **Request Priority Indicators:** Priority column with colored badges (urgent/expedited/normal/low) on Requests table
+- **Ingestion Retry:** POST /datasources/documents/{id}/re-ingest retries failed documents (resets to pending, queues Celery task). Progress indicator for processing items, auto-refresh while active
+- **Rich Text Editor:** TipTap editor replaces plain textarea for response letter editing. Toolbar with bold, italic, underline, bullet list, ordered list. Content stored as HTML in edited_content field
+- **Onboarding LLM Interview:** POST /onboarding/interview generates adaptive setup questions based on incomplete city profile fields. Chat-style UI with skip button, profile updates via PATCH /city-profile. Falls back to default questions when LLM unavailable
+- **DOCX/XLSX Macro Stripping:** Parsers strip VBA macros at ZIP level before text extraction. Supports .docm and .xlsm. Stripping logged in metadata for audit
+- **WCAG 44x44px Touch Targets:** min-width: 44px added alongside min-height for all interactive elements. All icon button variants enforce minimum touch target
+
+### Changed
+- **Department Names on Users Page:** UUID column replaced with human-readable department names via /departments/ API lookup
+- **Legacy .xls Blocklisted:** Removed .xls from XlsxParser supported extensions — BIFF8 binary format cannot be macro-stripped with ZIP approach
+- **Dead CSS Selector Removed:** `a.nav-link` in globals.css was unreachable (WCAG 44px applied via Tailwind inline on sidebar NavLinks)
+- **Version Alignment:** config.py, pyproject.toml, package.json, and CHANGELOG all at 1.1.0
+
+### Fixed
+- **Notification Event-Type Mismatch:** Aligned 12 seed templates with router dispatch strings — all 5 dispatch paths now deliver notifications instead of silently no-oping on 3 of 5
+- **Notification Seed Production Run:** Confirmed execution against production DB (5 created, 7 skipped)
+- **Audit Log CSV Export:** Frontend export button now uses authenticated fetch with ?format=csv and blob download instead of bare anchor tag (was returning 401)
+- **Dockerfile:** Added compliance_templates/, scripts/, and tests/ to COPY directives — compliance template test was failing on clean builds
+- **city_name in Notifications:** All 5 queue_notification call sites now include city_name from CityProfile — 8 templates were silently failing at render time due to missing template variable
+- **GitHub Pages Build:** Added .nojekyll to docs/ — Jekyll was failing on spec markdown files, causing 59 consecutive failed pages-build-deployment runs
+
+### Security
+- **ReDoS Protection:** Exemption rule test endpoint uses `regex` library with timeout=2s for admin-entered patterns — prevents catastrophic backtracking
+- **Test-Connection Credential Safety:** POST /datasources/test-connection uses dedicated schema, never persists credentials, never logs connection strings, never returns credentials in response
+- **Self-Demotion Guard:** Admins cannot change their own role or deactivate their own account via the PATCH endpoint
+- **Macro Stripping:** VBA macros stripped from DOCX/XLSX before ingestion — defense-in-depth for document pipeline security
+
+### Tests
+- 274 automated tests (up from 80 in v0.1.0, 104 at v1.0.0 release)
+- +36 tests in debt sprint: LLM client wiring (3), user management (7), search features (3), fee lifecycle (5), exemption features (6), datasource connection (4), coverage gaps (2), ingestion retry (2), onboarding interview (4)
+- Template render mismatch test catches any notification template referencing variables not provided by the router
+- Seed coverage test ensures every router-dispatched event_type has a matching template
+- .xls blocklist test prevents accidental re-addition of legacy format
+
 ## [1.0.0] - 2026-04-12
 
 ### Added
