@@ -14,6 +14,8 @@ from app.models.notifications import NotificationLog, NotificationTemplate
 # Every event_type that the requests router dispatches.
 # Source: backend/app/requests/router.py (grep for queue_notification).
 ROUTER_DISPATCHED_EVENT_TYPES = [
+    # From create_request (POST /) — hardcoded
+    "request_received",
     # From update_request (PATCH) — f"request_{data.status.value}"
     "request_searching",
     "request_in_review",
@@ -22,6 +24,8 @@ ROUTER_DISPATCHED_EVENT_TYPES = [
     "request_fulfilled",
     "request_closed",
     "request_drafted",
+    "request_ready_for_release",
+    "request_approved",
     # From dedicated endpoints (hardcoded strings)
     "request_in_review",        # submit_for_review
     "request_ready_for_release",  # mark_ready_for_release
@@ -138,6 +142,116 @@ async def test_all_templates_render_with_router_context_keys(client, admin_token
     assert render_failures == [], (
         f"Templates reference variables not provided by the router:\n"
         + "\n".join(render_failures)
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_request_dispatches_request_received(client, admin_token: str):
+    """POST /requests/ must dispatch request_received when requester_email is present.
+
+    Regression guard: create_request was missing a queue_notification call until
+    2026-04-14. The other notification_dispatch tests verify templates exist and
+    queue_notification works in isolation, but neither exercises create_request
+    end-to-end. This test asserts the wiring itself.
+    """
+    from tests.conftest import test_session_maker
+    from scripts.seed_notification_templates import NOTIFICATION_TEMPLATES
+    from app.models.user import User
+    from sqlalchemy import select
+
+    # Ensure the request_received template exists in the test DB
+    async with test_session_maker() as session:
+        result = await session.execute(select(User).limit(1))
+        user = result.scalar_one_or_none()
+        assert user is not None
+
+        existing = await session.execute(
+            select(NotificationTemplate).where(
+                NotificationTemplate.event_type == "request_received",
+            )
+        )
+        if not existing.scalar_one_or_none():
+            tmpl_data = next(
+                (t for t in NOTIFICATION_TEMPLATES if t["event_type"] == "request_received"),
+                None,
+            )
+            assert tmpl_data is not None, (
+                "Seed NOTIFICATION_TEMPLATES is missing 'request_received' — "
+                "must be added before this test can run."
+            )
+            session.add(NotificationTemplate(
+                event_type=tmpl_data["event_type"],
+                channel=tmpl_data["channel"],
+                subject_template=tmpl_data["subject_template"],
+                body_template=tmpl_data["body_template"],
+                is_active=True,
+                created_by=user.id,
+            ))
+            await session.commit()
+
+    # POST a new request with a requester_email
+    unique_email = "request-received-test@example.test"
+    resp = await client.post(
+        "/requests/",
+        json={
+            "requester_name": "Request Received Test",
+            "requester_email": unique_email,
+            "description": "Verify create_request fires request_received notification",
+        },
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 201
+    req_id = resp.json()["id"]
+
+    # Assert a notification_log row was written for this request, joined to the
+    # request_received template
+    async with test_session_maker() as session:
+        result = await session.execute(
+            select(NotificationLog)
+            .join(NotificationTemplate, NotificationLog.template_id == NotificationTemplate.id)
+            .where(
+                NotificationLog.recipient_email == unique_email,
+                NotificationTemplate.event_type == "request_received",
+            )
+        )
+        log_row = result.scalar_one_or_none()
+
+    assert log_row is not None, (
+        f"Expected a notification_log row with event_type='request_received' for "
+        f"recipient={unique_email} after POST /requests/. None was found, which "
+        f"means create_request is not calling queue_notification('request_received')."
+    )
+    assert log_row.status == "queued"
+    assert str(log_row.request_id) == req_id
+
+
+@pytest.mark.asyncio
+async def test_create_request_skips_dispatch_when_no_email(client, admin_token: str):
+    """POST /requests/ without a requester_email must not raise and must not create a log row."""
+    from tests.conftest import test_session_maker
+    from sqlalchemy import select
+
+    resp = await client.post(
+        "/requests/",
+        json={
+            "requester_name": "No Email Test",
+            "description": "Verify create_request handles missing email gracefully",
+        },
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 201
+    req_id = resp.json()["id"]
+
+    # No notification_log row should exist for this request
+    async with test_session_maker() as session:
+        result = await session.execute(
+            select(NotificationLog).where(NotificationLog.request_id == req_id)
+        )
+        rows = result.scalars().all()
+
+    assert rows == [], (
+        f"Expected no notification_log rows for a request with no requester_email, "
+        f"found {len(rows)}."
     )
 
 

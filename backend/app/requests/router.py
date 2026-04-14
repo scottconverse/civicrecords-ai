@@ -103,6 +103,23 @@ async def create_request(
     await session.commit()
     await session.refresh(req)
 
+    # Dispatch request_received notification if requester provided an email.
+    # Mirrors the pattern in update_request (PATCH dispatch).
+    if req.requester_email:
+        city_name = await _get_city_name(session)
+        await queue_notification(
+            session=session,
+            event_type="request_received",
+            recipient_email=req.requester_email,
+            request_id=req.id,
+            context_data={
+                "requester_name": req.requester_name,
+                "request_id": str(req.id),
+                "status": req.status.value,
+                "city_name": city_name,
+            },
+        )
+
     await write_audit_log(
         session=session, action="create_request", resource_type="request",
         resource_id=str(req.id), user_id=user.id,
