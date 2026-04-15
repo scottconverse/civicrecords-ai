@@ -41,7 +41,9 @@ async def execute_search(
         session.add(search_session)
         await session.flush()
 
-    # Department scoping: non-admin users with a department only see their dept's documents
+    # Department scoping: ALL non-admin users (liaison, staff, reviewer, read_only) who have a
+    # department_id set are automatically scoped to their department. Any user-supplied
+    # department_id filter is overwritten — server authority over scoping is intentional.
     effective_filters = dict(req.filters or {})
     if user.role != UserRole.ADMIN and user.department_id is not None:
         effective_filters["department_id"] = str(user.department_id)
