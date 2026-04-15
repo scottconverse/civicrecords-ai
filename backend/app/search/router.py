@@ -28,7 +28,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 async def execute_search(
     req: SearchRequest,
     session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(require_role(UserRole.STAFF)),
+    user: User = Depends(require_role(UserRole.LIAISON)),
 ):
     """Execute a hybrid search query. Optionally synthesize an LLM answer."""
     # Get or create session
@@ -41,12 +41,17 @@ async def execute_search(
         session.add(search_session)
         await session.flush()
 
+    # Department scoping: non-admin users with a department only see their dept's documents
+    effective_filters = dict(req.filters or {})
+    if user.role != UserRole.ADMIN and user.department_id is not None:
+        effective_filters["department_id"] = str(user.department_id)
+
     # Execute hybrid search
     hits = await hybrid_search(
         session=session,
         query_text=req.query,
         limit=req.limit,
-        filters=req.filters,
+        filters=effective_filters if effective_filters else None,
     )
 
     # Optionally synthesize answer

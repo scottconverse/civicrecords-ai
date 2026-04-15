@@ -38,6 +38,17 @@ def setup_db():
     with sync_engine.connect() as conn:
         conn.execute(sa.text("CREATE EXTENSION IF NOT EXISTS vector"))
         conn.commit()
+    # Ensure the user_role enum type exists with ALL current values before
+    # create_all() runs.  The SQLAlchemy model uses create_type=False so
+    # create_all() will not create the type itself — it must pre-exist.
+    # We recreate it here so the test DB always matches the model definition.
+    with sync_engine.connect() as conn:
+        conn.execute(sa.text("DROP TYPE IF EXISTS user_role CASCADE"))
+        conn.execute(sa.text(
+            "CREATE TYPE user_role AS ENUM "
+            "('admin', 'staff', 'reviewer', 'read_only', 'liaison', 'public')"
+        ))
+        conn.commit()
     Base.metadata.create_all(sync_engine)
     # Add generated tsvector column (migration 004 adds this, but create_all doesn't)
     with sync_engine.connect() as conn:
@@ -196,5 +207,15 @@ async def reviewer_token_dept_a(client: AsyncClient, dept_a: uuid.UUID) -> str:
     email = f"reviewer-a-{uuid.uuid4().hex[:8]}@test.com"
     password = "reviewerpass123"
     await _create_test_user_in_dept(email, password, "Reviewer A", UserRole.REVIEWER, dept_a)
+    login = await client.post("/auth/jwt/login", data={"username": email, "password": password})
+    return login.json()["access_token"]
+
+
+@pytest.fixture
+async def liaison_token_dept_a(client: AsyncClient, dept_a: uuid.UUID) -> str:
+    """Liaison user in department A."""
+    email = f"liaison-a-{uuid.uuid4().hex[:8]}@test.com"
+    password = "liaisonpass123"
+    await _create_test_user_in_dept(email, password, "Liaison A", UserRole.LIAISON, dept_a)
     login = await client.post("/auth/jwt/login", data={"username": email, "password": password})
     return login.json()["access_token"]

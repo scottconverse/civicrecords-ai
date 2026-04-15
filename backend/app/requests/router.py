@@ -135,7 +135,7 @@ async def list_requests(
     limit: int = 50,
     offset: int = 0,
     session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(require_role(UserRole.STAFF)),
+    user: User = Depends(require_role(UserRole.LIAISON)),
 ):
     stmt = select(RecordsRequest).order_by(RecordsRequest.created_at.desc())
 
@@ -155,7 +155,7 @@ async def list_requests(
 @router.get("/stats", response_model=RequestStats)
 async def request_stats(
     session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(require_role(UserRole.STAFF)),
+    user: User = Depends(require_role(UserRole.LIAISON)),
 ):
     dept_filter = []
     if user.role != UserRole.ADMIN and user.department_id is not None:
@@ -206,7 +206,7 @@ async def request_stats(
 async def get_request(
     request_id: uuid.UUID,
     session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(require_role(UserRole.STAFF)),
+    user: User = Depends(require_role(UserRole.LIAISON)),
 ):
     req = await session.get(RecordsRequest, request_id)
     if not req:
@@ -346,6 +346,7 @@ async def attach_document(
 async def list_attached_documents(
     request_id: uuid.UUID,
     session: AsyncSession = Depends(get_async_session),
+    # NOTE: Documents require STAFF — liaison can see request metadata but not attachments
     user: User = Depends(require_role(UserRole.STAFF)),
 ):
     req = await session.get(RecordsRequest, request_id)

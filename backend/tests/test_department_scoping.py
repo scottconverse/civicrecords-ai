@@ -169,3 +169,58 @@ async def test_reviewer_cannot_approve_other_department(
         headers={"Authorization": f"Bearer {reviewer_token_dept_a}"},
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_liaison_can_list_own_department_requests(
+    client: AsyncClient,
+    admin_token: str,
+    liaison_token_dept_a: str,
+    dept_a: uuid.UUID,
+    dept_b: uuid.UUID,
+):
+    """LIAISON in dept A can GET /requests/ and only sees dept A requests — not dept B."""
+    # Admin creates one request in dept A
+    await client.post(
+        "/requests/",
+        json={
+            "requester_name": "Public User",
+            "description": "Admin-created dept A request",
+            "department_id": str(dept_a),
+        },
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    # Admin creates one request in dept B — liaison must NOT see this
+    await client.post(
+        "/requests/",
+        json={
+            "requester_name": "Other User",
+            "description": "Admin-created dept B request",
+            "department_id": str(dept_b),
+        },
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    resp = await client.get(
+        "/requests/",
+        headers={"Authorization": f"Bearer {liaison_token_dept_a}"},
+    )
+    assert resp.status_code == 200  # fails before fix (returns 403)
+    data = resp.json()
+    assert len(data) == 1  # only dept A request visible
+    assert all(r["department_id"] == str(dept_a) for r in data)
+
+
+@pytest.mark.asyncio
+async def test_liaison_can_search(
+    client: AsyncClient,
+    liaison_token_dept_a: str,
+):
+    """LIAISON role should be able to POST /search/query (returns 200, not 403)."""
+    resp = await client.post(
+        "/search/query",
+        json={"query": "test liaison search"},
+        headers={"Authorization": f"Bearer {liaison_token_dept_a}"},
+    )
+    assert resp.status_code == 200  # fails before fix (returns 403)
+    data = resp.json()
+    assert "results" in data
