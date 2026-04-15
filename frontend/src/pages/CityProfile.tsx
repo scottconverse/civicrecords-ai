@@ -106,7 +106,7 @@ export default function CityProfile({ token }: { token: string }) {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6" role="status" aria-label="Loading city profile">
         <PageHeader title="City Profile" />
         <Card className="shadow-none">
           <CardContent className="pt-6 space-y-4">

@@ -161,7 +161,7 @@ export default function Ingestion({ token }: { token: string }) {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6" role="status" aria-label="Loading ingestion dashboard">
         <Skeleton className="h-10 w-64" />
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
