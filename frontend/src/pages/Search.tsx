@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
-import { LoadingRegion } from "@/components/loading-region";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -189,19 +188,19 @@ export default function Search({ token }: { token: string }) {
         />
       )}
 
-      {/* Loading */}
-      {loading && (
-        <div className="space-y-4" role="status" aria-label="Searching, please wait">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full" />
-          ))}
-        </div>
-      )}
+      {/* Loading + Results — persistent live region; aria-busy transitions true→false when results arrive */}
+      {(loading || hasSearched) && (
+        <div aria-live="polite" aria-busy={loading} aria-label="Search results">
+          {loading && (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full" />
+              ))}
+            </div>
+          )}
 
-      {/* Results */}
-      {results && !loading && (
-        <LoadingRegion loading={loading} label="Search results">
-        <div className="space-y-4">
+          {results && !loading && (
+          <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               {results.results_count} result{results.results_count !== 1 ? "s" : ""} found
@@ -317,7 +316,8 @@ export default function Search({ token }: { token: string }) {
             );
           })}
         </div>
-        </LoadingRegion>
+          )}
+        </div>
       )}
     </div>
   );
