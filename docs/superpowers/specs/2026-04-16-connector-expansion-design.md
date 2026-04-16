@@ -19,6 +19,7 @@
 - GIS REST API (Esri ArcGIS) — separate sprint
 - Vendor SDK (Axon Evidence, CAD systems) — separate sprint
 - SharePoint — use `RestApiConnector` with OAuth2 config; no custom connector needed
+- Binary / multipart REST responses (e.g., file download endpoints) — v1 restricts to `json`, `xml`, and `csv` text formats only; binary blobs require a future `response_format: "binary"` mode and parser
 
 ---
 
@@ -55,7 +56,7 @@ Every protocol method (`discover`, `fetch`, `health_check`) calls `_ensure_authe
 **`fetch(record: DiscoveredRecord)`**
 1. Calls `_ensure_authenticated()`.
 2. Constructs the fetch URL: if `source_path` is an absolute URL, uses it directly; otherwise appends to `base_url`.
-3. GETs the record; returns `FetchedDocument` with `content = response_body_bytes` and `mime_type = "application/json"`.
+3. GETs the record; returns `FetchedDocument` with `content = response_body_bytes` and `mime_type` derived from `response_format` (`"application/json"` / `"application/xml"` / `"text/csv"`).
 
 **`health_check()`**
 1. Calls `_ensure_authenticated()`.
@@ -97,7 +98,20 @@ Every protocol method (`discover`, `fetch`, `health_check`) calls `_ensure_authe
 2. Executes `SELECT 1` (or dialect-appropriate no-op).
 3. Returns `HealthCheckResult`.
 
-### 2.4 OAuth2 token refresh
+### 2.4 429 retry policy
+
+When any REST request (in `discover()`, `fetch()`, or `health_check()`) receives a `429 Too Many Requests` response, the connector applies exponential backoff with jitter:
+
+- **Max attempts:** 3 (initial attempt + 2 retries)
+- **Base delay:** 1 second; doubled each attempt (1s → 2s → 4s)
+- **Jitter:** ±20% random jitter applied to each delay to prevent thundering herd
+- **Max total wait:** 30 seconds — if the next retry would exceed this ceiling, raise immediately
+- **`Retry-After` header:** if present, use its value (seconds) as the delay instead of the computed backoff, subject to the 30s ceiling
+- **Non-retriable errors:** 4xx other than 429, 5xx — these are raised immediately without retry
+
+This policy must be implemented as a shared utility (e.g., `connectors/retry.py`) used by both `RestApiConnector` and any future HTTP-based connectors. It must not be re-implemented per connector.
+
+### 2.5 OAuth2 token refresh
 
 `_ensure_authenticated()` checks `self._token_expiry` before returning for OAuth2 connectors. If the token is expired (or within 60 seconds of expiry), it re-authenticates transparently. Token is stored in instance variables only — never written to the database or logs.
 
@@ -148,6 +162,15 @@ class RestApiConfig(BaseModel):
     record_id_field: str = "id"               # JSON path to unique record identifier
     since_field: str | None = None            # query param name for incremental sync
 
+    # response format
+    response_format: Literal["json", "xml", "csv"] = "json"
+    # Governs how fetch() deserializes the response body before returning FetchedDocument.
+    # "json" (default): response bytes passed through as-is; mime_type = "application/json"
+    # "xml":  response bytes passed through as-is; mime_type = "application/xml"
+    # "csv":  response bytes passed through as-is; mime_type = "text/csv"
+    # The ingestion pipeline must have a parser registered for the chosen format.
+    # Binary / multipart responses are out of scope for v1 (document in §1).
+
     # safety cap
     max_records: int = 10_000
 ```
@@ -176,13 +199,23 @@ class ODBCConfig(BaseModel):
 
 One migration covers REST, ODBC, and future IMAP incremental sync.
 
-```sql
-ALTER TABLE data_sources
-  ADD COLUMN last_sync_cursor VARCHAR NULL,
-  ADD COLUMN last_sync_at TIMESTAMPTZ NULL;
-```
-
 `last_sync_cursor` stores an opaque string: ISO timestamp for time-based sync, page token for cursor-based pagination, or IMAP UID watermark (future). No semantic parsing at the DB layer.
+
+### 4.1 Alembic migration (upgrade + downgrade)
+
+Both functions are required. `alembic downgrade -1` must work cleanly for a city IT admin hitting a bad deployment.
+
+```python
+def upgrade() -> None:
+    op.add_column("data_sources",
+        sa.Column("last_sync_cursor", sa.String(), nullable=True))
+    op.add_column("data_sources",
+        sa.Column("last_sync_at", sa.DateTime(timezone=True), nullable=True))
+
+def downgrade() -> None:
+    op.drop_column("data_sources", "last_sync_at")
+    op.drop_column("data_sources", "last_sync_cursor")
+```
 
 ---
 
@@ -207,7 +240,7 @@ Required test cases:
 - `test_health_check_head_success`
 - `test_health_check_head_405_falls_back_to_get` — asserts no false failure on 405
 - `test_partial_sync_cursor_not_advanced` — fetch fails on record N; asserts last_sync_cursor unchanged
-- `test_connection_safety` — calls test-connection path; asserts `connection_config` unchanged in DB, no credential values in audit log
+- `test_connection_safety` — calls test-connection path; asserts: (1) `data_sources.connection_config` is byte-for-byte unchanged in the DB, (2) no credential field values (`api_key`, `client_secret`, `password`, `token`) appear in any `AuditLog.details` JSONB entry written during the call. The `AuditLog` model (`audit_log` table) is a real queryable SQLAlchemy model — query it directly: `session.query(AuditLog).filter(AuditLog.action == "test_connection").all()` and assert none of its `.details` dicts contain the credential strings.
 
 ### 5.2 `test_odbc_connector.py` — using sqlite3 adapter
 
@@ -220,7 +253,7 @@ Required test cases:
 - `test_fetch_row` — asserts correct JSON serialization of fetched row
 - `test_health_check`
 - `test_partial_sync_cursor_not_advanced` — fetch fails mid-run; cursor remains at pre-run value
-- `test_connection_safety` — same credential-safety assertion as REST variant
+- `test_connection_safety` — same assertion as REST variant: `connection_config` unchanged in DB; `connection_string` value does not appear in any `AuditLog.details` entry written during the call
 
 ### 5.3 Cursor semantics test (both connectors)
 
