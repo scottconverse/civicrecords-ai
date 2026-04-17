@@ -17,6 +17,8 @@ from app.models.user import Base
 class SourceType(str, enum.Enum):
     UPLOAD = "upload"
     DIRECTORY = "directory"
+    REST_API = "rest_api"
+    ODBC = "odbc"
 
 
 class IngestionStatus(str, enum.Enum):
@@ -44,6 +46,7 @@ class DataSource(Base):
     connector_template_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     sync_schedule: Mapped[str | None] = mapped_column(String(50), nullable=True)
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_sync_cursor: Mapped[str | None] = mapped_column(String, nullable=True)
     last_sync_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     health_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     schema_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
