@@ -18,7 +18,20 @@ The current scheduler (`check_scheduled_sources`) checks `(now - last_ingestion_
 ### D1: Switch to cron-based scheduling via `croniter`
 **Decision:** `sync_schedule` (String(50), cron expression) is the single scheduling field. `schedule_minutes` is dropped.  
 **Why:** `croniter` (Apache 2.0 licensed) parses standard cron expressions and computes next/previous run times in UTC. Cron expressions match how admins think: "nightly at 2am" = `0 2 * * *`. No drift.  
-**Scheduler behavior:** `check_scheduled_sources` (fires every 5 min) evaluates each active, non-paused source with a non-null `sync_schedule`. For each: `croniter(expr, last_sync_at or epoch, hash_use_datetime=True).get_prev(datetime)` — if the previous scheduled slot is after `last_sync_at`, the source is overdue → trigger.
+**Scheduler behavior (B1 — corrected):** `check_scheduled_sources` (fires every 5 min) evaluates each active, non-paused source with a non-null `sync_schedule`. For each: compute the next scheduled slot after `last_sync_at` using `croniter(expr, anchor).get_next(datetime)`. If that next slot is ≤ `datetime.now(UTC)`, the source is overdue → trigger.
+
+Correct logic:
+```python
+anchor = source.last_sync_at or datetime(1970, 1, 1, tzinfo=UTC)
+it = croniter(source.sync_schedule, anchor)
+next_scheduled = it.get_next(datetime)
+if next_scheduled <= datetime.now(UTC):
+    task_ingest_source.delay(str(source.id))
+```
+
+**Why not `get_prev() > anchor`:** `croniter(expr, anchor).get_prev()` returns the most recent scheduled slot at or before `anchor`. By construction this is almost never `> anchor` (only exactly equal if `anchor` is itself a scheduled moment). For `last_sync_at = yesterday 2:05am` and cron `0 2 * * *`, `get_prev()` returns `yesterday 2:00am` which is NOT `> yesterday 2:05am` — source never triggers even though today's 2am has passed. This was the original spec bug.
+
+**`hash_use_datetime` note:** this parameter does not exist in the standard `croniter` API. Removed.
 
 ### D2: Minimum interval validation — rolling week sampling
 **Decision:** Reject any cron expression where the minimum interval across a rolling 7-day window is < 5 minutes.  
@@ -45,9 +58,48 @@ When `schedule_enabled = False`: scheduler ignores `sync_schedule` even if set. 
 **Why:** Don't null `sync_schedule` on disable — admin loses their configured expression and must re-enter it on re-enable. `schedule_enabled = False` preserves the field; re-enabling pre-fills the UI.  
 **UI toggle:** "Enable automatic sync" checkbox. When unchecked, schedule picker is hidden but field is preserved in form state. Saved as `schedule_enabled = False`.
 
-### D4: `schedule_minutes` migration
-**Decision:** Migration converts any non-null `schedule_minutes` values to approximate cron expressions before dropping the column. Convert via: 15→`*/15 * * * *`, 30→`*/30 * * * *`, 60→`0 * * * *`, 360→`0 */6 * * *`, 720→`0 */12 * * *`, 1440→`0 2 * * *` (anchored to 2am, not midnight, as a reasonable default). Any other value: convert to `*/{N} * * * *` if N < 60, else `0 */{H} * * *` where H = N/60 rounded. If the resulting expression fails min-interval validation, set `sync_schedule = NULL` and `schedule_enabled = False`.  
+### D4: `schedule_minutes` migration (M3 + M4 — non-divisors and silent loss)
+**Decision:** Migration converts `schedule_minutes` to cron using an explicit allowlist. Values not on the allowlist are nulled with a migration report — no silent data loss.
+
+**Allowlist (clean cron-representable intervals):**
+
+| schedule_minutes | cron | Notes |
+|---|---|---|
+| 5 | `*/5 * * * *` | minimum allowed |
+| 10 | `*/10 * * * *` | |
+| 15 | `*/15 * * * *` | |
+| 20 | `*/20 * * * *` | |
+| 30 | `*/30 * * * *` | |
+| 60 | `0 * * * *` | anchored to :00 |
+| 120 | `0 */2 * * *` | anchored to even hours |
+| 180 | `0 */3 * * *` | |
+| 240 | `0 */4 * * *` | |
+| 360 | `0 */6 * * *` | |
+| 480 | `0 */8 * * *` | |
+| 720 | `0 */12 * * *` | |
+| 1440 | `0 2 * * *` | daily, anchored to 2am UTC |
+
+**Non-allowlist values (e.g., 45, 3, 90, 100):** Set `sync_schedule = NULL`, `schedule_enabled = False`. Do NOT silently convert — `*/45 * * * *` is NOT a 45-minute interval (fires at :00 and :45, leaving a 15-minute gap at top of hour). Emit a migration report entry for every nulled source:
+```
+MIGRATION REPORT: schedule_minutes → sync_schedule conversion
+  Source ID {uuid} (name: "{name}"): schedule_minutes={N} has no clean cron equivalent.
+  sync_schedule set to NULL, schedule_enabled set to False.
+  Admin action required: set a schedule manually in the DataSources UI.
+```
+Report is written to migration log (Alembic output) and also to a `_migration_014_report` table for admin visibility.
+
 As of 2026-04-16, no production rows have `schedule_minutes` set (UI never exposed it). State this in the migration comment so reviewers can verify.
+
+### D4b: Timezone — UTC at storage, local conversion in UI (H6)
+**Decision:** All cron expressions are stored and evaluated in UTC. The scheduler uses `datetime.now(UTC)` exclusively.  
+**Why UTC:** single-tenant per-city deploy means the server timezone is not reliably the admin's timezone. UTC is unambiguous, avoids DST gaps, and is what croniter expects.  
+**UI disclosure (required):** anywhere a cron expression or computed next-run time is shown, display both UTC and local time:  
+- Card: "Next: Apr 17 at 2:00 AM UTC (8:00 PM MDT)"
+- Wizard schedule picker: "All schedules run in UTC. `Nightly at 2am` = 2:00 AM UTC."
+- Custom cron input: tooltip "Your cron expression is evaluated in UTC."  
+**Why this matters:** an admin typing `0 2 * * *` intending "2 AM local" gets 2 AM UTC, which is 9 PM or 7 PM local depending on timezone. For a compliance product, a sync that runs at 7 PM instead of 2 AM is not just surprising — it's an audit trail discrepancy.  
+**Local time computation:** browser-side, using `Intl.DateTimeFormat` to detect and display local offset. No server-side timezone handling needed.  
+**Test:** `test_scheduler.py::test_cron_evaluated_in_utc` — create source with `0 2 * * *`, mock `datetime.now` to a UTC time that is 2 AM UTC, verify trigger. Mock to 2 AM local (non-UTC) time, verify NO trigger if UTC time is different.
 
 ### D5: Three-state card schedule display
 | DataSource state | Display |
@@ -104,7 +156,7 @@ ALTER TABLE data_sources ADD CONSTRAINT chk_sync_schedule_nonempty
 `check_scheduled_sources` rewrite:
 ```python
 async def check_scheduled_sources():
-    sources = await session.execute(
+    result = await session.execute(
         select(DataSource).where(
             DataSource.is_active == True,
             DataSource.schedule_enabled == True,
@@ -112,31 +164,35 @@ async def check_scheduled_sources():
             DataSource.sync_schedule.isnot(None),
         )
     )
+    sources = result.scalars().all()
+    now = datetime.now(UTC)
     triggered = 0
-    for source in sources.scalars():
+    for source in sources:
         anchor = source.last_sync_at or datetime(1970, 1, 1, tzinfo=UTC)
-        it = croniter(source.sync_schedule, anchor, hash_use_datetime=True)
-        prev_scheduled = it.get_prev(datetime)
-        if prev_scheduled > anchor:
+        it = croniter(source.sync_schedule, anchor)
+        next_scheduled = it.get_next(datetime)
+        if next_scheduled <= now:
             task_ingest_source.delay(str(source.id))
             triggered += 1
-    return {"checked": count, "triggered": triggered}
+    return {"checked": len(sources), "triggered": triggered}
 ```
 
 ---
 
 ## Test Plan
 
-| Test | File | Description |
+| Test | File::Function | Description |
 |---|---|---|
-| Cron trigger — overdue | `test_scheduler.py` | Source with `0 2 * * *`, `last_sync_at` = yesterday → triggered |
-| Cron trigger — not due | `test_scheduler.py` | Source with `0 2 * * *`, `last_sync_at` = today at 2:01am → not triggered |
-| Cron trigger — first run | `test_scheduler.py` | Source with `last_sync_at = NULL` → triggered immediately |
-| Min interval — fine | `test_scheduler.py` | `0 * * * *` (hourly) → passes validation |
-| Min interval — too fast | `test_scheduler.py` | `*/1 0 * * *` → rejected |
-| Min interval — adversarial | `test_scheduler.py` | `*/1 0 * * *` — rolling week sampling catches it |
-| schedule_enabled = False | `test_scheduler.py` | Source with valid cron but `schedule_enabled = False` → not triggered |
-| sync_paused = True | `test_scheduler.py` | Source with valid cron but `sync_paused = True` → not triggered |
-| Migration — schedule_minutes | `test_migration_015.py` | Representative schedule_minutes values convert correctly to cron |
-| next_sync_at computed | `test_datasources_router.py` | GET /datasources/ returns correct `next_sync_at` for each state |
-| Preserve on toggle | `test_datasources_router.py` | PATCH schedule_enabled=False → sync_schedule unchanged in DB |
+| Cron trigger — overdue | `test_scheduler.py::test_overdue_source_triggers` | Source with `0 2 * * *`, `last_sync_at` = yesterday → triggered |
+| Cron trigger — not due | `test_scheduler.py::test_not_due_source_skipped` | Source with `0 2 * * *`, `last_sync_at` = today at 2:01am UTC → not triggered |
+| Cron trigger — first run | `test_scheduler.py::test_null_last_sync_triggers_immediately` | Source with `last_sync_at = NULL` → triggered immediately |
+| UTC evaluation | `test_scheduler.py::test_cron_evaluated_in_utc` | `0 2 * * *`, now=2:01 UTC → trigger; now=2:01 local non-UTC → no trigger |
+| Min interval — fine | `test_scheduler.py::test_min_interval_valid_hourly` | `0 * * * *` (hourly, 60-min gap) → passes validation |
+| Min interval — too fast | `test_scheduler.py::test_min_interval_rejected_every_minute` | `* * * * *` → rejected with validation error |
+| Min interval — adversarial | `test_scheduler.py::test_min_interval_adversarial_cron` | `*/1 0 * * *` → rolling week sampling detects 1-min gap in hour 0, rejected |
+| schedule_enabled = False | `test_scheduler.py::test_schedule_disabled_not_triggered` | Source with valid cron but `schedule_enabled = False` → not triggered |
+| sync_paused = True | `test_scheduler.py::test_paused_source_not_triggered` | Source with valid cron but `sync_paused = True` → not triggered |
+| Migration — allowlist values | `test_migration_015.py::test_schedule_minutes_allowlist_converts_correctly` | 15, 30, 60, 1440 → correct cron expressions |
+| Migration — non-allowlist nulled | `test_migration_015.py::test_schedule_minutes_non_allowlist_nulled_with_report` | 45, 90 → sync_schedule=NULL, schedule_enabled=False, report entry written |
+| next_sync_at computed | `test_datasources_router.py::test_next_sync_at_returned_in_list` | GET /datasources/ returns correct `next_sync_at` for each three-state scenario |
+| Preserve on toggle | `test_datasources_router.py::test_schedule_disabled_preserves_sync_schedule` | PATCH schedule_enabled=False → sync_schedule unchanged in DB |
