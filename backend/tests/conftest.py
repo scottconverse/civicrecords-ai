@@ -245,3 +245,25 @@ async def liaison_token_dept_a(client: AsyncClient, dept_a: uuid.UUID) -> str:
     await _create_test_user_in_dept(email, password, "Liaison A", UserRole.LIAISON, dept_a)
     login = await client.post("/auth/jwt/login", data={"username": email, "password": password})
     return login.json()["access_token"]
+
+
+# ---------------------------------------------------------------------------
+# Direct DB session fixtures — used by idempotency / integration tests
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+async def db_session(setup_db):
+    """Direct async session for integration tests that need DB access without HTTP layer."""
+    async with test_session_maker() as session:
+        yield session
+        await session.rollback()
+
+
+@pytest.fixture
+def db_session_factory(setup_db):
+    """Returns test_session_maker for concurrency tests needing independent sessions.
+
+    Each session created via db_session_factory() is independent — no shared transaction.
+    Usage: async with db_session_factory() as s1, db_session_factory() as s2: ...
+    """
+    return test_session_maker
