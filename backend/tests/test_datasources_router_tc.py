@@ -2,6 +2,7 @@
 Unit tests for test-connection endpoint safety:
 - Credential scrubbing
 - Recursive JSONB credential walk (no flat .get() allowed)
+- Pollution detection (non-deterministic REST API responses)
 """
 import pytest
 from app.datasources.router import _scrub_error
@@ -70,3 +71,72 @@ def test_recursive_walk_in_list():
     }
     found = _find_credentials_recursive(response)
     assert "root.records[0].password" in found
+
+
+class TestTestConnectionPollutionDetection:
+
+    @pytest.mark.asyncio
+    async def test_test_connection_pollution_warning(self, client, admin_token):
+        """test-connection with two differing fetches → success=True + warning: non_deterministic_response."""
+        from unittest.mock import patch
+
+        with patch("app.datasources.router._double_fetch_hashes") as mock_dfh:
+            import asyncio
+            mock_dfh.return_value = (
+                "aaa111",  # hash1
+                "bbb222",  # hash2 — differs!
+                ["fetched_at", "request_id"],  # differing_keys
+            )
+            # Make _double_fetch_hashes an async mock
+            async def _async_dfh(*args, **kwargs):
+                return ("aaa111", "bbb222", ["fetched_at", "request_id"])
+            mock_dfh.side_effect = _async_dfh
+
+            resp = await client.post(
+                "/datasources/test-connection",
+                json={
+                    "source_type": "rest_api",
+                    "rest_api_config": {
+                        "base_url": "https://api.example.com",
+                        "endpoint_path": "/records",
+                        "auth_method": "none",
+                        "response_format": "json",
+                        "data_key": "data",
+                    },
+                },
+                headers={"Authorization": f"Bearer {admin_token}"},
+            )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["success"] is True
+        assert body.get("warning") == "non_deterministic_response"
+        assert "differing_keys" in body
+        assert "fetched_at" in body["differing_keys"]
+
+    @pytest.mark.asyncio
+    async def test_test_connection_no_pollution_warning(self, client, admin_token):
+        """Two identical fetches → no warning field in response."""
+        from unittest.mock import patch
+
+        with patch("app.datasources.router._double_fetch_hashes") as mock_dfh:
+            async def _async_dfh(*args, **kwargs):
+                return ("aaa111", "aaa111", [])
+            mock_dfh.side_effect = _async_dfh
+
+            resp = await client.post(
+                "/datasources/test-connection",
+                json={
+                    "source_type": "rest_api",
+                    "rest_api_config": {
+                        "base_url": "https://api.example.com",
+                        "endpoint_path": "/records",
+                        "auth_method": "none",
+                        "response_format": "json",
+                    },
+                },
+                headers={"Authorization": f"Bearer {admin_token}"},
+            )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["success"] is True
+        assert "warning" not in body or body.get("warning") is None

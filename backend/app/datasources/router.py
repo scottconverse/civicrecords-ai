@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import logging
 import re as _re
 import time
@@ -17,6 +18,38 @@ from app.database import get_async_session
 from app.models.document import DataSource, Document, DocumentChunk, IngestionStatus, SourceType
 from app.models.user import User, UserRole
 from app.schemas.document import DataSourceCreate, DataSourceRead, DataSourceUpdate, IngestionStats
+
+async def _double_fetch_hashes(
+    connector, first_source_path: str, data_key: str | None
+) -> tuple[str, str, list[str]]:
+    """Fetch a record twice (500ms apart) and compare canonical hashes.
+
+    Returns (hash1, hash2, differing_top_level_keys).
+    Used to detect non-deterministic envelopes at test-connection time.
+    """
+    import json
+    from app.connectors.rest_api import _extract_dotted
+
+    async def _fetch_and_hash():
+        fetched = await connector.fetch(first_source_path)
+        parsed = json.loads(fetched.content.decode("utf-8"))
+        record = _extract_dotted(parsed, data_key)
+        canonical = json.dumps(record, sort_keys=True, ensure_ascii=False, default=str)
+        return hashlib.sha256(canonical.encode()).hexdigest(), parsed
+
+    hash1, parsed1 = await _fetch_and_hash()
+    await asyncio.sleep(0.5)
+    hash2, parsed2 = await _fetch_and_hash()
+
+    differing_keys: list[str] = []
+    if hash1 != hash2 and isinstance(parsed1, dict) and isinstance(parsed2, dict):
+        differing_keys = [
+            k for k in set(parsed1) | set(parsed2)
+            if parsed1.get(k) != parsed2.get(k)
+        ]
+
+    return hash1, hash2, differing_keys
+
 
 _CRED_SCRUB = _re.compile(
     r"(api_key|token|client_secret|password|connection_string)\s*=\s*\S+",
@@ -184,6 +217,8 @@ class TestConnectionResponse(BaseModel):
     message: str
     latency_ms: int | None = None
     status: str | None = None
+    warning: str | None = None
+    differing_keys: list[str] | None = None
 
 
 @router.post("/test-connection", response_model=TestConnectionResponse)
@@ -249,11 +284,31 @@ async def test_connection(
                 result = await connector.health_check()
             latency_ms = int((time.monotonic() - t0) * 1000)
             if result.status.value == "healthy":
+                # Pollution detection: only for REST API with discovered records
+                warning = None
+                differing_keys = None
+                if body.source_type == "rest_api":
+                    try:
+                        discovered = await connector.discover()
+                        if discovered:
+                            first_path = discovered[0].source_path
+                            data_key = config_dict.get("data_key")
+                            h1, h2, diff_keys = await _double_fetch_hashes(
+                                connector, first_path, data_key
+                            )
+                            if h1 != h2:
+                                warning = "non_deterministic_response"
+                                differing_keys = diff_keys
+                    except Exception as poll_exc:
+                        logger.debug("Pollution detection skipped: %s", poll_exc)
+
                 return TestConnectionResponse(
                     success=True,
                     message="Connection successful",
                     latency_ms=result.latency_ms if result.latency_ms is not None else latency_ms,
                     status="healthy",
+                    warning=warning,
+                    differing_keys=differing_keys,
                 )
             else:
                 err = _scrub_error(result.error_message or result.status.value)
