@@ -1179,11 +1179,72 @@ cd backend && DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@localh
 
 Expected: PASS.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 9: Rewire `task_ingest_source` to call `sync_runner.run_connector_sync_with_retry()`**
+
+The existing `task_ingest_source` in `backend/app/ingestion/tasks.py` hand-rolls a discover→fetch→ingest loop with a bare `raise` on line 216 that bubbles any per-record failure out of the task and relies on Celery retry for the whole batch. Replace that body with a call into the new sync_runner so that per-record failures flow into `sync_failures` (continue-on-error) while whole-run failures still trigger Celery task-level retry (D-FAIL-1).
+
+Critical ordering: migration 016 landed in Task 3, so `sync_failures` exists on this branch before this change lands. The per-record `continue-on-error` contract is only safe once the table is present — do not ship the tasks.py rewrite on a branch without migration 016.
+
+Rewrite target (abridged — the subagent fills in imports and surrounding plumbing to match the existing task signature/decorator):
+
+```python
+@celery_app.task(
+    bind=True,
+    autoretry_for=(IOError, OSError, httpx.TransportError),
+    retry_backoff=30,
+    retry_backoff_max=270,
+    retry_jitter=False,
+    max_retries=3,
+)
+def task_ingest_source(self, source_id: str) -> dict:
+    """Celery entrypoint — delegates to sync_runner. Task-level retry wraps full-run failures only."""
+    import asyncio
+    from app.ingestion.sync_runner import run_connector_sync_with_retry
+    from app.database import AsyncSessionLocal
+    from app.connectors.factory import build_connector_for_source
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            source = await _load_source(session, source_id)
+            connector = build_connector_for_source(source)
+            return await run_connector_sync_with_retry(
+                connector=connector,
+                source_id=source_id,
+                session=session,
+            )
+
+    try:
+        return asyncio.run(_run())
+    except (IOError, OSError) as exc:
+        # Task-level retry fires only for transient whole-run failures.
+        # Per-record errors are already absorbed into sync_failures inside the runner.
+        raise self.retry(exc=exc)
+```
+
+The old in-task loop (lines roughly 165–230) must be deleted in this same edit. Do not leave dead code. The bare `raise` on the old line 216 disappears as a consequence of removing the loop — there is no separate "flip raise to continue" step; sync_runner owns that contract now.
+
+If `build_connector_for_source` / `_load_source` helpers don't exist yet with those exact names, use whatever the existing task uses to construct a connector and load the source row — the rewrite should preserve existing behavior for those bootstrap steps, only replacing the discover→fetch loop.
+
+- [ ] **Step 10: Re-run the full sync_runner + existing ingestion test suite to confirm tasks.py rewire didn't regress**
+
+```
+cd backend && DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@localhost:5432/civicrecords_test python -m pytest tests/test_sync_runner_retry_layers.py tests/test_sync_runner_retry_cap.py tests/test_sync_runner_cursor.py tests/test_circuit_breaker.py tests/test_ingestion_task.py tests/test_pipeline_idempotency.py -v
+```
+
+Expected: all PASS. If `test_ingestion_task.py` has assertions that were written against the old in-task loop structure (e.g. "bare raise propagates"), update them in this step to match the continue-on-error contract and stage them with the same commit.
+
+- [ ] **Step 11: Commit sync_runner + tasks.py rewire together**
 
 ```bash
-git add backend/app/ingestion/sync_runner.py backend/tests/test_sync_runner_retry_layers.py backend/tests/test_sync_runner_retry_cap.py backend/tests/test_sync_runner_cursor.py
-git commit -m "feat(p7): sync_runner with two-layer retry, circuit breaker, cursor advance, run log"
+git add backend/app/ingestion/sync_runner.py backend/app/ingestion/tasks.py backend/tests/test_sync_runner_retry_layers.py backend/tests/test_sync_runner_retry_cap.py backend/tests/test_sync_runner_cursor.py backend/tests/test_ingestion_task.py
+git commit -m "feat(p7): sync_runner + tasks.py rewire — two-layer retry, circuit breaker, cursor advance, run log
+
+Replaces the bare-raise per-record loop in task_ingest_source with a
+delegation to sync_runner.run_connector_sync_with_retry(). Per-record
+failures flow into sync_failures (continue-on-error); whole-run
+failures still trigger Celery task-level retry via self.retry(). Ships
+with migration 016 already present on the branch — the continue-on-error
+contract is only safe once sync_failures exists."
 ```
 
 ---
@@ -2681,9 +2742,125 @@ git commit -m "feat(p7): 429/Retry-After handling (D10) + IntegrityError → per
 
 ---
 
-## Task 9: Full test suite + final integration
+## Task 9: P6 carry-forward cleanup
 
-This is the final gate. All implementation is complete at this point.
+Four items tracked in memory from the P6a and P6b audits. None of them are P7 features per se — they're discipline cleanup that was explicitly deferred to P7 so we'd stop carrying tech debt across priority boundaries. Each is scoped narrowly and has a ready-to-run test or verification step.
+
+**Files:**
+- Modify: `backend/requirements.txt` (add aiofiles)
+- Modify: `frontend/src/pages/DataSources.tsx` (formatNextRun helper + shadcn Checkbox swap)
+- Modify: `backend/tests/conftest.py` (move from `create_all` + manual DDL patches to `alembic upgrade head`)
+
+### 9a. aiofiles dependency leak (P6a carry-forward #3)
+
+- [ ] **Step 1: Verify the leak is still real**
+
+```
+cd backend && grep -n "aiofiles" app/datasources/router.py requirements.txt
+```
+
+Expected: `router.py` imports `aiofiles` but `requirements.txt` does not list it. One test (`test_datasources_router.py::test_csv_export_streams_file` or similar) has been skipping with `ModuleNotFoundError: No module named 'aiofiles'` since before P6a. If the grep shows `aiofiles` already in `requirements.txt`, skip the rest of 9a.
+
+- [ ] **Step 2: Pin aiofiles to the latest Apache 2.0 compatible version and add to requirements.txt**
+
+Latest stable is `aiofiles==24.1.0` (Apache 2.0). Add it to `backend/requirements.txt` in alphabetical order with the other async libraries.
+
+- [ ] **Step 3: Rebuild the backend image and run the previously skipped test**
+
+```
+docker compose build api && docker compose exec api python -m pytest tests/test_datasources_router.py -v -k csv
+```
+
+Expected: the CSV export test that previously errored with `ModuleNotFoundError` now PASSes. If no such test exists, just run the full `test_datasources_router.py` and confirm zero `ModuleNotFoundError` entries.
+
+### 9b. formatNextRun() cron preview helper (P6b D1)
+
+- [ ] **Step 4: Write a failing frontend test for the wizard preview**
+
+```typescript
+// frontend/src/pages/DataSources.test.tsx — new test in existing file
+it("shows a human-readable next-run preview when a cron preset is selected", () => {
+  render(<DataSources />);
+  // open wizard, navigate to step 3, select the "Daily at 2 AM UTC" preset
+  // ...
+  expect(screen.getByTestId("cron-preview")).toHaveTextContent(/Next: .+ at 2:00 AM UTC/);
+});
+```
+
+Expected: FAIL (no `data-testid="cron-preview"` in current DOM).
+
+- [ ] **Step 5: Add `formatNextRun(cron: string)` helper + wire into wizard Step 3**
+
+In `frontend/src/pages/DataSources.tsx`, add a small helper that uses `cron-parser` (MIT licensed; add to `frontend/package.json` if not present) to compute the next fire time and format it as `"Next: Apr 18 at 2:00 AM UTC (8:00 PM MDT)"`. Render it inside the wizard Step 3 schedule section as `<p data-testid="cron-preview">{formatNextRun(formData.sync_schedule)}</p>`, only when `sync_schedule` is non-empty and `schedule_enabled` is true. If `cron-parser` rejects the expression, render nothing (validation handles the error separately).
+
+Do NOT use this helper for the card display — that's D-SCHED-5, a separate P7 deliverable handled in the DataSource card layout (Task 7). This 9b is wizard-only.
+
+- [ ] **Step 6: Re-run the failing test**
+
+```
+cd frontend && npm test -- --run DataSources
+```
+
+Expected: PASS.
+
+### 9c. shadcn Checkbox swap (P6b D2)
+
+- [ ] **Step 7: Swap native `<input type="checkbox">` for the shadcn `Checkbox` component in wizard Step 3**
+
+`frontend/src/components/ui/checkbox.tsx` already exists in the repo. In `DataSources.tsx` wizard Step 3, replace the native `<input type="checkbox" checked={formData.schedule_enabled} onChange={...} />` (landed in P6b c670ef1) with `<Checkbox checked={formData.schedule_enabled} onCheckedChange={...} />` plus an adjacent `<Label>`. Keep the existing `<select>` for preset choice — there is no shadcn `Switch` in the repo and adding one is out of scope.
+
+Verify the control still toggles `formData.schedule_enabled` on click and on Space keystroke when focused (the two behaviors the native input gave us).
+
+- [ ] **Step 8: Run frontend test suite + `npm run build`**
+
+```
+cd frontend && npm test -- --run && npm run build
+```
+
+Expected: all tests PASS, TypeScript build EXIT:0.
+
+### 9d. conftest DDL → alembic upgrade head (P6b #6)
+
+- [ ] **Step 9: Replace the manual DDL patchwork in `backend/tests/conftest.py`**
+
+Currently `conftest.py` does `Base.metadata.create_all(sync_engine)` then applies ad-hoc DDL for migrations 004 (tsvector column) and 014 (partial UNIQUE indexes). With migration 016 landing in this priority, that pattern grows again. Replace the whole `Base.metadata.create_all(...)` block and its follow-up `op.execute(...)` patches with a single `alembic upgrade head` invocation against the test database URL.
+
+The existing `user_role` enum pre-create block stays — the enum is created outside of Alembic's model-first flow and needs the pre-create or `create_type=False` won't find it. Verify the integration test suite still passes after the swap.
+
+- [ ] **Step 10: Run the full integration test suite to confirm parity**
+
+```
+cd backend && DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@localhost:5432/civicrecords_test python -m pytest tests/ -v --tb=short 2>&1 | tail -40
+```
+
+Expected: same PASS count as before the conftest swap (minus any tests that were silently masking schema drift between models and migrations — if you find such tests, flag them in the commit message, do not fix them in this step).
+
+- [ ] **Step 11: Commit all four carry-forward fixes**
+
+```bash
+git add backend/requirements.txt frontend/src/pages/DataSources.tsx frontend/src/pages/DataSources.test.tsx frontend/package.json frontend/package-lock.json backend/tests/conftest.py
+git commit -m "chore(p7): close P6a/P6b carry-forward items
+
+- aiofiles pinned in backend/requirements.txt (P6a #3): previously
+  imported by datasources/router.py with no declared dep; the CSV
+  export test had been skipping with ModuleNotFoundError since P5.
+- formatNextRun() cron preview helper landed in wizard Step 3 (P6b
+  D1): admin now sees 'Next: Apr 18 at 2:00 AM UTC (...)' below the
+  preset selector, not just the raw cron echo. Card display is
+  separate — that's D-SCHED-5 in Task 7.
+- Native <input type='checkbox'> swapped for shadcn Checkbox in
+  wizard Step 3 (P6b D2): matches the rest of the design system.
+- conftest.py uses alembic upgrade head instead of Base.metadata
+  .create_all + manual migration-014 DDL patches (P6b #6): with
+  migration 016 landing this priority, the manual patchwork was
+  about to grow again. Single source of truth now."
+```
+
+---
+
+## Task 10: Full test suite + final integration + docs update
+
+This is the final gate. All implementation is complete at this point. **Docs update is a required step, not optional** — it is baked in here because P6a and P6b both shipped without docs updates and the drift had to be cleaned up in follow-up commits (`db8c8ba`, `cc97c9e`). That pattern is not repeating on P7.
 
 - [ ] **Step 1: Run full backend test suite**
 
@@ -2691,7 +2868,7 @@ This is the final gate. All implementation is complete at this point.
 cd backend && DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@localhost:5432/civicrecords_test python -m pytest tests/ -v --tb=short 2>&1 | tail -30
 ```
 
-Expected: All tests PASS. Zero failures.
+Expected: All tests PASS. Zero failures. The two pre-existing failures from P6b (aiofiles CSV export, Ollama retry) should both be GREEN now — aiofiles was fixed in Task 9a, and the Ollama retry test is expected to pass once Ollama is available in the test environment (if it still skips with a clean skip reason, that's acceptable; if it fails, debug before continuing).
 
 - [ ] **Step 2: Run frontend tests**
 
@@ -2709,9 +2886,68 @@ docker compose build
 
 Expected: Builds with no errors.
 
-- [ ] **Step 4: Final commit**
+- [ ] **Step 4: Docs update — UNIFIED-SPEC §17 5c**
+
+Flip `docs/UNIFIED-SPEC.md` §17 priority 5c from "IN DESIGN" to "DONE (<P7 final code commit SHA>)" with a one-paragraph summary of what shipped, matching the style of the 5a (P6a, `e462c7e`) and 5b (P6b, `c670ef1`) entries that landed in `db8c8ba`. Include: sync_failures table + retry layers, circuit breaker with grace-period unpause, sync_run_log, 429/Retry-After handling, D-FAIL classification rules, D-UI-1 Sync Now button, failed-records panel, health_status computation, notification digest window, migration 016.
+
+**SHA selection — the canonical pattern established by 5a and 5b: reference the final CODE commit, NOT this docs commit.** Look at §17 as it exists today: 5a points at `e462c7e` (the P6a implementation commit), not at `db8c8ba` (the P6a docs commit). 5b points at `c670ef1` (P6b implementation), not at `cc97c9e` (P6b docs). Someone reading §17 and running `git show <SHA>` should land on feature code, not a §17 edit. That means for P7:
+
+1. **Finish Task 9 first.** Run `git rev-parse HEAD` and capture the resulting SHA — that's the P7 final code commit.
+2. **Start Task 10.** In this Step 4, hardcode that captured SHA into the §17 5c line.
+3. **Commit Task 10's docs changes with the SHA already correct in the file.**
+
+No self-referencing SHA. No `--amend`. No force-push. No `<commit SHA>` placeholder left in the committed file.
+
+Also: audit the §17.x Decision Log rows D-FAIL-1 through D-FAIL-13, D-UI-1, D-UI-2, D-TENANT-1 and confirm each "Proof Test" column references an actual test function that exists in this priority's test suite. If any row points at a test that was renamed or removed during implementation, update the reference. Do not leave dangling links.
+
+Also: audit the §17.x Decision Log rows D-FAIL-1 through D-FAIL-13, D-UI-1, D-UI-2, D-TENANT-1 and confirm each "Proof Test" column references an actual test function that exists in this priority's test suite. If any row points at a test that was renamed or removed during implementation, update the reference. Do not leave dangling links.
+
+- [ ] **Step 5: Docs update — CHANGELOG [Unreleased]/Added**
+
+Add an entry to `CHANGELOG.md` under `[Unreleased]` → `Added` matching the style of the P6a/P6b entries (which landed in `db8c8ba`). The entry must name:
+- The sync_failures table + 8 stub columns on DataSource promoted to real (from migration 015 stub set)
+- Two-layer retry (task-level 3×30s→90s→270s; record-level N=100 or T=90s per-tick cap, 5 retries OR 7 days)
+- Circuit breaker (threshold 5, grace period 2 after unpause, full-run-failure definition per D-FAIL-4)
+- sync_run_log (one row per run)
+- 429/Retry-After honored at connector layer, capped 600s
+- Sync Now button with polling (D-UI-1) and notification digest (D-UI-2)
+- Failed records panel, dismiss (soft), retry-all, dismiss-all
+- `health_status` computed at response time (healthy / degraded / circuit_open)
+- Migration 016 additions
+- IntegrityError → permanently_failed classification (D-FAIL-10)
+
+- [ ] **Step 6: Docs update — README feature section**
+
+Check `README.md` "Key Features" section. If P7 introduces any user-facing capability that isn't already covered by the existing "Scheduled Sync & Idempotent Ingestion" bullet (added in `cc97c9e`), extend that bullet or add a new one. Likely candidates: "Failed records panel with retry/dismiss + circuit breaker with automatic pause on repeated failure" and/or "Sync Now button with live status polling." If everything is already covered, explicitly state so in the commit message so future auditors see the check happened.
+
+- [ ] **Step 7: Verify docs consistency**
+
+```bash
+grep -n "IN DESIGN" docs/UNIFIED-SPEC.md | grep -E "5[abc]\."
+```
+
+Expected: zero matches for 5a, 5b, OR 5c. All three priorities now show DONE.
+
+```bash
+grep -E "^- \*\*P[67]" CHANGELOG.md | head
+```
+
+Expected: at least one entry starting with "- **P7 —" under [Unreleased]/Added.
+
+- [ ] **Step 8: Final commit**
 
 ```bash
 git add -A
-git commit -m "feat(p7): complete sync failures + circuit breaker + UI polish — all tests passing"
+git commit -m "feat(p7): complete sync failures + circuit breaker + UI polish
+
+All 14 P7 decision records (D-FAIL-1..13, D-UI-1, D-UI-2, D-TENANT-1)
+have implementation + passing tests. All P6a/P6b carry-forward items
+closed (aiofiles, formatNextRun preview, shadcn Checkbox, conftest
+alembic upgrade). Docs aligned in the same commit: UNIFIED-SPEC §17
+5c flipped to DONE, CHANGELOG [Unreleased] entry added, README
+feature section updated.
+
+Final test count: <N>/<N> passing."
 ```
+
+If the §17 5c entry in UNIFIED-SPEC.md needs the self-referencing commit SHA, run a `git commit --amend --no-edit` after filling in the SHA in the file, then `git push` the final state. Do not leave `<commit SHA>` as a placeholder in the committed file.
