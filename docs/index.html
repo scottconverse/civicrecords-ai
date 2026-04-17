@@ -692,7 +692,7 @@
       <div class="card">
         <div class="card-icon">&#128268;</div>
         <h3>Connector Framework</h3>
-        <p>Pluggable adapter architecture lets administrators connect CivicRecords AI directly to live record sources. Built-in connector for local file systems included. Phase 3 adds SQL databases, IMAP email, SMB/NFS file shares, SharePoint, and REST API connectors.</p>
+        <p>Pluggable adapter architecture lets administrators connect CivicRecords AI directly to live record sources. Ships with file system, generic REST API (API key / Bearer / OAuth2 / Basic), and ODBC (SQL databases via pyodbc) connectors. Per-source cron scheduling (croniter, UTC) with configurable presets. Idempotent sync via content-hash dedup for binary sources and source-path dedup for structured sources. Roadmap: IMAP email, SMB/NFS, SharePoint.</p>
       </div>
 
       <div class="card">
