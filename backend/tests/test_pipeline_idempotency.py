@@ -1,6 +1,5 @@
 # backend/tests/test_pipeline_idempotency.py
 """P6a idempotency tests — TDD order: all [FIRST] tests must fail before implementation."""
-import hashlib
 import json
 import uuid
 import pytest
