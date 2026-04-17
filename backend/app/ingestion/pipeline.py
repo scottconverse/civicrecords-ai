@@ -168,6 +168,7 @@ async def ingest_structured_record(
             existing.file_size = len(content_bytes)
             existing.updated_at = datetime.now(timezone.utc)
             existing.ingestion_status = IngestionStatus.PROCESSING
+            existing.connector_type = connector_type
             await session.flush()
 
             # Re-chunk and re-embed (post-flush, same transaction)
