@@ -15,6 +15,9 @@ from app.models.prompts import PromptTemplate
 from app.models.city_profile import CityProfile
 from app.models.connectors import SystemCatalog, ConnectorTemplate
 
+# P7 models
+from app.models.sync_failure import SyncFailure, SyncRunLog
+
 __all__ = [
     "Base", "User", "UserRole", "ServiceAccount", "AuditLog",
     "DataSource", "Document", "DocumentChunk", "IngestionStatus", "SourceType",
@@ -28,4 +31,6 @@ __all__ = [
     "NotificationTemplate", "NotificationLog",
     "PromptTemplate", "CityProfile",
     "SystemCatalog", "ConnectorTemplate",
+    # P7
+    "SyncFailure", "SyncRunLog",
 ]

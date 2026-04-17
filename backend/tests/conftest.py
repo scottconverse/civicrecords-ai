@@ -19,6 +19,7 @@ from app.database import get_async_session
 from app.main import create_app
 from app.models.user import Base, User, UserRole
 from app.models.departments import Department
+from app.models.sync_failure import SyncFailure, SyncRunLog  # noqa: F401 — registers with Base.metadata
 
 # Build test database URL — replace only the database name (last segment)
 _base = settings.database_url.rsplit("/", 1)[0]
@@ -132,6 +133,19 @@ def setup_db():
                     CHECK (source_path IS NULL OR length(source_path) <= 2048);
                 END IF;
             END$$
+        """))
+        conn.commit()
+    # Seed one admin user so tests using (SELECT id FROM users LIMIT 1) get a valid FK.
+    with sync_engine.connect() as conn:
+        conn.execute(sa.text("""
+            INSERT INTO users (id, email, hashed_password, is_active, is_superuser, is_verified, role, full_name)
+            VALUES (
+                gen_random_uuid(),
+                'seed-admin@test.internal',
+                'x',
+                true, true, true, 'admin', 'Seed Admin'
+            )
+            ON CONFLICT DO NOTHING
         """))
         conn.commit()
     yield
