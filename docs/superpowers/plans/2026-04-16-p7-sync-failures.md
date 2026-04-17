@@ -610,34 +610,12 @@ def upgrade() -> None:
     )
     op.create_index("ix_sync_run_log_source", "sync_run_log", ["source_id", "started_at"])
 
-    # 3. New DataSource columns (P7 tracking)
-    for col_name, col_def in [
-        ("consecutive_failure_count", sa.Column("consecutive_failure_count", sa.Integer(),
-                                                nullable=False, server_default="0")),
-        ("last_error_message",        sa.Column("last_error_message", sa.String(500),
-                                                nullable=True)),
-        ("last_error_at",             sa.Column("last_error_at", sa.DateTime(timezone=True),
-                                                nullable=True)),
-        ("sync_paused",               sa.Column("sync_paused", sa.Boolean(),
-                                                nullable=False, server_default="false")),
-        ("sync_paused_at",            sa.Column("sync_paused_at", sa.DateTime(timezone=True),
-                                                nullable=True)),
-        ("sync_paused_reason",        sa.Column("sync_paused_reason", sa.String(200),
-                                                nullable=True)),
-        ("retry_batch_size",          sa.Column("retry_batch_size", sa.Integer(), nullable=True)),
-        ("retry_time_limit_seconds",  sa.Column("retry_time_limit_seconds", sa.Integer(),
-                                                nullable=True)),
-    ]:
-        op.add_column("data_sources", col_def)
+    # NOTE: The eight DataSource tracking columns (consecutive_failure_count, sync_paused, etc.)
+    # are added by migration 015 (P6b) as nullable stubs. They MUST NOT be re-added here.
+    # Migration 016 only creates the two new tables above.
 
 
 def downgrade() -> None:
-    for col in [
-        "retry_time_limit_seconds", "retry_batch_size", "sync_paused_reason",
-        "sync_paused_at", "sync_paused", "last_error_at", "last_error_message",
-        "consecutive_failure_count",
-    ]:
-        op.drop_column("data_sources", col)
     op.drop_table("sync_run_log")
     op.drop_table("sync_failures")
 ```
@@ -1593,19 +1571,118 @@ async def test_dismiss_all_permanently_failed(async_client, admin_headers, db_se
     assert all(r.dismissed_at is not None for r in rows)
 ```
 
-- [ ] **Step 5: Run API tests**
+- [ ] **Step 4b: Write notification rate-limit tests**
+
+```python
+# backend/tests/test_sync_notifications.py
+"""P7 notification rate-limit + digest tests.
+
+These tests run without a DB — they patch _queue_individual_circuit_open and
+_queue_digest_notification at the module level.
+"""
+import uuid
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+
+def _make_source():
+    """Return a minimal mock DataSource-like object."""
+    source = MagicMock()
+    source.id = uuid.uuid4()
+    source.name = f"source-{source.id}"
+    source.consecutive_failure_count = 5
+    source.sync_paused_reason = "5 consecutive failures"
+    return source
+
+
+@pytest.mark.asyncio
+async def test_single_circuit_open_sends_individual_notification():
+    """A lone circuit-open queues one individual notification, no digest."""
+    from app.notifications.sync_notifications import notify_circuit_open, _PENDING_CIRCUIT_OPENS
+
+    _PENDING_CIRCUIT_OPENS.clear()
+    source = _make_source()
+    individual_calls = []
+    digest_calls = []
+
+    async def fake_individual(session, src):
+        individual_calls.append(str(src.id))
+
+    async def fake_digest(session, source_ids, window_start):
+        digest_calls.append(list(source_ids))
+
+    with patch(
+        "app.notifications.sync_notifications._queue_individual_circuit_open",
+        side_effect=fake_individual,
+    ), patch(
+        "app.notifications.sync_notifications._queue_digest_notification",
+        side_effect=fake_digest,
+    ):
+        await notify_circuit_open(None, source)
+
+    assert individual_calls == [str(source.id)]
+    assert digest_calls == []
+
+
+@pytest.mark.asyncio
+async def test_multiple_circuit_opens_batched_to_digest():
+    """3 sources circuit-open within the same 5-min window → at most 1 individual email
+    (the first open) plus a digest that covers all 3 source IDs. Must NOT produce
+    3 separate individual notifications.
+
+    Spec ref: 'D12 — 3 sources circuit-open within 5-min window → 1 digest email, not 3'
+    """
+    from app.notifications.sync_notifications import notify_circuit_open, _PENDING_CIRCUIT_OPENS
+
+    _PENDING_CIRCUIT_OPENS.clear()
+    sources = [_make_source() for _ in range(3)]
+    individual_calls = []
+    digest_calls = []
+
+    async def fake_individual(session, src):
+        individual_calls.append(str(src.id))
+
+    async def fake_digest(session, source_ids, window_start):
+        digest_calls.append(list(source_ids))
+
+    with patch(
+        "app.notifications.sync_notifications._queue_individual_circuit_open",
+        side_effect=fake_individual,
+    ), patch(
+        "app.notifications.sync_notifications._queue_digest_notification",
+        side_effect=fake_digest,
+    ):
+        for source in sources:
+            await notify_circuit_open(None, source)
+
+    # Must not send 3 individual mails — at most 1 (the first)
+    assert len(individual_calls) <= 1, (
+        f"Expected ≤1 individual notification for 3 circuit opens in one window, "
+        f"got {len(individual_calls)}: {individual_calls}"
+    )
+    # Digest must have been sent and must cover all 3 source IDs
+    assert digest_calls, "Expected at least one digest call for 3 simultaneous circuit opens"
+    all_digest_ids = {sid for call in digest_calls for sid in call}
+    for source in sources:
+        assert str(source.id) in all_digest_ids, (
+            f"Source {source.id} missing from digest notification"
+        )
+```
+
+- [ ] **Step 5: Run notification + API tests**
 
 ```
-cd backend && DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@localhost:5432/civicrecords_test python -m pytest tests/test_sync_failures_router.py -v
+cd backend && python -m pytest tests/test_sync_notifications.py tests/test_sync_failures_router.py -v
 ```
 
-Expected: PASS.
+Expected: `test_sync_notifications.py` tests PASS (pure unit, no DB). Router tests PASS once integration DB is up.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/app/notifications/sync_notifications.py backend/app/schemas/sync_failure.py backend/app/datasources/sync_failures_router.py backend/tests/test_sync_failures_router.py
-git commit -m "feat(p7): sync-failures API endpoints, notifications stub, schemas"
+git add backend/app/notifications/sync_notifications.py backend/app/schemas/sync_failure.py backend/app/datasources/sync_failures_router.py backend/tests/test_sync_failures_router.py backend/tests/test_sync_notifications.py
+git commit -m "feat(p7): sync-failures API endpoints, notifications stub, schemas, rate-limit tests"
 ```
 
 ---
@@ -2368,42 +2445,7 @@ git commit -m "feat(p7): SourceCard Option B layout, FailedRecordsPanel, Sync No
 
 ---
 
-## Task 8: Full test suite + final integration
-
-- [ ] **Step 1: Run full backend test suite**
-
-```
-cd backend && DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@localhost:5432/civicrecords_test python -m pytest tests/ -v --tb=short 2>&1 | tail -30
-```
-
-Expected: All tests PASS.
-
-- [ ] **Step 2: Run frontend tests**
-
-```
-cd frontend && npm test -- --run 2>&1 | tail -20
-```
-
-Expected: All frontend tests PASS.
-
-- [ ] **Step 3: Docker build verification**
-
-```bash
-docker compose build
-```
-
-Expected: Builds with no errors.
-
-- [ ] **Step 4: Final commit**
-
-```bash
-git add -A
-git commit -m "feat(p7): complete sync failures + circuit breaker + UI polish — all tests passing"
-```
-
----
-
-## Task 9: 429/Retry-After handling + pipeline failure classification (D10 + D13b)
+## Task 8: 429/Retry-After handling + pipeline failure classification (D10 + D13b)
 
 **Files:**
 - Modify: `backend/app/connectors/rest_api.py`
@@ -2635,4 +2677,41 @@ Expected: All 3 tests PASS.
 ```bash
 git add backend/app/connectors/rest_api.py backend/app/ingestion/sync_runner.py backend/tests/test_sync_runner_pipeline_failures.py
 git commit -m "feat(p7): 429/Retry-After handling (D10) + IntegrityError → permanently_failed (D13b)"
+```
+
+---
+
+## Task 9: Full test suite + final integration
+
+This is the final gate. All implementation is complete at this point.
+
+- [ ] **Step 1: Run full backend test suite**
+
+```
+cd backend && DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@localhost:5432/civicrecords_test python -m pytest tests/ -v --tb=short 2>&1 | tail -30
+```
+
+Expected: All tests PASS. Zero failures.
+
+- [ ] **Step 2: Run frontend tests**
+
+```
+cd frontend && npm test -- --run 2>&1 | tail -20
+```
+
+Expected: All frontend tests PASS.
+
+- [ ] **Step 3: Docker build verification**
+
+```bash
+docker compose build
+```
+
+Expected: Builds with no errors.
+
+- [ ] **Step 4: Final commit**
+
+```bash
+git add -A
+git commit -m "feat(p7): complete sync failures + circuit breaker + UI polish — all tests passing"
 ```

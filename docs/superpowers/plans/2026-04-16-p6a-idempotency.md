@@ -107,9 +107,9 @@ class TestRestDeterminism:
         bytes2 = _canonical_rest({"status": "open", "id": 1, "title": "Permit"})
         assert bytes1 == bytes2
 
-    # ---------------------------------------------------------------------------
-    # ODBC — determinism tests
-    # ---------------------------------------------------------------------------
+
+class TestOdbcDeterminism:
+    """ODBC fetch() must produce identical bytes regardless of modified_column or column order."""
 
     def test_odbc_modified_column_excluded(self):
         """Same row with modified_column ticking → same canonical bytes."""
@@ -137,7 +137,7 @@ class TestRestDeterminism:
 - [ ] **Step 2: Run tests to confirm they PASS (these test reference implementations, not connector code — that's correct)**
 
 ```
-cd backend && python -m pytest tests/test_pipeline_idempotency.py::TestRestDeterminism -v
+cd backend && python -m pytest tests/test_pipeline_idempotency.py::TestRestDeterminism tests/test_pipeline_idempotency.py::TestOdbcDeterminism -v
 ```
 
 Expected: 4 PASSED — these are pure unit tests on `_canonical_*` helpers.
@@ -223,7 +223,13 @@ class TestIngestStructuredRecord:
 
     @pytest.mark.asyncio
     async def test_update_deletes_old_chunks_before_reembed(self, db_session):
-        """Same source_path, content changes → old DocumentChunk rows deleted before re-chunk."""
+        """Same source_path, content changes → old DocumentChunk rows deleted before re-chunk.
+
+        Assertion: every chunk ID from the first ingestion is ABSENT after the second ingestion.
+        This proves the DELETE step ran — not merely that the count didn't grow too much.
+        A count-based assertion (e.g., second_count <= first_count + 5) passes even if the
+        DELETE is missing and new chunks were simply appended.
+        """
         from app.ingestion.pipeline import ingest_structured_record
         from sqlalchemy import select, func
         from app.models.document import DocumentChunk
@@ -235,24 +241,215 @@ class TestIngestStructuredRecord:
             content_bytes=b'{"id": 3, "body": "original content long enough to chunk"}',
             filename="3.json", metadata={}, connector_type="rest_api",
         )
-        first_chunk_count_result = await db_session.execute(
-            select(func.count()).where(DocumentChunk.document_id == doc.id)
+
+        # Collect the chunk IDs created by the first ingestion
+        first_chunk_ids_result = await db_session.execute(
+            select(DocumentChunk.id).where(DocumentChunk.document_id == doc.id)
         )
-        first_count = first_chunk_count_result.scalar()
+        first_chunk_ids = {row[0] for row in first_chunk_ids_result}
+        assert len(first_chunk_ids) > 0, "First ingestion produced no chunks — test precondition failed"
 
         await ingest_structured_record(
             session=db_session, source_id=source_id, source_path=path,
             content_bytes=b'{"id": 3, "body": "completely different content"}',
             filename="3.json", metadata={}, connector_type="rest_api",
         )
-        second_chunk_count_result = await db_session.execute(
-            select(func.count()).where(DocumentChunk.document_id == doc.id)
-        )
-        second_count = second_chunk_count_result.scalar()
 
-        # Old chunks removed, new chunks in place — no accumulation
-        assert second_count <= first_count + 5  # sanity bound, not exact count
+        # Every chunk ID from the first ingestion must be gone
+        surviving_old_chunks_result = await db_session.execute(
+            select(func.count(DocumentChunk.id)).where(
+                DocumentChunk.document_id == doc.id,
+                DocumentChunk.id.in_(first_chunk_ids),
+            )
+        )
+        surviving_count = surviving_old_chunks_result.scalar()
+        assert surviving_count == 0, (
+            f"{surviving_count} original chunk(s) survived the update — "
+            "DELETE before re-embed is not working"
+        )
 ```
+
+- [ ] **Step 3b: Add concurrency tests proving SELECT FOR UPDATE and UNIQUE constraints (H5)**
+
+Append to `backend/tests/test_pipeline_idempotency.py`:
+
+```python
+class TestConcurrency:
+    """Prove UNIQUE indexes and SELECT FOR UPDATE prevent duplicate rows under
+    concurrent workers. Uses asyncio.gather() with independent DB sessions.
+
+    Requires db_session_factory fixture in conftest.py (see below).
+    """
+
+    @pytest.mark.asyncio
+    async def test_concurrent_structured_insert_race(self, db_session, db_session_factory):
+        """Two workers insert same (source_id, source_path) simultaneously → 1 document row.
+        Second INSERT hits uq_documents_structured_path; IntegrityError must be caught,
+        not re-raised (caller sees graceful no-op, not a crash).
+        """
+        import asyncio
+        from sqlalchemy.exc import IntegrityError
+        from sqlalchemy import select, func, text
+        from app.ingestion.pipeline import ingest_structured_record
+        from app.models.document import Document
+
+        source_id = uuid.uuid4()
+        await db_session.execute(text("""
+            INSERT INTO data_sources (id, name, source_type, connection_config, is_active, created_by)
+            VALUES (:id, 'concurrent-struct', 'rest_api', '{}', true, (SELECT id FROM users LIMIT 1))
+        """), {"id": str(source_id)})
+        await db_session.commit()
+
+        path = "https://api.example.com/concurrent/1"
+        content = b'{"id": 1}'
+
+        async def worker(session):
+            try:
+                await ingest_structured_record(
+                    session=session, source_id=source_id, source_path=path,
+                    content_bytes=content, filename="1.json", metadata={}, connector_type="rest_api",
+                )
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()  # expected when second worker hits UNIQUE constraint
+
+        async with db_session_factory() as s1, db_session_factory() as s2:
+            await asyncio.gather(worker(s1), worker(s2))
+
+        count = await db_session.scalar(
+            select(func.count(Document.id)).where(
+                Document.source_id == source_id, Document.source_path == path
+            )
+        )
+        assert count == 1, f"Race produced {count} rows — UNIQUE constraint not enforced"
+
+    @pytest.mark.asyncio
+    async def test_concurrent_binary_insert_race(self, db_session, db_session_factory):
+        """Two workers insert same (source_id, file_hash) simultaneously → 1 document row.
+        Second INSERT hits uq_documents_binary_hash; IntegrityError handled gracefully.
+        """
+        import asyncio, os, tempfile
+        from pathlib import Path
+        from sqlalchemy.exc import IntegrityError
+        from sqlalchemy import select, func, text
+        from app.ingestion.pipeline import ingest_file
+        from app.models.document import Document
+
+        source_id = uuid.uuid4()
+        await db_session.execute(text("""
+            INSERT INTO data_sources (id, name, source_type, connection_config, is_active, created_by)
+            VALUES (:id, 'concurrent-binary', 'directory', '{}', true, (SELECT id FROM users LIMIT 1))
+        """), {"id": str(source_id)})
+        await db_session.commit()
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f:
+            f.write(b"binary concurrency test content")
+            tmp_path = Path(f.name)
+
+        async def worker(session):
+            try:
+                await ingest_file(session=session, file_path=tmp_path, source_id=source_id)
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()
+
+        try:
+            async with db_session_factory() as s1, db_session_factory() as s2:
+                await asyncio.gather(worker(s1), worker(s2))
+            count = await db_session.scalar(
+                select(func.count(Document.id)).where(Document.source_id == source_id)
+            )
+            assert count == 1, f"Race produced {count} rows"
+        finally:
+            os.unlink(tmp_path)
+
+    @pytest.mark.asyncio
+    async def test_concurrent_update_select_for_update(self, db_session, db_session_factory):
+        """Two workers detect same source_path with different hash → SELECT FOR UPDATE
+        serializes them. One wins and updates; the second finds matching hash → no-op.
+        Final: one row, chunk count matches one update only (not two stacked updates).
+        """
+        import asyncio
+        from sqlalchemy import select, func, text
+        from app.ingestion.pipeline import ingest_structured_record
+        from app.models.document import Document, DocumentChunk
+
+        source_id = uuid.uuid4()
+        await db_session.execute(text("""
+            INSERT INTO data_sources (id, name, source_type, connection_config, is_active, created_by)
+            VALUES (:id, 'concurrent-update', 'rest_api', '{}', true, (SELECT id FROM users LIMIT 1))
+        """), {"id": str(source_id)})
+        await db_session.commit()
+
+        path = "https://api.example.com/concurrent/update"
+        original = b'{"id": 99, "v": 1}'
+
+        # Initial insert
+        await ingest_structured_record(
+            session=db_session, source_id=source_id, source_path=path,
+            content_bytes=original, filename="99.json", metadata={}, connector_type="rest_api",
+        )
+        await db_session.commit()
+
+        updated = b'{"id": 99, "v": 2}'
+
+        async def worker(session):
+            await ingest_structured_record(
+                session=session, source_id=source_id, source_path=path,
+                content_bytes=updated, filename="99.json", metadata={}, connector_type="rest_api",
+            )
+            await session.commit()
+
+        # Both workers see the same updated content — SELECT FOR UPDATE means one blocks
+        # on the lock, then finds hash already matches after the first commits → no-op
+        async with db_session_factory() as s1, db_session_factory() as s2:
+            await asyncio.gather(worker(s1), worker(s2))
+
+        doc_count = await db_session.scalar(
+            select(func.count(Document.id)).where(
+                Document.source_id == source_id, Document.source_path == path
+            )
+        )
+        assert doc_count == 1, "Concurrent updates produced multiple document rows"
+
+        doc = await db_session.scalar(
+            select(Document).where(Document.source_id == source_id, Document.source_path == path)
+        )
+        # Collect all chunk IDs — must be one cohesive set, not two stacked update sets
+        chunk_ids_result = await db_session.execute(
+            select(DocumentChunk.id).where(DocumentChunk.document_id == doc.id)
+        )
+        chunk_ids = {row[0] for row in chunk_ids_result}
+        # Verify no duplicate chunk_index values (which would indicate double-update accumulation)
+        chunk_indexes_result = await db_session.execute(
+            select(DocumentChunk.chunk_index).where(DocumentChunk.document_id == doc.id)
+        )
+        indexes = [row[0] for row in chunk_indexes_result]
+        assert len(indexes) == len(set(indexes)), (
+            "Duplicate chunk_index values found — concurrent updates stacked instead of serializing"
+        )
+```
+
+Add to `backend/tests/conftest.py` — the `db_session_factory` fixture for concurrency tests:
+
+```python
+@pytest.fixture
+def db_session_factory(async_engine):
+    """Returns an async session factory for creating independent sessions in concurrency tests.
+
+    Each session is independent — they do NOT share a transaction with db_session.
+    This is required for asyncio.gather()-based concurrency tests to exercise real
+    DB-level locking rather than serializing at the Python level.
+
+    Usage:
+        async with db_session_factory() as s1, db_session_factory() as s2:
+            await asyncio.gather(worker(s1), worker(s2))
+    """
+    from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
+    return async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
+```
+
+(Check `conftest.py` for the existing `async_engine` fixture name — use whatever the test suite calls the engine fixture.)
 
 - [ ] **Step 4: Run the integration tests to confirm they FAIL**
 
@@ -897,9 +1094,21 @@ async def ingest_structured_record(
 
     SELECT FOR UPDATE prevents concurrent workers from racing on the same record.
     """
+    if len(source_path) > 2048:
+        raise ValueError(
+            f"source_path exceeds 2048-char limit ({len(source_path)} chars): "
+            f"{source_path[:120]}..."
+        )
+
     file_hash = hashlib.sha256(content_bytes).hexdigest()
 
-    # Lock the row for this source_path to prevent concurrent update races (H5)
+    # begin_nested() creates a SAVEPOINT inside the caller's outer transaction.
+    # The caller (run_connector_sync or a test fixture) must have already begun a
+    # transaction — i.e., the session must NOT be in autocommit mode.
+    # In tests, the db_session fixture wraps each test in a transaction and rolls back
+    # after; that outer transaction satisfies begin_nested(). If you see
+    # "Can't call begin_nested() on connection in autocommit", ensure the session
+    # was acquired via `async with session.begin()` in the caller.
     async with session.begin_nested():
         result = await session.execute(
             select(Document)
@@ -996,6 +1205,44 @@ async def ingest_structured_record(
         return doc
 ```
 
+- [ ] **Step 1b: Write source_path length validation test**
+
+Add this test to `backend/tests/test_pipeline_idempotency.py`:
+
+```python
+@pytest.mark.asyncio
+async def test_source_path_max_length_rejected(db_session):
+    """source_path > 2048 chars raises ValueError before any DB write.
+
+    Prevents PostgreSQL check constraint violations (which produce 500s) — this
+    raises predictably so the sync runner can dead-letter the record.
+    """
+    import uuid
+    from app.ingestion.pipeline import ingest_structured_record
+
+    oversized_path = "https://api.example.com/records/" + "x" * 2030
+    assert len(oversized_path) > 2048, "Test setup: path must exceed 2048 chars"
+
+    with pytest.raises(ValueError, match="source_path exceeds 2048-char limit"):
+        await ingest_structured_record(
+            session=db_session,
+            source_id=uuid.uuid4(),
+            source_path=oversized_path,
+            content_bytes=b'{"id": 1}',
+            filename="test.json",
+            metadata={},
+            connector_type="rest_api",
+        )
+```
+
+Run:
+
+```
+cd backend && python -m pytest tests/test_pipeline_idempotency.py::test_source_path_max_length_rejected -v
+```
+
+Expected: PASS (pure unit — no DB needed for this test since the ValueError is raised before any DB call).
+
 - [ ] **Step 2: Run the integration tests that were failing in Task 1**
 
 ```
@@ -1008,7 +1255,7 @@ Expected: All tests PASS.
 
 ```bash
 git add backend/app/ingestion/pipeline.py
-git commit -m "feat(p6a): add ingest_structured_record() with SELECT FOR UPDATE upsert semantics"
+git commit -m "feat(p6a): add ingest_structured_record() with SELECT FOR UPDATE upsert semantics and source_path length guard"
 ```
 
 ---

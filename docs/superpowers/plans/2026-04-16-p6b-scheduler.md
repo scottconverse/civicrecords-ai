@@ -346,7 +346,7 @@ Also add these P7 columns that will be needed by migration 016 later (add as nul
     retry_time_limit_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 ```
 
-Note: The DB columns for P7 fields will be added by migration 016. Adding ORM mappings here avoids a model/migration sync gap when P7 plan runs.
+**IMPORTANT — deployment sequencing:** Migration 015 (Task 5) adds these eight columns to the DB as nullable stubs. The ORM mappings added here reference columns that MUST exist in the DB before any DataSource query runs. If migration 015 omits them and P7 has not yet shipped, every `SELECT` on `data_sources` fails with `UndefinedColumn`. Task 5 is updated to include them.
 
 - [ ] **Step 2: Verify import**
 
@@ -494,8 +494,30 @@ def upgrade() -> None:
     # 5. Drop schedule_minutes
     op.drop_column("data_sources", "schedule_minutes")
 
+    # 6. Add P7 DataSource tracking columns as nullable stubs.
+    #    These are used by the P6b scheduler query (sync_paused filter) and must exist
+    #    in the DB before P6b ships. P7 migration 016 creates sync_failures + sync_run_log
+    #    tables only — it does NOT re-add these columns.
+    for col_def in [
+        sa.Column("consecutive_failure_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("last_error_message", sa.String(500), nullable=True),
+        sa.Column("last_error_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("sync_paused", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column("sync_paused_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("sync_paused_reason", sa.String(200), nullable=True),
+        sa.Column("retry_batch_size", sa.Integer(), nullable=True),
+        sa.Column("retry_time_limit_seconds", sa.Integer(), nullable=True),
+    ]:
+        op.add_column("data_sources", col_def)
+
 
 def downgrade() -> None:
+    for col in [
+        "retry_time_limit_seconds", "retry_batch_size", "sync_paused_reason",
+        "sync_paused_at", "sync_paused", "last_error_at", "last_error_message",
+        "consecutive_failure_count",
+    ]:
+        op.drop_column("data_sources", col)
     op.add_column(
         "data_sources",
         sa.Column("schedule_minutes", sa.Integer(), nullable=True),
@@ -1017,18 +1039,45 @@ In the DataSource create/edit form, add after the connection config section:
 </div>
 ```
 
-- [ ] **Step 4: Add `formatNextRun` helper (client-side UTC + local)**
+- [ ] **Step 4: Install cron-parser and add `formatNextRun` helper**
+
+```bash
+cd frontend && npm install cron-parser
+```
+
+`cron-parser` (Apache-2.0) parses a cron expression and returns an iterator of upcoming fire times. Used here only in the wizard preview — the DataSource card reads `next_sync_at` from the API instead.
+
+Add this import at the top of `DataSources.tsx`:
+
+```typescript
+import parser from 'cron-parser';
+```
+
+Add this helper function (not exported — file-private):
 
 ```typescript
 function formatNextRun(cronExpr: string): string {
-  // Use Intl to show both UTC and local time — computed client-side
   try {
-    // Simple: show "Next: <date> UTC (<local>)"
-    // Full croniter-equivalent is not available in the browser;
-    // next_sync_at is returned by the API on GET /datasources/
-    return "See card for next run time";
+    const interval = parser.parseExpression(cronExpr, { utc: true });
+    const next = interval.next().toDate();
+    const utcStr = next.toLocaleString('en-US', {
+      timeZone: 'UTC',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }) + ' UTC';
+    const localStr = next.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    return `${utcStr} (${localStr} local)`;
   } catch {
-    return "Invalid expression";
+    return 'Invalid expression';
   }
 }
 ```
