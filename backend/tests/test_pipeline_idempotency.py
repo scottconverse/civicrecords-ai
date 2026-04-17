@@ -31,6 +31,38 @@ def _canonical_odbc(row_dict: dict, modified_column: str | None = None) -> bytes
 
 
 # ---------------------------------------------------------------------------
+# source_path length guard
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_source_path_max_length_rejected():
+    """source_path > 2048 chars raises ValueError before any DB write.
+
+    Uses a mock session — the guard fires before the function touches the DB,
+    so no real database connection is needed.
+    """
+    import uuid
+    from unittest.mock import MagicMock
+    from app.ingestion.pipeline import ingest_structured_record
+
+    oversized_path = "https://api.example.com/records/" + "x" * 2030
+    assert len(oversized_path) > 2048, "Test setup: path must exceed 2048 chars"
+
+    mock_session = MagicMock()
+
+    with pytest.raises(ValueError, match="source_path exceeds 2048-char limit"):
+        await ingest_structured_record(
+            session=mock_session,
+            source_id=uuid.uuid4(),
+            source_path=oversized_path,
+            content_bytes=b'{"id": 1}',
+            filename="test.json",
+            metadata={},
+            connector_type="rest_api",
+        )
+
+
+# ---------------------------------------------------------------------------
 # REST — determinism tests
 # ---------------------------------------------------------------------------
 

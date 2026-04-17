@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ingestion.chunker import chunk_pages
@@ -110,6 +110,137 @@ async def ingest_file(
         raise
 
     return doc
+
+
+async def ingest_structured_record(
+    session: AsyncSession,
+    source_id: uuid.UUID,
+    source_path: str,
+    content_bytes: bytes,
+    filename: str,
+    metadata: dict,
+    connector_type: str,
+    chunk_size: int = 500,
+    chunk_overlap: int = 50,
+    embed_model: str = "nomic-embed-text",
+) -> Document:
+    """Upsert a structured record (REST/ODBC) using (source_id, source_path) identity.
+
+    - Same source_path + same hash → no-op (returns existing doc).
+    - Same source_path + different hash → DELETE old chunks/embeddings, UPDATE doc.
+    - New source_path → INSERT doc, chunk, embed.
+
+    SELECT FOR UPDATE prevents concurrent workers from racing on the same record.
+    """
+    if len(source_path) > 2048:
+        raise ValueError(
+            f"source_path exceeds 2048-char limit ({len(source_path)} chars): "
+            f"{source_path[:120]}..."
+        )
+
+    file_hash = hashlib.sha256(content_bytes).hexdigest()
+
+    # begin_nested() creates a SAVEPOINT inside the caller's outer transaction.
+    # The caller (run_connector_sync or a test fixture) must have already begun a
+    # transaction — i.e., the session must NOT be in autocommit mode.
+    # In tests, the db_session fixture wraps each test in a transaction and rolls back
+    # after; that outer transaction satisfies begin_nested(). If you see
+    # "Can't call begin_nested() on connection in autocommit", ensure the session
+    # was acquired via `async with session.begin()` in the caller.
+    async with session.begin_nested():
+        result = await session.execute(
+            select(Document)
+            .where(Document.source_id == source_id, Document.source_path == source_path)
+            .with_for_update()
+        )
+        existing = result.scalar_one_or_none()
+
+        if existing is not None:
+            if existing.file_hash == file_hash:
+                # Content unchanged — no-op
+                return existing
+
+            # Content changed: DELETE old chunks then update doc atomically
+            await session.execute(
+                delete(DocumentChunk).where(DocumentChunk.document_id == existing.id)
+            )
+            existing.file_hash = file_hash
+            existing.file_size = len(content_bytes)
+            existing.updated_at = datetime.now(timezone.utc)
+            existing.ingestion_status = IngestionStatus.PROCESSING
+            await session.flush()
+
+            # Re-chunk and re-embed (post-flush, same transaction)
+            try:
+                chunks = chunk_pages(
+                    [{"text": content_bytes.decode("utf-8", errors="replace"), "page_number": 1}],
+                    chunk_size=chunk_size,
+                    chunk_overlap=chunk_overlap,
+                )
+                if chunks:
+                    texts = [c.text for c in chunks]
+                    embeddings = await embed_batch(texts, model=embed_model)
+                    for chunk, embedding in zip(chunks, embeddings):
+                        session.add(DocumentChunk(
+                            document_id=existing.id,
+                            chunk_index=chunk.index,
+                            content_text=chunk.text,
+                            embedding=embedding,
+                            token_count=chunk.token_count,
+                            page_number=chunk.page_number,
+                        ))
+                existing.ingestion_status = IngestionStatus.COMPLETED
+                existing.chunk_count = len(chunks)
+                existing.ingested_at = datetime.now(timezone.utc)
+            except Exception as e:
+                existing.ingestion_status = IngestionStatus.FAILED
+                existing.ingestion_error = str(e)[:2000]
+                raise
+
+            return existing
+
+        # New record — INSERT
+        doc = Document(
+            source_id=source_id,
+            source_path=source_path,
+            filename=filename,
+            file_type="json",
+            file_hash=file_hash,
+            file_size=len(content_bytes),
+            connector_type=connector_type,
+            ingestion_status=IngestionStatus.PROCESSING,
+            metadata_=metadata,
+        )
+        session.add(doc)
+        await session.flush()
+
+        try:
+            chunks = chunk_pages(
+                [{"text": content_bytes.decode("utf-8", errors="replace"), "page_number": 1}],
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+            )
+            if chunks:
+                texts = [c.text for c in chunks]
+                embeddings = await embed_batch(texts, model=embed_model)
+                for chunk, embedding in zip(chunks, embeddings):
+                    session.add(DocumentChunk(
+                        document_id=doc.id,
+                        chunk_index=chunk.index,
+                        content_text=chunk.text,
+                        embedding=embedding,
+                        token_count=chunk.token_count,
+                        page_number=chunk.page_number,
+                    ))
+            doc.ingestion_status = IngestionStatus.COMPLETED
+            doc.chunk_count = len(chunks)
+            doc.ingested_at = datetime.now(timezone.utc)
+        except Exception as e:
+            doc.ingestion_status = IngestionStatus.FAILED
+            doc.ingestion_error = str(e)[:2000]
+            raise
+
+        return doc
 
 
 async def ingest_directory(
