@@ -33,6 +33,11 @@ class RestApiConfig(BaseModel):
     response_format: Literal["json", "xml", "csv"] = "json"
     results_field: Optional[str] = None   # JSON path to records array
 
+    # Idempotency (P6a)
+    data_key: Optional[str] = None          # dotted path to logical record; None = root object
+    id_field: str = "id"                    # field within each list element used as record ID
+    envelope_excludes: list[str] = []       # reserved for v2 — not used in v1
+
     # Incremental sync
     since_field: Optional[str] = None
     since_format: str = "%Y-%m-%dT%H:%M:%SZ"

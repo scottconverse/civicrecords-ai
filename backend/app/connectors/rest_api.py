@@ -8,6 +8,7 @@ Pagination: none, page-based, offset-based, cursor-based.
 import json
 import logging
 import time
+import urllib.parse
 from typing import Any, Optional
 
 import httpx
@@ -29,6 +30,39 @@ _MIME_TYPES = {
     "xml": "application/xml",
     "csv": "text/csv",
 }
+
+
+def _extract_dotted(obj: Any, path: str | None) -> Any:
+    """Traverse a dotted path into obj. None path returns obj unchanged.
+
+    Raises KeyError if a segment is missing.
+    Raises TypeError if a segment traverses a non-dict.
+    """
+    if path is None:
+        return obj
+    for segment in path.split("."):
+        if not isinstance(obj, dict):
+            raise TypeError(
+                f"_extract_dotted: expected dict at segment '{segment}', got {type(obj).__name__}"
+            )
+        if segment not in obj:
+            raise KeyError(
+                f"_extract_dotted: key '{segment}' not found in object. "
+                f"Available keys: {list(obj.keys())}"
+            )
+        obj = obj[segment]
+    return obj
+
+
+def _build_source_path(base_url: str, endpoint_path: str, record_id: str) -> str:
+    """Construct canonical source_path for a REST record.
+
+    Format: {base_url.rstrip('/')}{endpoint_path}/{url_encoded_record_id}
+    Max 2048 chars enforced at call site (validation layer).
+    """
+    base = str(base_url).rstrip("/")
+    encoded_id = urllib.parse.quote(str(record_id), safe="")
+    return f"{base}{endpoint_path}/{encoded_id}"
 
 
 class RestApiConnector(BaseConnector):
@@ -188,11 +222,12 @@ class RestApiConnector(BaseConnector):
                 items = [data]
 
             for item in items:
-                record_id = str(item.get("id", len(records)))
+                record_id = str(item.get(cfg.id_field, len(records)))
+                source_path = _build_source_path(str(cfg.base_url), cfg.endpoint_path, record_id)
                 records.append(
                     DiscoveredRecord(
-                        source_path=f"{url}/{record_id}",
-                        filename=f"{record_id}.json",
+                        source_path=source_path,
+                        filename=f"{urllib.parse.quote(record_id, safe='')}.json",
                         file_type="json",
                         file_size=len(json.dumps(item).encode()),
                         metadata={"raw": item},
@@ -231,12 +266,18 @@ class RestApiConnector(BaseConnector):
         response = await self._make_request("GET", source_path)
         response.raise_for_status()
 
-        content = response.content
-        if len(content) > self._cfg.max_response_bytes:
+        raw_bytes = response.content
+        if len(raw_bytes) > self._cfg.max_response_bytes:
             raise RuntimeError(
-                f"Fetch response size {len(content)} exceeds "
+                f"Fetch response size {len(raw_bytes)} exceeds "
                 f"max_response_bytes={self._cfg.max_response_bytes}"
             )
+
+        # Canonical serialization: extract via data_key, sort keys, deterministic output
+        parsed = response.json()
+        record = _extract_dotted(parsed, self._cfg.data_key)
+        canonical = json.dumps(record, sort_keys=True, ensure_ascii=False, default=str)
+        content = canonical.encode("utf-8")
 
         return FetchedDocument(
             source_path=source_path,

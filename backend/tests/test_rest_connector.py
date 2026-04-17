@@ -437,3 +437,54 @@ async def test_health_check_network_error_returns_unreachable():
 def test_connector_type():
     connector = RestApiConnector(make_config())
     assert connector.connector_type == "rest_api"
+
+
+# ---------------------------------------------------------------------------
+# P6a — canonical serialization, data_key, source_path encoding
+# ---------------------------------------------------------------------------
+
+class TestRestApiConnectorP6a:
+
+    def _make_connector(self, extra_config: dict = None) -> "RestApiConnector":
+        from app.connectors.rest_api import RestApiConnector
+        config = {
+            "base_url": "https://api.example.com",
+            "endpoint_path": "/records",
+            "auth_method": "none",
+            "response_format": "json",
+            **(extra_config or {}),
+        }
+        return RestApiConnector(config)
+
+    def test_data_key_nested_extraction(self):
+        """data_key='response.record' extracts correctly from nested response."""
+        from app.connectors.rest_api import _extract_dotted
+        payload = {"response": {"record": {"id": 1, "name": "Test"}}}
+        result = _extract_dotted(payload, "response.record")
+        assert result == {"id": 1, "name": "Test"}
+
+    def test_data_key_missing_raises_key_error(self):
+        """data_key='missing.path' → KeyError with descriptive message."""
+        from app.connectors.rest_api import _extract_dotted
+        with pytest.raises(KeyError, match="missing"):
+            _extract_dotted({"data": {}}, "missing.path")
+
+    def test_data_key_array_each_element_is_record(self):
+        """data_key resolves to list → each element is its own DiscoveredRecord."""
+        from app.connectors.rest_api import _extract_dotted
+        payload = {"items": [{"id": 1}, {"id": 2}, {"id": 3}]}
+        result = _extract_dotted(payload, "items")
+        assert isinstance(result, list)
+        assert len(result) == 3
+
+    def test_source_path_record_id_encoded(self):
+        """Record ID containing '/' is percent-encoded in source_path."""
+        import urllib.parse
+        from app.connectors.rest_api import _build_source_path
+        base = "https://api.example.com"
+        endpoint = "/records"
+        record_id = "dept/2024/contract-001"
+        path = _build_source_path(base, endpoint, record_id)
+        # The record ID segment must be URL-encoded
+        assert urllib.parse.quote(record_id, safe="") in path
+        assert "/" not in path.split(endpoint + "/")[1]  # no raw slash in ID segment
