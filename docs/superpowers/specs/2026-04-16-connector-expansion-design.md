@@ -83,7 +83,7 @@ Every protocol method (`discover`, `fetch`, `health_check`) calls `_ensure_authe
    - `source_path` = `"{table_name}/{pk_value}"`
    - `filename` = `"{table_name}_{pk_value}.json"`
    - `mime_type` = `"application/json"`
-6. Updates cursor **only on full successful completion** (see §2.5).
+6. Updates cursor **only on full successful completion** (see §2.6).
 7. Returns `list[DiscoveredRecord]`.
 
 **`fetch(record: DiscoveredRecord)`**
