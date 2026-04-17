@@ -107,6 +107,15 @@ def task_ingest_source(self, source_id: str, user_id: str | None = None):
             if source_type == "manual_drop":
                 return await _ingest_manual_drop_source(session, source, user_id)
 
+            # New connector types: rest_api, odbc
+            if source_type in ("rest_api", "odbc"):
+                from app.connectors import get_connector
+                connector = get_connector(source_type, config)
+                authenticated = await connector.authenticate()
+                if not authenticated:
+                    return {"error": f"{source_type} authentication failed"}
+                return await run_connector_sync(connector, source_id=source_id, session=session)
+
             # Default: directory-based ingestion
             directory = Path(config.get("path", ""))
             if not directory.is_dir():
