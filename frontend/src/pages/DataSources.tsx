@@ -41,7 +41,21 @@ interface DataSource {
   is_active: boolean;
   created_at: string;
   last_ingestion_at: string | null;
+  sync_schedule: string | null;
+  schedule_enabled: boolean;
+  next_sync_at: string | null;
 }
+
+const SCHEDULE_PRESETS: { label: string; cron: string | null }[] = [
+  { label: "Every 15 minutes", cron: "*/15 * * * *" },
+  { label: "Every 30 minutes", cron: "*/30 * * * *" },
+  { label: "Every hour",       cron: "0 * * * *" },
+  { label: "Every 6 hours",    cron: "0 */6 * * *" },
+  { label: "Every 12 hours",   cron: "0 */12 * * *" },
+  { label: "Nightly at 2am UTC", cron: "0 2 * * *" },
+  { label: "Weekly (Mon 2am UTC)", cron: "0 2 * * 1" },
+  { label: "Custom…", cron: null },
+];
 
 function SourceCard({ source, onIngest, ingesting }: { source: DataSource; onIngest: () => void; ingesting: boolean }) {
   return (
@@ -110,6 +124,8 @@ export default function DataSources({ token }: { token: string }) {
     pagination_style: "none", max_records: "1000",
     // odbc
     connection_string: "", table_name: "", pk_column: "", modified_column: "", batch_size: "500",
+    // schedule
+    schedule_enabled: true, sync_schedule: "0 2 * * *", schedule_preset: "Nightly at 2am UTC",
   });
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [testing, setTesting] = useState(false);
@@ -140,6 +156,7 @@ export default function DataSources({ token }: { token: string }) {
       rest_username: "", rest_password: "",
       pagination_style: "none", max_records: "1000",
       connection_string: "", table_name: "", pk_column: "", modified_column: "", batch_size: "500",
+      schedule_enabled: true, sync_schedule: "0 2 * * *", schedule_preset: "Nightly at 2am UTC",
     });
     setTestResult(null);
   };
@@ -184,6 +201,8 @@ export default function DataSources({ token }: { token: string }) {
           name: formData.name,
           source_type: formData.sourceType,
           connection_config: config,
+          sync_schedule: formData.schedule_enabled ? formData.sync_schedule : null,
+          schedule_enabled: formData.schedule_enabled,
         }),
       });
       setShowForm(false);
@@ -454,6 +473,47 @@ export default function DataSources({ token }: { token: string }) {
                 {/* Step 3: Review + test connection */}
                 {wizardStep === 3 && (
                   <>
+                    <div className="space-y-2 border rounded-md p-3">
+                      <label className="flex items-center gap-2 text-sm font-medium">
+                        <input
+                          type="checkbox"
+                          checked={formData.schedule_enabled}
+                          onChange={(e) => setFormData({ ...formData, schedule_enabled: e.target.checked })}
+                        />
+                        Enable automatic sync
+                      </label>
+                      {formData.schedule_enabled && (
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Sync schedule (UTC)</label>
+                          <select
+                            className="w-full border rounded-md px-2 py-1.5 text-sm bg-background"
+                            value={formData.schedule_preset}
+                            onChange={(e) => {
+                              const preset = SCHEDULE_PRESETS.find((p) => p.label === e.target.value);
+                              setFormData({
+                                ...formData,
+                                schedule_preset: e.target.value,
+                                sync_schedule: preset?.cron ?? formData.sync_schedule,
+                              });
+                            }}
+                          >
+                            {SCHEDULE_PRESETS.map((p) => (
+                              <option key={p.label} value={p.label}>{p.label}</option>
+                            ))}
+                          </select>
+                          {formData.schedule_preset === "Custom…" && (
+                            <Input
+                              value={formData.sync_schedule}
+                              onChange={(e) => setFormData({ ...formData, sync_schedule: e.target.value })}
+                              placeholder="0 2 * * * (5-field cron, UTC)"
+                            />
+                          )}
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {formData.sync_schedule}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                     <Card className="shadow-none">
                       <CardContent className="p-4 space-y-2 text-sm">
                         <p><span className="font-medium">Name:</span> {formData.name}</p>
