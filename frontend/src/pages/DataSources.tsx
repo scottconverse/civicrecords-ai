@@ -12,7 +12,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import FileUpload from "@/components/FileUpload";
 import {
   Select,
@@ -28,23 +27,8 @@ import {
   Mail,
   Database,
   Globe,
-  RefreshCw,
-  CheckCircle,
-  Clock,
 } from "lucide-react";
-
-interface DataSource {
-  id: string;
-  name: string;
-  source_type: string;
-  connection_config: Record<string, string>;
-  is_active: boolean;
-  created_at: string;
-  last_ingestion_at: string | null;
-  sync_schedule: string | null;
-  schedule_enabled: boolean;
-  next_sync_at: string | null;
-}
+import { SourceCard, type DataSource } from "@/components/SourceCard";
 
 const SCHEDULE_PRESETS: { label: string; cron: string | null }[] = [
   { label: "Every 15 minutes", cron: "*/15 * * * *" },
@@ -56,53 +40,6 @@ const SCHEDULE_PRESETS: { label: string; cron: string | null }[] = [
   { label: "Weekly (Mon 2am UTC)", cron: "0 2 * * 1" },
   { label: "Custom…", cron: null },
 ];
-
-function SourceCard({ source, onIngest, ingesting }: { source: DataSource; onIngest: () => void; ingesting: boolean }) {
-  return (
-    <Card className="shadow-none">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            {source.source_type === "upload" ? (
-              <Upload className="h-5 w-5 text-primary" />
-            ) : (
-              <FolderOpen className="h-5 w-5 text-primary" />
-            )}
-            <div>
-              <p className="font-medium text-foreground">{source.name}</p>
-              <p className="text-xs text-muted-foreground">{source.source_type}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            {source.is_active ? (
-              <CheckCircle className="h-4 w-4 text-success" />
-            ) : (
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            )}
-            <span className="text-xs text-muted-foreground">
-              {source.is_active ? "Active" : "Inactive"}
-            </span>
-          </div>
-        </div>
-        <Separator className="my-3" />
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            Last ingestion: {source.last_ingestion_at ? new Date(source.last_ingestion_at).toLocaleDateString() : "Never"}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={ingesting}
-            onClick={onIngest}
-          >
-            <RefreshCw className={`h-3 w-3 mr-1 ${ingesting ? "animate-spin" : ""}`} />
-            {ingesting ? "Ingesting..." : "Ingest Now"}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 
 export default function DataSources({ token }: { token: string }) {
@@ -130,7 +67,6 @@ export default function DataSources({ token }: { token: string }) {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [testing, setTesting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [ingesting, setIngesting] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -215,17 +151,6 @@ export default function DataSources({ token }: { token: string }) {
     }
   };
 
-  const handleIngest = async (id: string) => {
-    setIngesting(id);
-    try {
-      await apiFetch(`/datasources/${id}/ingest`, { token, method: "POST" });
-      await loadData();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Ingestion failed");
-    } finally {
-      setIngesting(null);
-    }
-  };
 
   if (loading) {
     return (
@@ -594,8 +519,7 @@ export default function DataSources({ token }: { token: string }) {
             <SourceCard
               key={s.id}
               source={s}
-              onIngest={() => handleIngest(s.id)}
-              ingesting={ingesting === s.id}
+              onRefresh={loadData}
             />
           ))}
           {sources.length === 0 && (
