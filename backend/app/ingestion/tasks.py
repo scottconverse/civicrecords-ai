@@ -107,14 +107,24 @@ def task_ingest_source(self, source_id: str, user_id: str | None = None):
             if source_type == "manual_drop":
                 return await _ingest_manual_drop_source(session, source, user_id)
 
-            # New connector types: rest_api, odbc
+            # Connector types with per-record failure tracking
             if source_type in ("rest_api", "odbc"):
                 from app.connectors import get_connector
+                from app.ingestion.sync_runner import run_connector_sync_with_retry
                 connector = get_connector(source_type, config)
                 authenticated = await connector.authenticate()
                 if not authenticated:
                     return {"error": f"{source_type} authentication failed"}
-                return await run_connector_sync(connector, source_id=source_id, session=session)
+                try:
+                    return await run_connector_sync_with_retry(
+                        connector=connector,
+                        source_id=source_id,
+                        session=session,
+                    )
+                except (IOError, OSError) as exc:
+                    # Task-level retry fires only for transient whole-run failures.
+                    # Per-record errors are absorbed into sync_failures inside the runner.
+                    raise self.retry(exc=exc, countdown=30)
 
             # Default: directory-based ingestion
             directory = Path(config.get("path", ""))
@@ -140,94 +150,6 @@ def task_ingest_source(self, source_id: str, user_id: str | None = None):
             return stats
 
     return _run_async(_ingest())
-
-
-async def run_connector_sync(connector, source_id: str, session=None, db=None) -> dict:
-    """Core connector sync loop: discover → fetch → ingest, with cursor-on-success semantics.
-
-    - Calls connector.close() in a finally block regardless of success/failure.
-    - Writes last_sync_cursor and last_sync_at ONLY after ALL fetch() calls succeed.
-    - Logs failed fetches with structured fields: error_class, record_id, status_code, retry_count.
-    - Routes REST/ODBC fetches to ingest_structured_record; file-based to ingest_file_from_bytes.
-
-    Args:
-        connector: An authenticated BaseConnector instance.
-        source_id: UUID string of the DataSource row.
-        session: AsyncSession (preferred kwarg name).
-        db: Alias for session (test compatibility).
-    """
-    from app.models.document import DataSource
-    from app.ingestion.pipeline import ingest_structured_record
-
-    db_session = session or db
-    if db_session is None:
-        raise ValueError("run_connector_sync requires a db session (session= or db= kwarg)")
-
-    source = await db_session.get(DataSource, uuid.UUID(source_id) if isinstance(source_id, str) else source_id)
-    if not source:
-        raise ValueError(f"DataSource not found: {source_id}")
-
-    connector_type = source.source_type.value if hasattr(source.source_type, "value") else str(source.source_type)
-    is_structured = connector_type in ("rest_api", "odbc")
-
-    ingested = 0
-    errors = 0
-    last_successful_modified = None
-    discovered = []
-
-    try:
-        discovered = await connector.discover()
-        for record in discovered:
-            try:
-                fetched = await connector.fetch(record.source_path)
-                if is_structured:
-                    doc = await ingest_structured_record(
-                        session=db_session,
-                        source_id=source.id,
-                        source_path=fetched.source_path,
-                        content_bytes=fetched.content,
-                        filename=fetched.filename,
-                        metadata=fetched.metadata,
-                        connector_type=connector_type,
-                    )
-                else:
-                    doc = await ingest_file_from_bytes(
-                        session=db_session,
-                        content=fetched.content,
-                        filename=fetched.filename,
-                        file_type=fetched.file_type,
-                        source_id=source.id,
-                    )
-                if doc:
-                    ingested += 1
-                    if record.last_modified:
-                        last_successful_modified = record.last_modified
-            except Exception as exc:
-                logger.error(
-                    "Fetch failed",
-                    extra={
-                        "error_class": type(exc).__name__,
-                        "record_id": record.source_path,
-                        "status_code": getattr(exc, "status_code", None),
-                        "retry_count": getattr(exc, "retry_count", 0),
-                    },
-                )
-                errors += 1
-                raise
-
-        # Cursor advances to last successful modified timestamp, or now()
-        source.last_sync_cursor = (
-            last_successful_modified.isoformat()
-            if last_successful_modified
-            else datetime.now(timezone.utc).isoformat()
-        )
-        source.last_sync_at = datetime.now(timezone.utc)
-        await db_session.commit()
-
-    finally:
-        connector.close()
-
-    return {"ingested": ingested, "errors": errors, "discovered": len(discovered)}
 
 
 async def _ingest_email_source(session, source, user_id: str | None) -> dict:

@@ -36,7 +36,7 @@ def upgrade() -> None:
         sa.Column("resolved_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("dismissed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("dismissed_by", sa.dialects.postgresql.UUID(as_uuid=True),
-                  nullable=True),  # no FK — allows storing deleted user IDs
+                  sa.ForeignKey("users.id"), nullable=True),
     )
     op.create_index("ix_sync_failures_source_status", "sync_failures", ["source_id", "status"])
     op.create_index("ix_sync_failures_created", "sync_failures", ["first_failed_at"])

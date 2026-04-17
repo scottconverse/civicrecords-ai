@@ -1,11 +1,14 @@
-"""Tests for sync runner cursor semantics, connection lifecycle, and structured logging.
+"""Tests for sync runner connection lifecycle, logging, and Celery task decoration.
 
-These tests exercise run_connector_sync() directly with mocked connectors.
-DB-dependent tests (test_cursor_not_written_on_partial_failure) require PostgreSQL
-and are skipped in pure-unit mode unless a real db_session fixture is provided.
+Updated for P7: run_connector_sync_with_retry (continue-on-error contract) replaces
+the old run_connector_sync bare-raise loop. Tests that asserted bare-raise propagation
+or cursor-held-on-partial-failure are removed — those invariants are now gone by design.
 """
+import uuid
+import logging
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
+from sqlalchemy import text
 
 
 # ---------------------------------------------------------------------------
@@ -13,7 +16,6 @@ from unittest.mock import MagicMock, AsyncMock, patch
 # ---------------------------------------------------------------------------
 
 def make_discovered_record(n: int):
-    """Return a minimal DiscoveredRecord-like object."""
     from app.connectors.base import DiscoveredRecord
     return DiscoveredRecord(
         source_path=f"records/{n}",
@@ -25,7 +27,6 @@ def make_discovered_record(n: int):
 
 
 def make_fetched_document(n: int):
-    """Return a minimal FetchedDocument-like object."""
     from app.connectors.base import FetchedDocument
     return FetchedDocument(
         source_path=f"records/{n}",
@@ -37,264 +38,156 @@ def make_fetched_document(n: int):
     )
 
 
-def _make_mock_source(source_id="00000000-0000-0000-0000-000000000001"):
-    """Return a mock DataSource with the fields run_connector_sync reads."""
-    source = MagicMock()
-    source.id = source_id
-    source.last_sync_cursor = None
-    source.last_sync_at = None
-    return source
+async def _seed_source(db_session, source_id: uuid.UUID, name: str = "test-source"):
+    await db_session.execute(text("""
+        INSERT INTO data_sources
+          (id, name, source_type, connection_config, is_active,
+           sync_schedule, schedule_enabled, sync_paused,
+           consecutive_failure_count, created_by)
+        VALUES (:id, :name, 'rest_api', '{}', true,
+                '0 2 * * *', true, false, 0,
+                (SELECT id FROM users LIMIT 1))
+    """), {"id": str(source_id), "name": name})
+    await db_session.commit()
 
 
 # ---------------------------------------------------------------------------
-# close() lifecycle tests
+# connector.close() lifecycle
 # ---------------------------------------------------------------------------
-
 
 @pytest.mark.asyncio
-async def test_close_called_on_success():
+async def test_close_called_on_success(db_session):
     """Sync runner calls connector.close() in finally after a successful run."""
-    import uuid
-    from app.ingestion.tasks import run_connector_sync
+    source_id = uuid.uuid4()
+    await _seed_source(db_session, source_id, "close-success")
 
-    source_id = str(uuid.uuid4())
+    mock_connector = AsyncMock()
+    mock_connector.connector_type = "rest_api"
+    mock_connector.discover = AsyncMock(return_value=[make_discovered_record(1)])
+    mock_connector.fetch = AsyncMock(return_value=make_fetched_document(1))
+    mock_connector.close = MagicMock()
 
-    connector = MagicMock()
-    connector.discover = AsyncMock(return_value=[make_discovered_record(1)])
-    connector.fetch = AsyncMock(return_value=make_fetched_document(1))
-    connector.close = MagicMock()
+    from app.ingestion.sync_runner import run_connector_sync_with_retry
+    with patch("app.ingestion.sync_runner.ingest_structured_record", new=AsyncMock(return_value=MagicMock())):
+        await run_connector_sync_with_retry(
+            connector=mock_connector, source_id=str(source_id), session=db_session
+        )
 
-    mock_source = _make_mock_source(source_id)
-    mock_session = AsyncMock()
-    mock_session.get = AsyncMock(return_value=mock_source)
-    mock_session.commit = AsyncMock()
-
-    with patch("app.ingestion.tasks.ingest_file_from_bytes", new=AsyncMock(return_value=MagicMock())):
-        await run_connector_sync(connector, source_id=source_id, session=mock_session)
-
-    connector.close.assert_called_once()
+    mock_connector.close.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_close_called_on_fetch_failure():
-    """Sync runner calls connector.close() even when fetch() raises."""
-    import uuid
-    from app.ingestion.tasks import run_connector_sync
+async def test_close_called_on_fetch_failure(db_session):
+    """Sync runner calls connector.close() even when fetch() raises (continue-on-error)."""
+    source_id = uuid.uuid4()
+    await _seed_source(db_session, source_id, "close-fetch-fail")
 
-    source_id = str(uuid.uuid4())
+    mock_connector = AsyncMock()
+    mock_connector.connector_type = "rest_api"
+    mock_connector.discover = AsyncMock(return_value=[make_discovered_record(1)])
+    mock_connector.fetch = AsyncMock(side_effect=RuntimeError("fetch failed"))
+    mock_connector.close = MagicMock()
 
-    connector = MagicMock()
-    connector.discover = AsyncMock(return_value=[make_discovered_record(1)])
-    connector.fetch = AsyncMock(side_effect=RuntimeError("fetch failed"))
-    connector.close = MagicMock()
+    from app.ingestion.sync_runner import run_connector_sync_with_retry
+    # P7 contract: fetch failure does NOT propagate — it's absorbed into sync_failures
+    result = await run_connector_sync_with_retry(
+        connector=mock_connector, source_id=str(source_id), session=db_session
+    )
 
-    mock_source = _make_mock_source(source_id)
-    mock_session = AsyncMock()
-    mock_session.get = AsyncMock(return_value=mock_source)
-    mock_session.commit = AsyncMock()
-
-    with pytest.raises(RuntimeError, match="fetch failed"):
-        await run_connector_sync(connector, source_id=source_id, session=mock_session)
-
-    connector.close.assert_called_once()
+    assert result["failed"] == 1
+    mock_connector.close.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_close_called_on_discover_failure():
+async def test_close_called_on_discover_failure(db_session):
     """Sync runner calls connector.close() even when discover() raises."""
-    import uuid
-    from app.ingestion.tasks import run_connector_sync
+    source_id = uuid.uuid4()
+    await _seed_source(db_session, source_id, "close-discover-fail")
 
-    source_id = str(uuid.uuid4())
+    mock_connector = AsyncMock()
+    mock_connector.connector_type = "rest_api"
+    mock_connector.discover = AsyncMock(side_effect=ConnectionError("IMAP down"))
+    mock_connector.close = MagicMock()
 
-    connector = MagicMock()
-    connector.discover = AsyncMock(side_effect=ConnectionError("IMAP down"))
-    connector.close = MagicMock()
-
-    mock_source = _make_mock_source(source_id)
-    mock_session = AsyncMock()
-    mock_session.get = AsyncMock(return_value=mock_source)
-
+    from app.ingestion.sync_runner import run_connector_sync_with_retry
     with pytest.raises(ConnectionError):
-        await run_connector_sync(connector, source_id=source_id, session=mock_session)
+        await run_connector_sync_with_retry(
+            connector=mock_connector, source_id=str(source_id), session=db_session
+        )
 
-    connector.close.assert_called_once()
+    mock_connector.close.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
-# Cursor-on-success semantics
+# Cursor semantics (P7 contract: partial-advance, not hold-all)
 # ---------------------------------------------------------------------------
-
 
 @pytest.mark.asyncio
-async def test_cursor_written_on_full_success():
+async def test_cursor_written_on_full_success(db_session):
     """last_sync_cursor and last_sync_at are set after a clean run."""
-    import uuid
-    from app.ingestion.tasks import run_connector_sync
+    from app.models.document import DataSource
+    source_id = uuid.uuid4()
+    await _seed_source(db_session, source_id, "cursor-success")
 
-    source_id = str(uuid.uuid4())
+    mock_connector = AsyncMock()
+    mock_connector.connector_type = "rest_api"
+    mock_connector.discover = AsyncMock(return_value=[make_discovered_record(1)])
+    mock_connector.fetch = AsyncMock(return_value=make_fetched_document(1))
+    mock_connector.close = MagicMock()
 
-    connector = MagicMock()
-    connector.discover = AsyncMock(return_value=[make_discovered_record(1)])
-    connector.fetch = AsyncMock(return_value=make_fetched_document(1))
-    connector.close = MagicMock()
+    from app.ingestion.sync_runner import run_connector_sync_with_retry
+    with patch("app.ingestion.sync_runner.ingest_structured_record", new=AsyncMock(return_value=MagicMock())):
+        await run_connector_sync_with_retry(
+            connector=mock_connector, source_id=str(source_id), session=db_session
+        )
 
-    mock_source = _make_mock_source(source_id)
-    mock_session = AsyncMock()
-    mock_session.get = AsyncMock(return_value=mock_source)
-    mock_session.commit = AsyncMock()
-
-    with patch("app.ingestion.tasks.ingest_file_from_bytes", new=AsyncMock(return_value=MagicMock())):
-        await run_connector_sync(connector, source_id=source_id, session=mock_session)
-
-    assert mock_source.last_sync_cursor is not None, "Cursor should be set after success"
-    assert mock_source.last_sync_at is not None, "last_sync_at should be set after success"
-    mock_session.commit.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_cursor_not_written_on_fetch_failure():
-    """last_sync_cursor must NOT advance if fetch() raises."""
-    import uuid
-    from app.ingestion.tasks import run_connector_sync
-
-    source_id = str(uuid.uuid4())
-
-    connector = MagicMock()
-    connector.discover = AsyncMock(return_value=[make_discovered_record(1)])
-    connector.fetch = AsyncMock(side_effect=RuntimeError("fetch failed"))
-    connector.close = MagicMock()
-
-    mock_source = _make_mock_source(source_id)
-    original_cursor = mock_source.last_sync_cursor  # None
-    mock_session = AsyncMock()
-    mock_session.get = AsyncMock(return_value=mock_source)
-    mock_session.commit = AsyncMock()
-
-    with pytest.raises(RuntimeError):
-        await run_connector_sync(connector, source_id=source_id, session=mock_session)
-
-    assert mock_source.last_sync_cursor == original_cursor, (
-        f"Cursor advanced to '{mock_source.last_sync_cursor}' despite fetch failure"
-    )
-    mock_session.commit.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_cursor_not_written_on_partial_failure():
-    """last_sync_cursor must NOT advance if any fetch fails mid-run."""
-    import uuid
-    from app.connectors.base import FetchedDocument
-    from app.ingestion.tasks import run_connector_sync
-
-    source_id = str(uuid.uuid4())
-
-    connector = MagicMock()
-    connector.discover = AsyncMock(return_value=[
-        make_discovered_record(1),
-        make_discovered_record(2),
-    ])
-    connector.fetch = AsyncMock(side_effect=[
-        make_fetched_document(1),               # first succeeds
-        RuntimeError("second fetch failed"),    # second fails
-    ])
-    connector.close = MagicMock()
-
-    mock_source = _make_mock_source(source_id)
-    original_cursor = mock_source.last_sync_cursor
-    mock_session = AsyncMock()
-    mock_session.get = AsyncMock(return_value=mock_source)
-    mock_session.commit = AsyncMock()
-
-    with patch("app.ingestion.tasks.ingest_file_from_bytes", new=AsyncMock(return_value=MagicMock())):
-        with pytest.raises(RuntimeError, match="second fetch failed"):
-            await run_connector_sync(connector, source_id=source_id, session=mock_session)
-
-    assert mock_source.last_sync_cursor == original_cursor, (
-        f"Cursor advanced to '{mock_source.last_sync_cursor}' despite mid-run failure"
-    )
-    mock_session.commit.assert_not_called()
-    connector.close.assert_called_once()
+    source = await db_session.get(DataSource, source_id)
+    assert source.last_sync_cursor is not None, "Cursor should be set after success"
+    assert source.last_sync_at is not None, "last_sync_at should be set after success"
 
 
 # ---------------------------------------------------------------------------
 # Structured failure logging
 # ---------------------------------------------------------------------------
 
-
 @pytest.mark.asyncio
-async def test_structured_log_on_fetch_failure(caplog):
-    """Failed fetch logs error_class, record_id, status_code, retry_count."""
-    import uuid
-    import logging
-    from app.ingestion.tasks import run_connector_sync
-
-    source_id = str(uuid.uuid4())
+async def test_structured_log_on_fetch_failure(db_session, caplog):
+    """Failed fetch logs error_class and source info."""
+    source_id = uuid.uuid4()
+    await _seed_source(db_session, source_id, "log-fetch-fail")
 
     class CustomError(Exception):
         status_code = 503
         retry_count = 2
 
-    connector = MagicMock()
-    connector.discover = AsyncMock(return_value=[make_discovered_record(1)])
-    connector.fetch = AsyncMock(side_effect=CustomError("upstream error"))
-    connector.close = MagicMock()
+    mock_connector = AsyncMock()
+    mock_connector.connector_type = "rest_api"
+    mock_connector.discover = AsyncMock(return_value=[make_discovered_record(1)])
+    mock_connector.fetch = AsyncMock(side_effect=CustomError("upstream error"))
+    mock_connector.close = MagicMock()
 
-    mock_source = _make_mock_source(source_id)
-    mock_session = AsyncMock()
-    mock_session.get = AsyncMock(return_value=mock_source)
-    mock_session.commit = AsyncMock()
+    from app.ingestion.sync_runner import run_connector_sync_with_retry
+    with caplog.at_level(logging.ERROR, logger="app.ingestion.sync_runner"):
+        await run_connector_sync_with_retry(
+            connector=mock_connector, source_id=str(source_id), session=db_session
+        )
 
-    with caplog.at_level(logging.ERROR, logger="app.ingestion.tasks"):
-        with pytest.raises(CustomError):
-            await run_connector_sync(connector, source_id=source_id, session=mock_session)
-
-    assert any("Fetch failed" in r.message for r in caplog.records), (
-        "Expected 'Fetch failed' log message"
+    assert any("Record fetch failed" in r.message for r in caplog.records), (
+        "Expected 'Record fetch failed' log message"
     )
 
 
 # ---------------------------------------------------------------------------
-# Celery task timeout decoration test
+# Celery task timeout decoration
 # ---------------------------------------------------------------------------
-
 
 def test_task_ingest_source_has_timeouts():
     """task_ingest_source must declare soft_time_limit and time_limit."""
     from app.ingestion.tasks import task_ingest_source
 
-    # Celery task options live on task.soft_time_limit / task.time_limit
     assert getattr(task_ingest_source, "soft_time_limit", None) == 3600, (
         "soft_time_limit must be 3600"
     )
     assert getattr(task_ingest_source, "time_limit", None) == 4200, (
         "time_limit must be 4200"
     )
-
-
-# ---------------------------------------------------------------------------
-# db kwarg alias
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_db_kwarg_alias():
-    """run_connector_sync accepts db= as an alias for session=."""
-    import uuid
-    from app.ingestion.tasks import run_connector_sync
-
-    source_id = str(uuid.uuid4())
-
-    connector = MagicMock()
-    connector.discover = AsyncMock(return_value=[])
-    connector.close = MagicMock()
-
-    mock_source = _make_mock_source(source_id)
-    mock_session = AsyncMock()
-    mock_session.get = AsyncMock(return_value=mock_source)
-    mock_session.commit = AsyncMock()
-
-    # Pass db= instead of session=
-    await run_connector_sync(connector, source_id=source_id, db=mock_session)
-
-    connector.close.assert_called_once()
