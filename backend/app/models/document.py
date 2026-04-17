@@ -68,6 +68,10 @@ class Document(Base):
     ingested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
 
+    # P6a: idempotency split
+    connector_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # Phase 2 columns
     display_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
     department_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
