@@ -137,6 +137,21 @@ All dependencies use permissive (MIT, Apache 2.0, BSD) or weak-copyleft (LGPL, M
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, and how to submit changes.
 
+### Testing Prerequisites
+
+Integration tests require Docker Compose with PostgreSQL running, and the `civicrecords` Postgres user needs DROP/CREATE DATABASE privileges (the default docker compose config does this automatically). Each test drops and recreates `civicrecords_test` to guarantee a clean schema.
+
+```bash
+docker compose up -d postgres redis
+docker compose run --rm api python -m pytest tests -q
+```
+
+If a prior test run died mid-fixture, `civicrecords_test` may already exist and the suite will fail with `DuplicateDatabaseError`. Drop it manually and re-run:
+
+```bash
+docker compose exec postgres dropdb -U civicrecords civicrecords_test
+```
+
 ## User Roles
 
 | Role | Permissions | Phase |
@@ -166,7 +181,7 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 **Carried from v1.0.x:**
 - 11 staff workbench pages with shadcn/ui design system
 - 29 database tables, ~30 API endpoints
-- 335 backend + 5 frontend automated tests passing
+- 432 backend + 5 frontend automated tests passing (see `backend/test_results_full.txt`)
 - Guided onboarding, systems catalog, connector framework
 - Request timeline, messaging, fee tracking, response letter generation
 - Operational analytics and notification service

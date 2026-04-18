@@ -322,11 +322,17 @@ async def db_session(setup_db):
 
 
 @pytest.fixture
-def db_session_factory(setup_db):
+async def db_session_factory(setup_db):
     """Returns a per-test session_maker for concurrency tests needing independent sessions.
 
     Each session created via db_session_factory() is independent — no shared transaction.
     Usage: async with db_session_factory() as s1, db_session_factory() as s2: ...
+
+    The engine is disposed in teardown to prevent asyncpg connection leaks.
     """
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
-    return async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    yield session_maker
+    await engine.dispose()
+    import gc
+    gc.collect()

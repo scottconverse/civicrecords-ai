@@ -115,7 +115,9 @@ async def test_unpause_source(client: AsyncClient, admin_token: str, db_session)
     source = await db_session.get(DataSource, source_id)
     assert source.sync_paused is False
     assert source.consecutive_failure_count == 0
-    assert source.sync_paused_reason is None
+    # Unpause sets sync_paused_reason to 'grace_period' sentinel — drops next-sync
+    # circuit-open threshold from 5 to 2 (see sync_failures_router.unpause_source).
+    assert source.sync_paused_reason == "grace_period"
 
 
 @pytest.mark.asyncio

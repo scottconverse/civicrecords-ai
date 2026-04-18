@@ -30,11 +30,22 @@ async def ingest_file(
     chunk_overlap: int = 50,
     embed_model: str = "nomic-embed-text",
 ) -> Document:
+    from app.models.document import DataSource
+
     file_hash = await asyncio.to_thread(compute_file_hash, file_path)
     file_size = file_path.stat().st_size
 
+    # Resolve parent source_type so the partial unique index (which excludes
+    # NULL connector_type rows) covers binary ingests. Without this, two
+    # concurrent ingests of the same (source_id, file_hash) produce duplicate rows.
+    parent = await session.get(DataSource, source_id)
+    connector_type = parent.source_type if parent is not None else "directory"
+
+    # SELECT FOR UPDATE serializes concurrent workers seeing the same hash.
     existing = await session.execute(
-        select(Document).where(Document.source_id == source_id, Document.file_hash == file_hash)
+        select(Document)
+        .where(Document.source_id == source_id, Document.file_hash == file_hash)
+        .with_for_update()
     )
     existing_doc = existing.scalar_one_or_none()
     if existing_doc:
@@ -54,6 +65,7 @@ async def ingest_file(
         file_type=file_path.suffix.lower().lstrip("."),
         file_hash=file_hash,
         file_size=file_size,
+        connector_type=connector_type,
         ingestion_status=IngestionStatus.PROCESSING,
     )
     session.add(doc)

@@ -128,8 +128,21 @@ Every sub-project must pass ALL verification gates before merge:
 
 ### Integration Tests
 - Require Docker: `docker compose up -d postgres redis`
-- Create test database: `docker compose exec postgres createdb -U civicrecords civicrecords_test`
 - Run inside the api container (postgres is not exposed to localhost): `docker compose run --rm api python -m pytest tests/ -v`
+
+#### Testing Prerequisites (PostgreSQL permissions and cleanup)
+
+The test runner's `setup_db` fixture drops and recreates `civicrecords_test` per test, so PostgreSQL must grant DROP/CREATE DATABASE privileges to the `civicrecords` user (the default docker compose config does — this matters only for custom deployments).
+
+**First-run cleanup:** If a previous test run died mid-fixture, `civicrecords_test` may already exist. That surfaces as a cryptic `DuplicateDatabaseError` in the first test. Drop it manually before rerunning:
+
+```bash
+docker compose exec postgres dropdb -U civicrecords civicrecords_test
+```
+
+The suite expects to own `civicrecords_test` exclusively. Do not run tests against a shared test database.
+
+**Accepted warning baseline:** The suite emits `RuntimeWarning: coroutine 'Connection._cancel' was never awaited` and related `SAWarning: garbage collector is trying to clean up non-checked-in connection` in teardown. These are a known limitation of NullPool + asyncpg event-loop timing: when pytest-asyncio closes a per-function event loop, any `Connection._cancel` coroutines scheduled by asyncpg's cleanup have no loop to run on. The conftest mitigates this with `asyncio.sleep + gc.collect` in client/db_session teardown, but cannot eliminate it entirely. Current baseline is **~110 warnings per full run of 432 tests** (see `backend/test_results_full.txt`). Counts materially above ~150 indicate a new leak — investigate before shipping.
 
 ### Docker Verification
 - `docker compose build` must succeed with no errors
