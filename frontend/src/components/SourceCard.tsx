@@ -63,9 +63,11 @@ function formatElapsed(seconds: number): string {
 export function SourceCard({
   source,
   onRefresh,
+  token,
 }: {
   source: DataSource;
   onRefresh: () => void;
+  token: string;
 }) {
   const [failuresOpen, setFailuresOpen] = useState(false);
   const health = HEALTH_BADGE[source.health_status] ?? HEALTH_BADGE.healthy;
@@ -74,7 +76,7 @@ export function SourceCard({
     onRefresh();
   }, [onRefresh]);
 
-  const { isSyncing, elapsedSeconds, triggerSync } = useSyncNow(source.id, handleSyncComplete);
+  const { isSyncing, elapsedSeconds, triggerSync } = useSyncNow(source.id, handleSyncComplete, token);
 
   return (
     <Card className="overflow-hidden">
@@ -168,7 +170,7 @@ export function SourceCard({
       {/* Failed records panel */}
       {failuresOpen && (
         <div role="region" aria-label={`Failed records for ${source.name}`} aria-live="polite">
-          <FailedRecordsPanel sourceId={source.id} syncPaused={source.sync_paused} />
+          <FailedRecordsPanel sourceId={source.id} syncPaused={source.sync_paused} token={token} />
         </div>
       )}
     </Card>

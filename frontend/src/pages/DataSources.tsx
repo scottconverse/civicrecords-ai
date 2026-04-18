@@ -551,6 +551,7 @@ export default function DataSources({ token }: { token: string }) {
               key={s.id}
               source={s}
               onRefresh={loadData}
+              token={token}
             />
           ))}
           {sources.length === 0 && (

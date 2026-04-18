@@ -51,7 +51,7 @@ describe("SourceCard — Sync Now button", () => {
     }));
 
     const onRefresh = vi.fn();
-    render(<SourceCard source={mockSource} onRefresh={onRefresh} />);
+    render(<SourceCard source={mockSource} onRefresh={onRefresh} token="test-token" />);
 
     const syncBtn = screen.getByRole("button", { name: /sync now/i });
     expect(syncBtn).not.toBeDisabled();
@@ -93,7 +93,7 @@ describe("SourceCard — Sync Now button", () => {
       });
     }));
 
-    render(<SourceCard source={mockSource} onRefresh={vi.fn()} />);
+    render(<SourceCard source={mockSource} onRefresh={vi.fn()} token="test-token" />);
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /sync now/i }));

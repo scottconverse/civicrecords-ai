@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { apiFetch } from "@/lib/api";
 
 interface SyncNowState {
   isSyncing: boolean;
@@ -9,7 +10,7 @@ interface SyncNowState {
 const POLL_INTERVALS = [5000, 10000, 20000, 30000]; // ms, cap at 30s
 const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
-export function useSyncNow(sourceId: string, onComplete: () => void) {
+export function useSyncNow(sourceId: string, onComplete: () => void, token: string) {
   const [state, setState] = useState<SyncNowState>({
     isSyncing: false,
     elapsedSeconds: 0,
@@ -47,10 +48,10 @@ export function useSyncNow(sourceId: string, onComplete: () => void) {
     }
 
     try {
-      const resp = await fetch(`/datasources/${sourceId}`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-
+      const data = await apiFetch<{ last_sync_at: string | null }>(
+        `/datasources/${sourceId}`,
+        { token }
+      );
       const lastSyncAt = data.last_sync_at ? new Date(data.last_sync_at).getTime() : 0;
       if (lastSyncAt > triggeredAt) {
         stopSync(null);
@@ -64,14 +65,13 @@ export function useSyncNow(sourceId: string, onComplete: () => void) {
     const nextInterval = POLL_INTERVALS[Math.min(pollIndexRef.current, POLL_INTERVALS.length - 1)];
     pollIndexRef.current = Math.min(pollIndexRef.current + 1, POLL_INTERVALS.length - 1);
     pollIntervalRef.current = setTimeout(pollForCompletion, nextInterval);
-  }, [sourceId, stopSync, onComplete]);
+  }, [sourceId, token, stopSync, onComplete]);
 
   const triggerSync = useCallback(async () => {
     if (state.isSyncing) return;
 
     try {
-      const resp = await fetch(`/datasources/${sourceId}/ingest`, { method: "POST" });
-      if (!resp.ok) throw new Error(`Trigger failed: HTTP ${resp.status}`);
+      await apiFetch(`/datasources/${sourceId}/ingest`, { method: "POST", token });
 
       triggeredAtRef.current = Date.now();
       pollIndexRef.current = 0;
@@ -91,7 +91,7 @@ export function useSyncNow(sourceId: string, onComplete: () => void) {
         error: err instanceof Error ? err.message : "Sync trigger failed",
       }));
     }
-  }, [sourceId, state.isSyncing, pollForCompletion]);
+  }, [sourceId, token, state.isSyncing, pollForCompletion]);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 

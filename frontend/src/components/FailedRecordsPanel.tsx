@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/api";
 
 interface SyncFailure {
   id: string;
@@ -16,9 +17,11 @@ type PanelState = "loading" | "empty" | "populated" | "error";
 export function FailedRecordsPanel({
   sourceId,
   syncPaused,
+  token,
 }: {
   sourceId: string;
   syncPaused: boolean;
+  token: string;
 }) {
   const [panelState, setPanelState] = useState<PanelState>("loading");
   const [failures, setFailures] = useState<SyncFailure[]>([]);
@@ -27,11 +30,10 @@ export function FailedRecordsPanel({
   async function loadFailures() {
     setPanelState("loading");
     try {
-      const resp = await fetch(
-        `/datasources/${sourceId}/sync-failures?status=retrying&limit=50`
+      const data = await apiFetch<SyncFailure[]>(
+        `/datasources/${sourceId}/sync-failures?status=retrying&limit=50`,
+        { token }
       );
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data: SyncFailure[] = await resp.json();
       setFailures(data);
       setPanelState(data.length === 0 ? "empty" : "populated");
     } catch (err) {
@@ -46,33 +48,33 @@ export function FailedRecordsPanel({
   }, [sourceId]);
 
   async function handleRetryAll() {
-    await fetch(
+    await apiFetch(
       `/datasources/${sourceId}/sync-failures/retry-all?status=permanently_failed`,
-      { method: "POST" }
+      { method: "POST", token }
     );
     void loadFailures();
   }
 
   async function handleDismissAll() {
-    await fetch(
+    await apiFetch(
       `/datasources/${sourceId}/sync-failures/dismiss-all?status=permanently_failed`,
-      { method: "POST" }
+      { method: "POST", token }
     );
     void loadFailures();
   }
 
   async function handleRetry(failureId: string) {
-    await fetch(`/datasources/${sourceId}/sync-failures/${failureId}/retry`, { method: "POST" });
+    await apiFetch(`/datasources/${sourceId}/sync-failures/${failureId}/retry`, { method: "POST", token });
     void loadFailures();
   }
 
   async function handleDismiss(failureId: string) {
-    await fetch(`/datasources/${sourceId}/sync-failures/${failureId}/dismiss`, { method: "POST" });
+    await apiFetch(`/datasources/${sourceId}/sync-failures/${failureId}/dismiss`, { method: "POST", token });
     void loadFailures();
   }
 
   async function handleUnpause() {
-    await fetch(`/datasources/${sourceId}/unpause`, { method: "POST" });
+    await apiFetch(`/datasources/${sourceId}/unpause`, { method: "POST", token });
     void loadFailures();
   }
 
