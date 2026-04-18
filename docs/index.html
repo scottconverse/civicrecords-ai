@@ -460,8 +460,13 @@
     </div>
   </div>
 
-  <a href="https://github.com/scottconverse/civicrecords-ai" class="btn btn-primary">View on GitHub</a>
-  <a href="civicrecords-ai-manual.html" class="btn btn-outline">Read the Manual</a>
+  <div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;margin-top:1.5rem;">
+    <a href="https://github.com/scottconverse/civicrecords-ai" class="btn btn-primary">&#128008; GitHub Repository</a>
+    <a href="https://github.com/scottconverse/civicrecords-ai/raw/master/install.sh" class="btn btn-primary" download>&#11015; Download Installer (Linux / macOS)</a>
+    <a href="https://github.com/scottconverse/civicrecords-ai/raw/master/install.ps1" class="btn btn-primary" download>&#11015; Download Installer (Windows)</a>
+    <a href="civicrecords-ai-manual.pdf" class="btn btn-outline" download>&#128462; User Manual (PDF)</a>
+    <a href="../README.md" class="btn btn-outline">&#128196; README</a>
+  </div>
 </header>
 
 <!-- ARCHITECTURE -->
@@ -617,7 +622,7 @@
 <!-- STATS BAR -->
 <div class="stats-bar">
   <div class="stat">
-    <div class="stat-num">16</div>
+    <div class="stat-num">17</div>
     <div class="stat-label">Core Features</div>
   </div>
   <div class="stat">
@@ -638,7 +643,7 @@
 <section class="features" id="features">
   <div class="container">
     <h2 class="section-title">What it does</h2>
-    <p class="section-sub">Sixteen integrated capabilities — all running locally, all under your control.</p>
+    <p class="section-sub">Seventeen integrated capabilities — all running locally, all under your control.</p>
     <div class="grid-6">
 
       <div class="card">
@@ -737,6 +742,12 @@
         <p>Five ready-to-use compliance documents ship with the product: AI Use Disclosure, Response Letter Disclosure Language, CAIA Impact Assessment, AI Governance Policy, and Data Residency Attestation. Templates render with your city profile data and are customizable by admins.</p>
       </div>
 
+      <div class="card">
+        <div class="card-icon">&#128308;</div>
+        <h3>Sync Failure Tracking &amp; Circuit Breaker</h3>
+        <p>Per-record failure tracking with two-layer retry — task-level exponential backoff absorbs transient network errors; record-level retry handles persistent connector failures (up to 5 attempts over 7 days). Automatic circuit breaker suspends a source after 5 consecutive full-run failures and sends admin notifications. Health status (Healthy / Degraded / Circuit Open) displayed live on every source card. Admin UI surfaces failed records with bulk retry and dismiss actions, per-record history, and a one-click unpause path once the underlying issue is resolved.</p>
+      </div>
+
     </div>
   </div>
 </section>
@@ -813,17 +824,62 @@
 <!-- LINKS -->
 <section class="links" id="links">
   <div class="container">
-    <h2 class="section-title">Documentation</h2>
-    <p class="section-sub">Everything you need to evaluate, install, and contribute.</p>
+    <h2 class="section-title">Get started</h2>
+    <p class="section-sub">Download, read the documentation, and evaluate CivicRecords AI for your city.</p>
+
+    <!-- PRIMARY ACTION BUTTONS -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-bottom:2.5rem;">
+      <a href="https://github.com/scottconverse/civicrecords-ai"
+         style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1.5rem 1rem;background:var(--blue-dark);color:#fff;border-radius:10px;text-decoration:none;text-align:center;font-weight:700;transition:opacity .15s;"
+         onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <span style="font-size:1.75rem;">&#128008;</span>
+        <span style="font-size:1rem;">GitHub Repository</span>
+        <span style="font-size:.78rem;font-weight:400;color:#93c5fd;">scottconverse/civicrecords-ai</span>
+      </a>
+      <a href="https://github.com/scottconverse/civicrecords-ai/raw/master/install.sh"
+         download="install.sh"
+         style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1.5rem 1rem;background:#15803d;color:#fff;border-radius:10px;text-decoration:none;text-align:center;font-weight:700;transition:opacity .15s;"
+         onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <span style="font-size:1.75rem;">&#11015;</span>
+        <span style="font-size:1rem;">Download Installer</span>
+        <span style="font-size:.78rem;font-weight:400;color:#bbf7d0;">Linux &amp; macOS · install.sh</span>
+      </a>
+      <a href="https://github.com/scottconverse/civicrecords-ai/raw/master/install.ps1"
+         download="install.ps1"
+         style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1.5rem 1rem;background:#1d4ed8;color:#fff;border-radius:10px;text-decoration:none;text-align:center;font-weight:700;transition:opacity .15s;"
+         onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <span style="font-size:1.75rem;">&#11015;</span>
+        <span style="font-size:1rem;">Download Installer</span>
+        <span style="font-size:.78rem;font-weight:400;color:#bfdbfe;">Windows · install.ps1</span>
+      </a>
+      <a href="civicrecords-ai-manual.pdf"
+         download="CivicRecords-AI-User-Manual.pdf"
+         style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1.5rem 1rem;background:#7c3aed;color:#fff;border-radius:10px;text-decoration:none;text-align:center;font-weight:700;transition:opacity .15s;"
+         onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <span style="font-size:1.75rem;">&#128462;</span>
+        <span style="font-size:1rem;">User Manual</span>
+        <span style="font-size:.78rem;font-weight:400;color:#ddd6fe;">PDF · Staff + IT + Architecture</span>
+      </a>
+      <a href="../README.md"
+         style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1.5rem 1rem;background:var(--gray-700);color:#fff;border-radius:10px;text-decoration:none;text-align:center;font-weight:700;transition:opacity .15s;"
+         onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <span style="font-size:1.75rem;">&#128196;</span>
+        <span style="font-size:1rem;">README</span>
+        <span style="font-size:.78rem;font-weight:400;color:#d1d5db;">Quick start &amp; feature overview</span>
+      </a>
+    </div>
+
+    <!-- SECONDARY DOCS -->
+    <h3 style="font-size:.875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:.75rem;">Additional Resources</h3>
     <div class="links-grid">
       <a class="link-card" href="civicrecords-ai-manual.html" style="background: var(--blue-pale); border-color: #93c5fd; font-weight: 600;">
-        &#128214; Complete System Manual <span class="arrow">&#8594;</span>
+        &#128214; Complete Manual (Online) <span class="arrow">&#8594;</span>
       </a>
-      <a class="link-card" href="https://github.com/scottconverse/civicrecords-ai">
-        &#128008; GitHub Repo <span class="arrow">&#8594;</span>
+      <a class="link-card" href="user-manual-staff.html">
+        &#128101; Staff Operations Guide <span class="arrow">&#8594;</span>
       </a>
-      <a class="link-card" href="../README.md">
-        &#128196; README <span class="arrow">&#8594;</span>
+      <a class="link-card" href="admin-manual-it.html">
+        &#128736; IT Admin Guide <span class="arrow">&#8594;</span>
       </a>
       <a class="link-card" href="../CHANGELOG.md">
         &#128221; CHANGELOG <span class="arrow">&#8594;</span>
@@ -831,34 +887,12 @@
       <a class="link-card" href="../CONTRIBUTING.md">
         &#129309; Contributing <span class="arrow">&#8594;</span>
       </a>
-      <a class="link-card" href="user-manual-staff.html">
-        &#128214; Staff User Manual <span class="arrow">&#8594;</span>
-      </a>
-      <a class="link-card" href="admin-manual-it.html">
-        &#128736; IT Admin Manual <span class="arrow">&#8594;</span>
-      </a>
       <a class="link-card" href="UNIFIED-SPEC.md">
         &#128195; Canonical Spec <span class="arrow">&#8594;</span>
       </a>
       <a class="link-card" href="../LICENSE">
         &#9878; Apache 2.0 License <span class="arrow">&#8594;</span>
       </a>
-    </div>
-
-    <div style="margin-top: 2rem;">
-      <h3 style="font-size: 1rem; color: var(--gray-900); margin-bottom: .75rem;">Download Complete Manual</h3>
-      <p style="font-size: .875rem; color: var(--gray-500); margin-bottom: 1rem;">Unified system manual covering both staff operations and IT administration, with architecture diagrams.</p>
-      <div style="display: flex; gap: .75rem; flex-wrap: wrap;">
-        <a class="link-card" href="civicrecords-ai-manual.pdf" style="background: var(--blue-pale); border-color: #93c5fd; font-weight: 600;" download>
-          &#128462; Download PDF <span class="arrow">&#8594;</span>
-        </a>
-        <a class="link-card" href="civicrecords-ai-manual.docx" download>
-          &#128196; Download Word <span class="arrow">&#8594;</span>
-        </a>
-        <a class="link-card" href="civicrecords-ai-manual.html">
-          &#127760; View Online <span class="arrow">&#8594;</span>
-        </a>
-      </div>
     </div>
 
     <div style="margin-top: 2rem;">

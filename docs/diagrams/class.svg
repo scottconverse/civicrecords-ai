@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="920" height="720" preserveAspectRatio="xMinYMin meet" viewBox="0 0 920 720" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="920" height="720"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-720)" style="clip-path: url(#clip)">
+		<g transform="">
+			<rect x="0" y="0" width="920" height="720" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="319.181" y="696" style="font-family: Helvetica-Bold; font-size: 14px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1392) scale(1,-1)">CivicRecords AI — Domain Class Diagram</text>
+			<g transform="">
+				<rect x="30" y="468" width="270" height="192" rx="4" ry="4" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1.2; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+				<rect x="30" y="638" width="270" height="22" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+				<text x="138.60425" y="644" style="font-family: Helvetica-Bold; font-size: 9.5px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,1288) scale(1,-1)">DataSource</text>
+				<text x="36" y="616" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1232) scale(1,-1)">+ id: UUID</text>
+				<text x="36" y="602" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1204) scale(1,-1)">+ name: str</text>
+				<text x="36" y="588" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1176) scale(1,-1)">+ source_type: str</text>
+				<text x="36" y="574" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1148) scale(1,-1)">+ dept_id: UUID</text>
+				<text x="36" y="560" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1120) scale(1,-1)">+ config: JSON</text>
+				<text x="36" y="546" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1092) scale(1,-1)">+ is_active: bool</text>
+				<text x="36" y="532" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1064) scale(1,-1)">+ circuit_state: str</text>
+				<text x="36" y="518" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1036) scale(1,-1)">+ failure_count: int</text>
+				<path d="M 30,516 L 300,516 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8;"/>
+				<text x="36" y="504" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(21%,25%,31%); stroke:none;" transform="translate(0,1008) scale(1,-1)">+ discover()</text>
+				<text x="36" y="490" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(21%,25%,31%); stroke:none;" transform="translate(0,980) scale(1,-1)">+ fetch()</text>
+			</g>
+			<g transform="">
+				<rect x="330" y="552" width="270" height="108" rx="4" ry="4" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1.2; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+				<rect x="330" y="638" width="270" height="22" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(86%,14%,14%); fill-rule: evenodd;"/>
+				<text x="438.07225" y="644" style="font-family: Helvetica-Bold; font-size: 9.5px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,1288) scale(1,-1)">SyncFailure</text>
+				<text x="336" y="616" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1232) scale(1,-1)">+ id: UUID</text>
+				<text x="336" y="602" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1204) scale(1,-1)">+ source_id: UUID</text>
+				<text x="336" y="588" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1176) scale(1,-1)">+ error_msg: str</text>
+				<text x="336" y="574" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1148) scale(1,-1)">+ failed_at: datetime</text>
+				<text x="336" y="560" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1120) scale(1,-1)">+ dismissed: bool</text>
+			</g>
+			<g transform="">
+				<rect x="630" y="538" width="270" height="122" rx="4" ry="4" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1.2; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+				<rect x="630" y="638" width="270" height="22" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(57%,25%,5%); fill-rule: evenodd;"/>
+				<text x="735.70675" y="644" style="font-family: Helvetica-Bold; font-size: 9.5px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,1288) scale(1,-1)">SyncRunLog</text>
+				<text x="636" y="616" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1232) scale(1,-1)">+ id: UUID</text>
+				<text x="636" y="602" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1204) scale(1,-1)">+ source_id: UUID</text>
+				<text x="636" y="588" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1176) scale(1,-1)">+ started_at: datetime</text>
+				<text x="636" y="574" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1148) scale(1,-1)">+ finished_at: datetime</text>
+				<text x="636" y="560" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1120) scale(1,-1)">+ docs_synced: int</text>
+				<text x="636" y="546" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1092) scale(1,-1)">+ status: str</text>
+			</g>
+			<g transform="">
+				<rect x="30" y="302" width="270" height="150" rx="4" ry="4" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1.2; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+				<rect x="30" y="430" width="270" height="22" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(10%,22%,36%); fill-rule: evenodd;"/>
+				<text x="141.77725" y="436" style="font-family: Helvetica-Bold; font-size: 9.5px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,872) scale(1,-1)">Document</text>
+				<text x="36" y="408" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,816) scale(1,-1)">+ id: UUID</text>
+				<text x="36" y="394" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,788) scale(1,-1)">+ source_id: UUID</text>
+				<text x="36" y="380" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,760) scale(1,-1)">+ title: str</text>
+				<text x="36" y="366" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,732) scale(1,-1)">+ content: text</text>
+				<text x="36" y="352" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,704) scale(1,-1)">+ file_path: str</text>
+				<text x="36" y="338" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,676) scale(1,-1)">+ content_hash: str</text>
+				<text x="36" y="324" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,648) scale(1,-1)">+ dept_id: UUID</text>
+				<text x="36" y="310" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,620) scale(1,-1)">+ synced_at: datetime</text>
+			</g>
+			<g transform="">
+				<rect x="330" y="344" width="270" height="108" rx="4" ry="4" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1.2; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+				<rect x="330" y="430" width="270" height="22" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(7%,30%,29%); fill-rule: evenodd;"/>
+				<text x="450.22275" y="436" style="font-family: Helvetica-Bold; font-size: 9.5px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,872) scale(1,-1)">Chunk</text>
+				<text x="336" y="408" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,816) scale(1,-1)">+ id: UUID</text>
+				<text x="336" y="394" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,788) scale(1,-1)">+ doc_id: UUID</text>
+				<text x="336" y="380" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,760) scale(1,-1)">+ text: str</text>
+				<text x="336" y="366" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,732) scale(1,-1)">+ embedding: vector(384)</text>
+				<text x="336" y="352" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,704) scale(1,-1)">+ chunk_index: int</text>
+			</g>
+			<g transform="">
+				<rect x="630" y="316" width="270" height="136" rx="4" ry="4" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1.2; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+				<rect x="630" y="430" width="270" height="22" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(8%,39%,20%); fill-rule: evenodd;"/>
+				<text x="746.26125" y="436" style="font-family: Helvetica-Bold; font-size: 9.5px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,872) scale(1,-1)">Request</text>
+				<text x="636" y="408" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,816) scale(1,-1)">+ id: UUID</text>
+				<text x="636" y="394" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,788) scale(1,-1)">+ requester_id: UUID</text>
+				<text x="636" y="380" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,760) scale(1,-1)">+ dept_id: UUID</text>
+				<text x="636" y="366" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,732) scale(1,-1)">+ subject: str</text>
+				<text x="636" y="352" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,704) scale(1,-1)">+ status: str</text>
+				<text x="636" y="338" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,676) scale(1,-1)">+ due_date: date</text>
+				<text x="636" y="324" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,648) scale(1,-1)">+ created_at: datetime</text>
+			</g>
+			<g transform="">
+				<rect x="30" y="122" width="270" height="122" rx="4" ry="4" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1.2; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+				<rect x="30" y="222" width="270" height="22" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(34%,10%,52%); fill-rule: evenodd;"/>
+				<text x="130.952" y="228" style="font-family: Helvetica-Bold; font-size: 9.5px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,456) scale(1,-1)">ExemptionFlag</text>
+				<text x="36" y="200" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,400) scale(1,-1)">+ id: UUID</text>
+				<text x="36" y="186" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,372) scale(1,-1)">+ request_id: UUID</text>
+				<text x="36" y="172" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,344) scale(1,-1)">+ chunk_id: UUID</text>
+				<text x="36" y="158" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,316) scale(1,-1)">+ exemption_code: str</text>
+				<text x="36" y="144" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,288) scale(1,-1)">+ rationale: str</text>
+				<text x="36" y="130" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,260) scale(1,-1)">+ reviewed: bool</text>
+			</g>
+			<g transform="">
+				<rect x="330" y="136" width="270" height="108" rx="4" ry="4" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1.2; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+				<rect x="330" y="222" width="270" height="22" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+				<text x="454.44075" y="228" style="font-family: Helvetica-Bold; font-size: 9.5px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,456) scale(1,-1)">User</text>
+				<text x="336" y="200" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,400) scale(1,-1)">+ id: UUID</text>
+				<text x="336" y="186" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,372) scale(1,-1)">+ email: str</text>
+				<text x="336" y="172" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,344) scale(1,-1)">+ role: str</text>
+				<text x="336" y="158" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,316) scale(1,-1)">+ dept_id: UUID</text>
+				<text x="336" y="144" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,288) scale(1,-1)">+ is_active: bool</text>
+			</g>
+			<g transform="">
+				<rect x="630" y="164" width="270" height="80" rx="4" ry="4" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1.2; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+				<rect x="630" y="222" width="270" height="22" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(10%,22%,36%); fill-rule: evenodd;"/>
+				<text x="738.609" y="228" style="font-family: Helvetica-Bold; font-size: 9.5px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,456) scale(1,-1)">Department</text>
+				<text x="636" y="200" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,400) scale(1,-1)">+ id: UUID</text>
+				<text x="636" y="186" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,372) scale(1,-1)">+ name: str</text>
+				<text x="636" y="172" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,344) scale(1,-1)">+ code: str</text>
+			</g>
+			<g transform="">
+				<rect x="30" y="-100" width="270" height="136" rx="4" ry="4" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1.2; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+				<rect x="30" y="14" width="270" height="22" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(21%,25%,31%); fill-rule: evenodd;"/>
+				<text x="144.157" y="20" style="font-family: Helvetica-Bold; font-size: 9.5px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,40) scale(1,-1)">AuditLog</text>
+				<text x="36" y="-8" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,-16) scale(1,-1)">+ id: UUID</text>
+				<text x="36" y="-22" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,-44) scale(1,-1)">+ user_id: UUID</text>
+				<text x="36" y="-36" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,-72) scale(1,-1)">+ action: str</text>
+				<text x="36" y="-50" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,-100) scale(1,-1)">+ entity: str</text>
+				<text x="36" y="-64" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,-128) scale(1,-1)">+ entity_id: UUID</text>
+				<text x="36" y="-78" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,-156) scale(1,-1)">+ timestamp: datetime</text>
+				<text x="36" y="-92" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,-184) scale(1,-1)">+ detail: JSON</text>
+			</g>
+			<g transform="">
+				<path d="M 300,564 L 330,606 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="330 606, 322.0952 601.8151, 328.605 597.1652" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+				<text x="319.0" y="587.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(14%,38%,92%); stroke:none;" transform="translate(0,1174) scale(1,-1)">1..*</text>
+			</g>
+			<g transform="">
+				<path d="M 300,564 L 630,599 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="630 599, 621.6227 602.1339, 622.4665 594.1786" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+				<text x="469.0" y="583.5" style="font-family: Helvetica; font-size: 7px;fill: rgb(14%,38%,92%); stroke:none;" transform="translate(0,1167) scale(1,-1)">1..*</text>
+			</g>
+			<g transform="">
+				<path d="M 165,468 L 165,452 Z" style="stroke: rgb(10%,22%,36%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="165 452, 169 460, 161 460" style="stroke: rgb(10%,22%,36%); stroke-linecap: butt; stroke-width: 0; fill: rgb(10%,22%,36%); fill-rule: evenodd;"/>
+				<text x="169.0" y="462.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,924) scale(1,-1)">1..*</text>
+			</g>
+			<g transform="">
+				<path d="M 300,377 L 330,398 Z" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="330 398, 321.1523 396.6892, 325.74 390.1354" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 0; fill: rgb(7%,30%,29%); fill-rule: evenodd;"/>
+				<text x="319.0" y="389.5" style="font-family: Helvetica; font-size: 7px;fill: rgb(7%,30%,29%); stroke:none;" transform="translate(0,779) scale(1,-1)">1..*</text>
+			</g>
+			<g transform="">
+				<path d="M 630,384 L 300,183 Z" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="300 183, 308.9132 183.7454, 304.7516 190.5777" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 0; fill: rgb(34%,10%,52%); fill-rule: evenodd;"/>
+				<text x="469.0" y="285.5" style="font-family: Helvetica; font-size: 7px;fill: rgb(34%,10%,52%); stroke:none;" transform="translate(0,571) scale(1,-1)">0..*</text>
+			</g>
+			<g transform="">
+				<path d="M 600,190 L 630,204 Z" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="630 204, 621.059 204.2416, 624.4421 196.9922" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 0; fill: rgb(8%,39%,20%); fill-rule: evenodd;"/>
+				<text x="619.0" y="199.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(8%,39%,20%); stroke:none;" transform="translate(0,398) scale(1,-1)">*.1</text>
+			</g>
+			<g transform="">
+				<path d="M 330,190 L 300,-32 Z" style="stroke: rgb(21%,25%,31%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="300 -32, 305.0353 -24.60773, 297.1074 -23.53639" style="stroke: rgb(21%,25%,31%); stroke-linecap: butt; stroke-width: 0; fill: rgb(21%,25%,31%); fill-rule: evenodd;"/>
+				<text x="319.0" y="81.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(21%,25%,31%); stroke:none;" transform="translate(0,162) scale(1,-1)">1..*</text>
+			</g>
+		</g>
+	</g>
+</svg>

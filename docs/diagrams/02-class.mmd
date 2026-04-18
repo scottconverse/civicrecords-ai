@@ -1,0 +1,128 @@
+---
+title: CivicRecords AI — Core Domain Class Diagram (v1.1+)
+---
+classDiagram
+    direction TB
+
+    class DataSource {
+        +UUID id
+        +str name
+        +SourceType source_type
+        +str sync_schedule
+        +bool schedule_enabled
+        +bool sync_paused
+        +int consecutive_failure_count
+        +str last_error_message
+        +datetime last_sync_at
+        +datetime next_sync_at
+        +UUID department_id
+        +health_status() str
+    }
+
+    class SyncFailure {
+        +UUID id
+        +UUID source_id
+        +str source_path
+        +FailureStatus status
+        +int retry_count
+        +str error_message
+        +datetime first_failed_at
+        +datetime last_attempted_at
+        +UUID dismissed_by
+        +dismiss()
+        +retry()
+    }
+
+    class SyncRunLog {
+        +UUID id
+        +UUID source_id
+        +datetime started_at
+        +datetime ended_at
+        +int records_discovered
+        +int records_ingested
+        +int records_failed
+        +bool full_run_failed
+    }
+
+    class Document {
+        +UUID id
+        +UUID source_id
+        +str source_path
+        +str file_hash
+        +ConnectorType connector_type
+        +str filename
+        +str file_type
+        +int file_size
+        +datetime ingested_at
+        +datetime updated_at
+    }
+
+    class Chunk {
+        +UUID id
+        +UUID document_id
+        +int chunk_index
+        +str content
+        +Vector embedding
+        +int page_number
+    }
+
+    class Request {
+        +UUID id
+        +str requester_name
+        +str requester_email
+        +str description
+        +RequestStatus status
+        +RequestPriority priority
+        +datetime deadline
+        +UUID assigned_to
+        +UUID department_id
+        +datetime created_at
+    }
+
+    class ExemptionFlag {
+        +UUID id
+        +UUID document_id
+        +UUID request_id
+        +str rule_id
+        +str flagged_text
+        +float confidence
+        +FlagStatus status
+        +UUID reviewed_by
+        +datetime reviewed_at
+    }
+
+    class User {
+        +UUID id
+        +str email
+        +str full_name
+        +UserRole role
+        +bool is_active
+        +UUID department_id
+    }
+
+    class Department {
+        +UUID id
+        +str name
+        +str code
+    }
+
+    class AuditLog {
+        +UUID id
+        +UUID user_id
+        +str action
+        +str resource_type
+        +UUID resource_id
+        +JSON details
+        +str ip_address
+        +datetime timestamp
+    }
+
+    DataSource "1" --> "0..*" SyncFailure : tracks failures
+    DataSource "1" --> "0..*" SyncRunLog : logs runs
+    DataSource "1" --> "0..*" Document : owns
+    Document "1" --> "1..*" Chunk : split into
+    Request "1" --> "0..*" ExemptionFlag : flags
+    Request "0..*" --> "0..1" User : assigned to
+    User "0..*" --> "0..1" Department : belongs to
+    DataSource "0..*" --> "0..1" Department : scoped to
+    User "1" --> "0..*" AuditLog : generates

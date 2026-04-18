@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="920" height="780" preserveAspectRatio="xMinYMin meet" viewBox="0 0 920 780" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="920" height="780"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-780)" style="clip-path: url(#clip)">
+		<g transform="">
+			<rect x="0" y="0" width="920" height="780" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="325.803" y="756" style="font-family: Helvetica-Bold; font-size: 14px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1512) scale(1,-1)">CivicRecords AI — System Components</text>
+			<rect x="30" y="208" width="860" height="70" rx="4" ry="4" style="stroke: rgb(10%,22%,36%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(93%,96%,100%); fill-rule: evenodd;"/>
+			<rect x="30" y="252" width="860" height="26" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(10%,22%,36%); fill-rule: evenodd;"/>
+			<text x="421.7915" y="260" style="font-family: Helvetica-Bold; font-size: 11px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,520) scale(1,-1)">Browser Layer</text>
+			<rect x="38.0" y="212" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="86.1045" y="221" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,442) scale(1,-1)">Search UI</text>
+			<rect x="180.0" y="212" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="215.58825" y="221" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,442) scale(1,-1)">Request Tracker</text>
+			<rect x="322.0" y="212" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="363.25350000000003" y="221" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,442) scale(1,-1)">Data Sources</text>
+			<rect x="464.0" y="212" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="506.90675" y="221" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,442) scale(1,-1)">Admin Panel</text>
+			<rect x="606.0" y="212" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="637.81" y="221" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,442) scale(1,-1)">Exemption Review</text>
+			<rect x="748.0" y="212" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="797.04375" y="221" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,442) scale(1,-1)">Audit Log</text>
+			<rect x="30" y="290" width="860" height="102" rx="4" ry="4" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(86%,98%,90%); fill-rule: evenodd;"/>
+			<rect x="30" y="366" width="860" height="26" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(8%,39%,20%); fill-rule: evenodd;"/>
+			<text x="411.402" y="374" style="font-family: Helvetica-Bold; font-size: 11px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,748) scale(1,-1)">Application Server</text>
+			<rect x="38.0" y="326" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="86.3425" y="335" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,670) scale(1,-1)">JWT Auth</text>
+			<rect x="180.0" y="326" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="221.48725" y="335" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,670) scale(1,-1)">Dept Scoping</text>
+			<rect x="322.0" y="326" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="367.50350000000003" y="335" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,670) scale(1,-1)">Search API</text>
+			<rect x="464.0" y="326" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="507.1405" y="335" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,670) scale(1,-1)">Request API</text>
+			<rect x="606.0" y="326" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="649.3785" y="335" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,670) scale(1,-1)">Sources API</text>
+			<rect x="748.0" y="326" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="780.51125" y="335" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,670) scale(1,-1)">Exemption Engine</text>
+			<rect x="38.0" y="294" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="84.923" y="303" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,606) scale(1,-1)">Admin API</text>
+			<rect x="180.0" y="294" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="223.8545" y="303" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,606) scale(1,-1)">Notifications</text>
+			<rect x="322.0" y="294" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="371.28175" y="303" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,606) scale(1,-1)">Audit API</text>
+			<rect x="464.0" y="294" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="510.68925" y="303" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,606) scale(1,-1)">LLM Client</text>
+			<rect x="606.0" y="294" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="648.435" y="303" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,606) scale(1,-1)">Sync Runner</text>
+			<rect x="30" y="404" width="860" height="70" rx="4" ry="4" style="stroke: rgb(57%,25%,5%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(99%,95%,78%); fill-rule: evenodd;"/>
+			<rect x="30" y="448" width="860" height="26" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(57%,25%,5%); fill-rule: evenodd;"/>
+			<text x="437.9945" y="456" style="font-family: Helvetica-Bold; font-size: 11px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,912) scale(1,-1)">Workers</text>
+			<rect x="38.0" y="408" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="77.84675" y="417" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,834) scale(1,-1)">Celery Worker</text>
+			<rect x="180.0" y="408" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="224.798" y="417" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,834) scale(1,-1)">Celery Beat</text>
+			<rect x="30" y="486" width="860" height="70" rx="4" ry="4" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(95%,90%,100%); fill-rule: evenodd;"/>
+			<rect x="30" y="530" width="860" height="26" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(34%,10%,52%); fill-rule: evenodd;"/>
+			<text x="431.8785" y="538" style="font-family: Helvetica-Bold; font-size: 11px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,1076) scale(1,-1)">Data Layer</text>
+			<rect x="38.0" y="490" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="54.799" y="499" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,998) scale(1,-1)">PostgreSQL 17 + pgvector</text>
+			<rect x="180.0" y="490" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="229.048" y="499" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,998) scale(1,-1)">Redis 7.2</text>
+			<rect x="30" y="568" width="860" height="70" rx="4" ry="4" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(80%,98%,94%); fill-rule: evenodd;"/>
+			<rect x="30" y="612" width="860" height="26" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(7%,30%,29%); fill-rule: evenodd;"/>
+			<text x="438.297" y="620" style="font-family: Helvetica-Bold; font-size: 11px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,1240) scale(1,-1)">AI Layer</text>
+			<rect x="38.0" y="572" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="67.923" y="581" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1162) scale(1,-1)">Ollama (Local LLM)</text>
+			<rect x="180.0" y="572" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="217.7175" y="581" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1162) scale(1,-1)">Tesseract OCR</text>
+			<rect x="30" y="650" width="860" height="70" rx="4" ry="4" style="stroke: rgb(21%,25%,31%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(95%,95%,96%); fill-rule: evenodd;"/>
+			<rect x="30" y="694" width="860" height="26" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(21%,25%,31%); fill-rule: evenodd;"/>
+			<text x="412.931" y="702" style="font-family: Helvetica-Bold; font-size: 11px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,1404) scale(1,-1)">City Data Sources</text>
+			<rect x="38.0" y="654" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="82.80225" y="663" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1326) scale(1,-1)">File System</text>
+			<rect x="180.0" y="654" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="221.25775" y="663" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1326) scale(1,-1)">Direct Upload</text>
+			<rect x="322.0" y="654" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="369.63275" y="663" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1326) scale(1,-1)">REST API</text>
+			<rect x="464.0" y="654" width="134.0" height="28" rx="3" ry="3" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0.8; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="509.036" y="663" style="font-family: Helvetica; font-size: 8.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1326) scale(1,-1)">ODBC/SQL</text>
+			<path d="M 30,243 L 16,243 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<path d="M 16,243 L 16,341 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<g transform="">
+				<path d="M 16,341 L 30,341 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="30 341, 22 345, 22 337" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="-22.113999999999997" y="292.0" style="font-family: Helvetica; font-size: 6.5px;fill: rgb(14%,38%,92%); stroke:none;" transform="translate(0,584) scale(1,-1)">HTTP/REST</text>
+			<path d="M 30,341 L 10,341 Z" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<path d="M 10,341 L 10,521 Z" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<g transform="">
+				<path d="M 10,521 L 30,521 Z" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="30 521, 22 525, 22 517" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 0; fill: rgb(34%,10%,52%); fill-rule: evenodd;"/>
+			</g>
+			<text x="-29.212500000000006" y="431.0" style="font-family: Helvetica; font-size: 6.5px;fill: rgb(34%,10%,52%); stroke:none;" transform="translate(0,862) scale(1,-1)">SQL / Cache</text>
+			<path d="M 30,439 L 4,439 Z" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<path d="M 4,439 L 4,521 Z" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<g transform="">
+				<path d="M 4,521 L 30,521 Z" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="30 521, 22 525, 22 517" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 0; fill: rgb(34%,10%,52%); fill-rule: evenodd;"/>
+			</g>
+			<text x="-35.212500000000006" y="480.0" style="font-family: Helvetica; font-size: 6.5px;fill: rgb(34%,10%,52%); stroke:none;" transform="translate(0,960) scale(1,-1)">SQL / Cache</text>
+			<path d="M 30,439 L 10,439 Z" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<path d="M 10,439 L 10,603 Z" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<g transform="">
+				<path d="M 10,603 L 30,603 Z" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="30 603, 22 607, 22 599" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 0; fill: rgb(7%,30%,29%); fill-rule: evenodd;"/>
+			</g>
+			<text x="-32.456" y="521.0" style="font-family: Helvetica; font-size: 6.5px;fill: rgb(7%,30%,29%); stroke:none;" transform="translate(0,1042) scale(1,-1)">Embed / OCR</text>
+			<path d="M 30,685 L 16,685 Z" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<path d="M 16,685 L 16,341 Z" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<g transform="">
+				<path d="M 16,341 L 30,341 Z" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="30 341, 22 345, 22 337" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 0; fill: rgb(8%,39%,20%); fill-rule: evenodd;"/>
+			</g>
+			<text x="-3.706000000000003" y="513.0" style="font-family: Helvetica; font-size: 6.5px;fill: rgb(8%,39%,20%); stroke:none;" transform="translate(0,1026) scale(1,-1)">Ingest</text>
+		</g>
+	</g>
+</svg>

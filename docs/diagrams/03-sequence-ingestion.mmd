@@ -1,0 +1,68 @@
+---
+title: CivicRecords AI — Ingestion Pipeline Sequence (v1.1+)
+---
+sequenceDiagram
+    autonumber
+    participant Beat as Celery Beat
+    participant Task as Celery Worker
+    participant SR as Sync Runner
+    participant Conn as Connector<br/>(REST/ODBC/FS)
+    participant Pipe as Ingestion Pipeline
+    participant PG as PostgreSQL
+    participant Ollama as Ollama<br/>(Local LLM)
+
+    Beat->>Task: trigger_sync(source_id) [per cron schedule]
+    Task->>SR: run_sync(source_id)
+
+    SR->>PG: load DataSource config
+    SR->>Conn: authenticate()
+    Conn-->>SR: auth OK
+
+    SR->>PG: load retrying SyncFailures (cap N=100, T=90s)
+    loop For each retrying failure
+        SR->>Conn: fetch(source_path)
+        Conn-->>SR: FetchedDocument
+        SR->>Pipe: ingest_record(doc)
+        Pipe->>PG: upsert Document (SELECT FOR UPDATE)
+        Pipe->>Ollama: embed(chunks)
+        Ollama-->>Pipe: embeddings
+        Pipe->>PG: upsert Chunks + pgvector
+        Pipe-->>SR: success / failure
+    end
+
+    SR->>Conn: discover(since=last_cursor)
+    Conn-->>SR: [DiscoveredRecord, ...]
+
+    loop For each discovered record
+        SR->>Conn: fetch(source_path)
+        Conn-->>SR: FetchedDocument
+        SR->>Pipe: ingest_record(doc)
+        alt New document
+            Pipe->>PG: INSERT Document
+            Pipe->>Ollama: embed(chunks)
+            Ollama-->>Pipe: embeddings
+            Pipe->>PG: INSERT Chunks + pgvector
+        else Content changed
+            Pipe->>PG: DELETE old Chunks (atomic)
+            Pipe->>PG: UPDATE Document
+            Pipe->>Ollama: embed(new chunks)
+            Pipe->>PG: INSERT new Chunks + pgvector
+        else No change (hash match)
+            Pipe-->>SR: skip (idempotent)
+        end
+        alt Failure (IOError / timeout)
+            SR->>PG: upsert SyncFailure(status=retrying)
+        else Failure (IntegrityError)
+            SR->>PG: upsert SyncFailure(status=permanently_failed)
+        end
+    end
+
+    SR->>PG: advance last_sync_cursor
+    SR->>PG: INSERT SyncRunLog (counts, duration)
+
+    alt 5 consecutive full-run failures
+        SR->>PG: SET sync_paused=true, sync_paused_reason
+        SR->>Task: trigger circuit_open notification
+    else Any success
+        SR->>PG: SET consecutive_failure_count=0
+    end

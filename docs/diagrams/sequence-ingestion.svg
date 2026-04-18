@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="920" height="680" preserveAspectRatio="xMinYMin meet" viewBox="0 0 920 680" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="920" height="680"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-680)" style="clip-path: url(#clip)">
+		<g transform="">
+			<rect x="0" y="0" width="920" height="680" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="300.505" y="656" style="font-family: Helvetica-Bold; font-size: 14px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1312) scale(1,-1)">CivicRecords AI — Ingestion Pipeline Sequence</text>
+			<rect x="37.42857142857143" y="589" width="108.00000000000001" height="36" rx="4" ry="4" style="stroke: rgb(57%,25%,5%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(99%,95%,78%); fill-rule: evenodd;"/>
+			<text x="69.42057142857144" y="601" style="font-family: Helvetica-Bold; font-size: 8px;fill: rgb(57%,25%,5%); stroke:none;" transform="translate(0,1202) scale(1,-1)">Celery Beat</text>
+			<rect x="160.28571428571428" y="589" width="108.0" height="36" rx="4" ry="4" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(86%,98%,90%); fill-rule: evenodd;"/>
+			<text x="187.16571428571427" y="601" style="font-family: Helvetica-Bold; font-size: 8px;fill: rgb(8%,39%,20%); stroke:none;" transform="translate(0,1202) scale(1,-1)">Celery Worker</text>
+			<rect x="283.14285714285717" y="589" width="108.0" height="36" rx="4" ry="4" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(93%,96%,100%); fill-rule: evenodd;"/>
+			<text x="312.47085714285714" y="601" style="font-family: Helvetica-Bold; font-size: 8px;fill: rgb(14%,38%,92%); stroke:none;" transform="translate(0,1202) scale(1,-1)">Sync Runner</text>
+			<rect x="406.0" y="589" width="108.0" height="36" rx="4" ry="4" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(80%,98%,94%); fill-rule: evenodd;"/>
+			<text x="440.0" y="601" style="font-family: Helvetica-Bold; font-size: 8px;fill: rgb(7%,30%,29%); stroke:none;" transform="translate(0,1202) scale(1,-1)">Connector</text>
+			<rect x="528.8571428571429" y="589" width="108.0" height="36" rx="4" ry="4" style="stroke: rgb(10%,22%,36%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(95%,95%,96%); fill-rule: evenodd;"/>
+			<text x="548.6251428571429" y="601" style="font-family: Helvetica-Bold; font-size: 8px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1202) scale(1,-1)">Ingestion Pipeline</text>
+			<rect x="651.7142857142858" y="589" width="108.0" height="36" rx="4" ry="4" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(95%,90%,100%); fill-rule: evenodd;"/>
+			<text x="682.5982857142858" y="601" style="font-family: Helvetica-Bold; font-size: 8px;fill: rgb(34%,10%,52%); stroke:none;" transform="translate(0,1202) scale(1,-1)">PostgreSQL</text>
+			<rect x="774.5714285714286" y="589" width="108.0" height="36" rx="4" ry="4" style="stroke: rgb(21%,25%,31%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(95%,95%,96%); fill-rule: evenodd;"/>
+			<text x="815.2314285714285" y="601" style="font-family: Helvetica-Bold; font-size: 8px;fill: rgb(21%,25%,31%); stroke:none;" transform="translate(0,1202) scale(1,-1)">Ollama</text>
+			<path d="M 91.428571,589 L 91.428571,30 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<path d="M 214.285714,589 L 214.285714,30 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<path d="M 337.142857,589 L 337.142857,30 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<path d="M 460,589 L 460,30 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<path d="M 582.857143,589 L 582.857143,30 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<path d="M 705.714286,589 L 705.714286,30 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<path d="M 828.571429,589 L 828.571429,30 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<g transform="">
+				<path d="M 91.428571,620 L 214.285714,620 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="214.2857 620, 206.2857 624, 206.2857 616" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="123.68214285714286" y="624" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1248) scale(1,-1)">trigger sync tasks</text>
+			<g transform="">
+				<path d="M 214.285714,590 L 337.142857,590 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="337.1429 590, 329.1429 594, 329.1429 586" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="241.74678571428572" y="594" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1188) scale(1,-1)">run_sync(source_id)</text>
+			<g transform="">
+				<path d="M 337.142857,560 L 460,560 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="460 560, 452 564, 452 556" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="375.64392857142855" y="564" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1128) scale(1,-1)">authenticate()</text>
+			<path d="M 460,545 L 337.142857,545 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<g transform="">
+				<path d="M 460,545 L 337.142857,545 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1;"/>
+				<polygon points="337.1429 545, 345.1429 541, 345.1429 549" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0; fill: rgb(81%,83%,85%); fill-rule: evenodd;"/>
+			</g>
+			<text x="380.01642857142855" y="549" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1098) scale(1,-1)">auth_token</text>
+			<g transform="">
+				<path d="M 337.142857,520 L 460,520 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="460 520, 452 524, 452 516" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="382.11267857142855" y="524" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1048) scale(1,-1)">discover()</text>
+			<path d="M 460,505 L 337.142857,505 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<g transform="">
+				<path d="M 460,505 L 337.142857,505 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1;"/>
+				<polygon points="337.1429 505, 345.1429 501, 345.1429 509" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0; fill: rgb(81%,83%,85%); fill-rule: evenodd;"/>
+			</g>
+			<text x="383.77392857142854" y="509" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1018) scale(1,-1)">doc_list[]</text>
+			<g transform="">
+				<path d="M 337.142857,480 L 460,480 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="460 480, 452 484, 452 476" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="376.89642857142854" y="484" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,968) scale(1,-1)">fetch(doc_id)</text>
+			<path d="M 460,465 L 337.142857,465 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<g transform="">
+				<path d="M 460,465 L 337.142857,465 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1;"/>
+				<polygon points="337.1429 465, 345.1429 461, 345.1429 469" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0; fill: rgb(81%,83%,85%); fill-rule: evenodd;"/>
+			</g>
+			<text x="378.1451785714286" y="469" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,938) scale(1,-1)">raw_content</text>
+			<g transform="">
+				<path d="M 337.142857,440 L 582.857143,440 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="582.8571 440, 574.8571 444, 574.8571 436" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="441.4525" y="444" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,888) scale(1,-1)">ingest(doc)</text>
+			<g transform="">
+				<path d="M 582.857143,415 L 705.714286,415 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="705.7143 415, 697.7143 419, 697.7143 411" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="616.3557142857144" y="419" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,838) scale(1,-1)">upsert document</text>
+			<path d="M 705.714286,400 L 582.857143,400 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<g transform="">
+				<path d="M 705.714286,400 L 582.857143,400 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1;"/>
+				<polygon points="582.8571 400, 590.8571 396, 590.8571 404" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0; fill: rgb(81%,83%,85%); fill-rule: evenodd;"/>
+			</g>
+			<text x="633.2382142857143" y="404" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,808) scale(1,-1)">doc_id</text>
+			<g transform="">
+				<path d="M 582.857143,380 L 705.714286,380 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="705.7143 380, 697.7143 384, 697.7143 376" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="620.9419642857143" y="384" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,768) scale(1,-1)">upsert chunks</text>
+			<g transform="">
+				<path d="M 582.857143,355 L 828.571429,355 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="828.5714 355, 820.5714 359, 820.5714 351" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="673.6180357142857" y="359" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,718) scale(1,-1)">embed(chunk_text)</text>
+			<path d="M 828.571429,340 L 582.857143,340 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<g transform="">
+				<path d="M 828.571429,340 L 582.857143,340 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1;"/>
+				<polygon points="582.8571 340, 590.8571 336, 590.8571 344" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0; fill: rgb(81%,83%,85%); fill-rule: evenodd;"/>
+			</g>
+			<text x="687.1630357142858" y="344" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,688) scale(1,-1)">vector[384]</text>
+			<g transform="">
+				<path d="M 582.857143,320 L 705.714286,320 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="705.7143 320, 697.7143 324, 697.7143 316" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="614.4807142857144" y="324" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,648) scale(1,-1)">store embeddings</text>
+			<path d="M 705.714286,305 L 582.857143,305 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<g transform="">
+				<path d="M 705.714286,305 L 582.857143,305 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1;"/>
+				<polygon points="582.8571 305, 590.8571 301, 590.8571 309" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0; fill: rgb(81%,83%,85%); fill-rule: evenodd;"/>
+			</g>
+			<text x="638.8669642857143" y="309" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,618) scale(1,-1)">OK</text>
+			<path d="M 582.857143,280 L 337.142857,280 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<g transform="">
+				<path d="M 582.857143,280 L 337.142857,280 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1;"/>
+				<polygon points="337.1429 280, 345.1429 276, 345.1429 284" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0; fill: rgb(81%,83%,85%); fill-rule: evenodd;"/>
+			</g>
+			<text x="435.82375" y="284" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,568) scale(1,-1)">pipeline_result</text>
+			<g transform="">
+				<path d="M 337.142857,255 L 705.714286,255 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="705.7143 255, 697.7143 259, 697.7143 251" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			</g>
+			<text x="493.91482142857143" y="259" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,518) scale(1,-1)">log SyncRunLog</text>
+			<path d="M 337.142857,248 L 377.142857,248 Z" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<path d="M 377.142857,248 L 377.142857,230 Z" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<g transform="">
+				<path d="M 377.142857,230 L 337.142857,230 Z" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.2;"/>
+				<polygon points="337.1429 230, 345.1429 226, 345.1429 234" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 0; fill: rgb(7%,30%,29%); fill-rule: evenodd;"/>
+			</g>
+			<text x="381.14285714285717" y="235" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(7%,30%,29%); stroke:none;" transform="translate(0,470) scale(1,-1)">circuit_breaker check</text>
+			<path d="M 337.142857,205 L 214.285714,205 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<g transform="">
+				<path d="M 337.142857,205 L 214.285714,205 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1;"/>
+				<polygon points="214.2857 205, 222.2857 201, 222.2857 209" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 0; fill: rgb(81%,83%,85%); fill-rule: evenodd;"/>
+			</g>
+			<text x="248.1967857142857" y="209" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,418) scale(1,-1)">done / exception</text>
+			<rect x="332.14285714285717" y="205" width="10.0" height="385" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1; fill: rgb(93%,96%,100%); fill-rule: evenodd;"/>
+			<text x="30" y="70" style="font-family: Helvetica-Bold; font-size: 8px;fill: rgb(21%,25%,31%); stroke:none;" transform="translate(0,140) scale(1,-1)">Legend:</text>
+			<path d="M 30,60 L 60,60 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+			<text x="64" y="60" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,120) scale(1,-1)">sync call</text>
+			<path d="M 120,60 L 150,60 Z" style="stroke: rgb(81%,83%,85%); stroke-linecap: butt; stroke-width: 1; stroke-dasharray: 4, 3;"/>
+			<text x="154" y="60" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,120) scale(1,-1)">return</text>
+		</g>
+	</g>
+</svg>

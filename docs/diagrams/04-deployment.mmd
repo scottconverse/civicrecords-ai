@@ -1,0 +1,59 @@
+---
+title: CivicRecords AI — Deployment Diagram (Docker Compose, v1.1+)
+---
+graph TB
+    subgraph Host["City Server — Single Machine (Windows / Linux / macOS)"]
+        subgraph Compose["Docker Compose Network: civicrecords_default"]
+            subgraph FE["Port 8080 → frontend"]
+                Nginx["nginx\nReact SPA\n(static build)"]
+            end
+
+            subgraph BE["Port 8000 → api"]
+                FastAPI["FastAPI\nuvicorn workers\nPython 3.12"]
+            end
+
+            subgraph WK["worker (no exposed port)"]
+                Celery["Celery Worker\n4 concurrency\n(ingest / embed / notify)"]
+            end
+
+            subgraph BT["beat (no exposed port)"]
+                Beat["Celery Beat\n60s tick\n(scheduler / deadlines)"]
+            end
+
+            subgraph PG["Port 5432 → postgres"]
+                Postgres["PostgreSQL 17\n+ pgvector\nVolume: pg_data"]
+            end
+
+            subgraph RD["Port 6379 → redis"]
+                Redis["Redis 7.2\nTask broker\nVolume: redis_data"]
+            end
+
+            subgraph OL["Port 11434 → ollama"]
+                Ollama["Ollama\nGemma 4 / Mistral\nVolume: ollama_data\nGPU: auto-detect"]
+            end
+        end
+    end
+
+    subgraph Browser["Staff Browser (Internal Network)"]
+        Staff["City Clerk / IT Staff\nChrome / Firefox / Edge"]
+    end
+
+    Staff -->|"HTTP :8080\n(internal LAN only)"| Nginx
+    Nginx -->|"proxy /api → :8000"| FastAPI
+    FastAPI -->|":5432"| Postgres
+    FastAPI -->|":6379"| Redis
+    FastAPI -->|":11434"| Ollama
+    Celery -->|":5432"| Postgres
+    Celery -->|":6379 (broker)"| Redis
+    Celery -->|":11434"| Ollama
+    Beat -->|":6379"| Redis
+
+    classDef internet fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+    classDef internal fill:#dbeafe,stroke:#1d4ed8,color:#1e3a5f
+    classDef data fill:#f3e8ff,stroke:#7c3aed,color:#4c1d95
+    classDef worker fill:#fef3c7,stroke:#d97706,color:#78350f
+
+    class Nginx,FastAPI internal
+    class Postgres,Redis data
+    class Celery,Beat worker
+    class Staff internet

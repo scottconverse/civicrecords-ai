@@ -1,0 +1,68 @@
+---
+title: CivicRecords AI — System Component Diagram (v1.1+)
+---
+graph TB
+    subgraph Browser["🖥 Browser Client — React 18 · shadcn/ui · Tailwind CSS"]
+        direction LR
+        UI_Search["Search UI"]
+        UI_Requests["Request Tracker"]
+        UI_Sources["Data Sources"]
+        UI_Admin["Admin Panel"]
+        UI_Exempt["Exemption Review"]
+        UI_Audit["Audit Log"]
+    end
+
+    subgraph API["⚙ Application Server — FastAPI · Python 3.12"]
+        direction TB
+        Auth["JWT Auth\n(fastapi-users)"]
+        Dept["Department\nScoping"]
+        SearchAPI["Search API\n/search/query\n/search/export"]
+        RequestAPI["Request Workflow\n/requests/**"]
+        SourceAPI["Data Sources\n/datasources/**"]
+        ExemptAPI["Exemption Engine\n/exemptions/**"]
+        AdminAPI["Admin API\n/admin/**"]
+        NotifAPI["Notifications\n/notifications/**"]
+        AuditAPI["Audit Log\n/audit/**"]
+        LLMClient["LLM Client\n(context budgeting)"]
+        SyncRunner["Sync Runner\n(circuit breaker)"]
+    end
+
+    subgraph Workers["🔄 Async Workers — Celery · Redis broker"]
+        CeleryW["Celery Worker\n(ingest / embed / notify)"]
+        CeleryB["Celery Beat\n(scheduler / deadline checks)"]
+    end
+
+    subgraph Data["🗄 Data Layer"]
+        PG["PostgreSQL 17\n+ pgvector\n29 tables"]
+        Redis["Redis 7.2\ntask queue / cache"]
+    end
+
+    subgraph AI["🤖 AI Layer — Local Only"]
+        Ollama["Ollama\n(Gemma 4 / Mistral)\nembeddings + synthesis"]
+        Tesseract["Tesseract OCR\n(scanned PDF fallback)"]
+    end
+
+    subgraph Sources["📂 City Data Sources"]
+        FS["File System\n(directories)"]
+        Upload["Direct Upload\n(PDF / DOCX / CSV)"]
+        REST["REST API\n(municipal systems)"]
+        ODBC["ODBC / SQL\n(databases)"]
+    end
+
+    Browser -->|"HTTPS REST/JSON"| API
+    API --> Auth
+    API --> Dept
+    API --> SearchAPI
+    API --> SourceAPI
+    API --> RequestAPI
+    API --> ExemptAPI
+    API --> AdminAPI
+    SyncRunner -->|"discover / fetch"| Sources
+    SyncRunner -->|"enqueue tasks"| Redis
+    Workers -->|"reads tasks"| Redis
+    Workers -->|"reads/writes"| PG
+    Workers -->|"embeddings"| Ollama
+    LLMClient -->|"inference"| Ollama
+    API -->|"reads/writes"| PG
+    CeleryB -->|"triggers"| CeleryW
+    ExemptAPI -->|"OCR fallback"| Tesseract

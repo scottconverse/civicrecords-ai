@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="920" height="640" preserveAspectRatio="xMinYMin meet" viewBox="0 0 920 640" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="920" height="640"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-640)" style="clip-path: url(#clip)">
+		<g transform="">
+			<rect x="0" y="0" width="920" height="640" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="296.24199999999996" y="616" style="font-family: Helvetica-Bold; font-size: 14px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1232) scale(1,-1)">CivicRecords AI — Docker Deployment Topology</text>
+			<rect x="30" y="540" width="120" height="50" rx="6" ry="6" style="stroke: rgb(10%,22%,36%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(93%,96%,100%); fill-rule: evenodd;"/>
+			<text x="69.995" y="558" style="font-family: Helvetica-Bold; font-size: 10px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1116) scale(1,-1)">Browser</text>
+			<text x="78.892" y="545" style="font-family: Helvetica; font-size: 8px;fill: rgb(21%,25%,31%); stroke:none;" transform="translate(0,1090) scale(1,-1)">(User)</text>
+			<rect x="30" y="40" width="860" height="490" rx="8" ry="8" style="stroke: rgb(10%,22%,36%); stroke-linecap: butt; stroke-width: 2; fill: rgb(97%,98%,98%); fill-rule: evenodd;"/>
+			<text x="42" y="512" style="font-family: Helvetica-Bold; font-size: 11px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1024) scale(1,-1)">City Server</text>
+			<rect x="50" y="60" width="820" height="440" rx="6" ry="6" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(94%,97%,100%); fill-rule: evenodd;"/>
+			<text x="62" y="484" style="font-family: Helvetica-Bold; font-size: 9.5px;fill: rgb(14%,38%,92%); stroke:none;" transform="translate(0,968) scale(1,-1)">Docker Compose Network (civicrecords-net)</text>
+			<rect x="80" y="410" width="130" height="52" rx="6" ry="6" style="stroke: rgb(5%,64%,91%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(87%,94%,99%); fill-rule: evenodd;"/>
+			<text x="126.7525" y="442.0" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(5%,64%,91%); stroke:none;" transform="translate(0,884) scale(1,-1)">frontend</text>
+			<text x="133.12" y="429.0" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(5%,64%,91%); stroke:none;" transform="translate(0,858) scale(1,-1)">(:8080)</text>
+			<rect x="240" y="410" width="130" height="52" rx="6" ry="6" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(86%,98%,90%); fill-rule: evenodd;"/>
+			<text x="298.4975" y="442.0" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(8%,39%,20%); stroke:none;" transform="translate(0,884) scale(1,-1)">api</text>
+			<text x="293.12" y="429.0" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(8%,39%,20%); stroke:none;" transform="translate(0,858) scale(1,-1)">(:8000)</text>
+			<rect x="80" y="320" width="130" height="52" rx="6" ry="6" style="stroke: rgb(57%,25%,5%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(99%,95%,78%); fill-rule: evenodd;"/>
+			<text x="130.2445" y="349.0" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(57%,25%,5%); stroke:none;" transform="translate(0,698) scale(1,-1)">worker</text>
+			<rect x="240" y="320" width="130" height="52" rx="6" ry="6" style="stroke: rgb(57%,25%,5%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(99%,95%,78%); fill-rule: evenodd;"/>
+			<text x="295.748" y="349.0" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(57%,25%,5%); stroke:none;" transform="translate(0,698) scale(1,-1)">beat</text>
+			<rect x="420" y="320" width="130" height="52" rx="6" ry="6" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(80%,98%,94%); fill-rule: evenodd;"/>
+			<text x="470.744" y="352.0" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(7%,30%,29%); stroke:none;" transform="translate(0,704) scale(1,-1)">ollama</text>
+			<text x="471.035" y="339.0" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(7%,30%,29%); stroke:none;" transform="translate(0,678) scale(1,-1)">(:11434)</text>
+			<rect x="80" y="230" width="130" height="52" rx="6" ry="6" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(95%,90%,100%); fill-rule: evenodd;"/>
+			<text x="125.9965" y="262.0" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(34%,10%,52%); stroke:none;" transform="translate(0,524) scale(1,-1)">postgres</text>
+			<text x="133.12" y="249.0" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(34%,10%,52%); stroke:none;" transform="translate(0,498) scale(1,-1)">(:5432)</text>
+			<rect x="240" y="230" width="130" height="52" rx="6" ry="6" style="stroke: rgb(86%,14%,14%); stroke-linecap: butt; stroke-width: 1.5; fill: rgb(99%,88%,88%); fill-rule: evenodd;"/>
+			<text x="294.245" y="262.0" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(86%,14%,14%); stroke:none;" transform="translate(0,524) scale(1,-1)">redis</text>
+			<text x="293.12" y="249.0" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(86%,14%,14%); stroke:none;" transform="translate(0,498) scale(1,-1)">(:6379)</text>
+			<path d="M 210,436 L 240,436 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<text x="229.0" y="439.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(14%,38%,92%); stroke:none;" transform="translate(0,878) scale(1,-1)">HTTP</text>
+			<path d="M 305,410 L 145,282 Z" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<text x="229.0" y="349.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(34%,10%,52%); stroke:none;" transform="translate(0,698) scale(1,-1)">SQL</text>
+			<path d="M 370,436 L 420,346 Z" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<text x="399.0" y="394.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(7%,30%,29%); stroke:none;" transform="translate(0,788) scale(1,-1)">HTTP</text>
+			<path d="M 145,320 L 145,282 Z" style="stroke: rgb(34%,10%,52%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<text x="149.0" y="304.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(34%,10%,52%); stroke:none;" transform="translate(0,608) scale(1,-1)">SQL</text>
+			<path d="M 210,346 L 240,256 Z" style="stroke: rgb(86%,14%,14%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<text x="229.0" y="304.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(86%,14%,14%); stroke:none;" transform="translate(0,608) scale(1,-1)">Queue</text>
+			<path d="M 210,346 L 420,346 Z" style="stroke: rgb(7%,30%,29%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<text x="319.0" y="349.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(7%,30%,29%); stroke:none;" transform="translate(0,698) scale(1,-1)">HTTP</text>
+			<path d="M 370,346 L 240,256 Z" style="stroke: rgb(86%,14%,14%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<text x="309.0" y="304.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(86%,14%,14%); stroke:none;" transform="translate(0,608) scale(1,-1)">Sched</text>
+			<path d="M 305,410 L 305,282 Z" style="stroke: rgb(86%,14%,14%); stroke-linecap: butt; stroke-width: 1.2;"/>
+			<text x="309.0" y="349.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(86%,14%,14%); stroke:none;" transform="translate(0,698) scale(1,-1)">Cache</text>
+			<g transform="">
+				<path d="M 150,565 L 80,436 Z" style="stroke: rgb(10%,22%,36%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="80 436, 87.33127 441.1237, 80.29979 444.9392" style="stroke: rgb(10%,22%,36%); stroke-linecap: butt; stroke-width: 0; fill: rgb(10%,22%,36%); fill-rule: evenodd;"/>
+				<text x="119.0" y="502.5" style="font-family: Helvetica; font-size: 7px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1005) scale(1,-1)">HTTPS :80</text>
+			</g>
+		</g>
+	</g>
+</svg>

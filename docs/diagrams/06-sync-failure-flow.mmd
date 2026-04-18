@@ -1,0 +1,30 @@
+---
+title: CivicRecords AI — Sync Failure & Circuit Breaker State Machine (v1.1+)
+---
+stateDiagram-v2
+    [*] --> Healthy : source created / sync successful
+
+    Healthy --> Degraded : fetch failure logged\n(SyncFailure: retrying)
+    Degraded --> Healthy : subsequent sync succeeds\nconsecutive_failure_count reset to 0
+
+    Degraded --> Degraded : retry attempt fails\n(retry_count < 5 AND age < 7 days)
+    Degraded --> PermanentlyFailed : IntegrityError OR\nretry_count ≥ 5 OR age ≥ 7 days
+
+    Healthy --> CircuitOpen : 5 consecutive FULL-RUN failures\n(sync_paused = true)
+    Degraded --> CircuitOpen : 5 consecutive FULL-RUN failures\n(sync_paused = true)
+
+    CircuitOpen --> Healthy : admin unpauses source\nAND next sync succeeds\n(grace threshold = 2)
+    CircuitOpen --> CircuitOpen : admin unpauses\nbut sync still fails\n(grace threshold exhausted → re-paused)
+
+    PermanentlyFailed --> Dismissed : admin dismisses record\n(soft delete, audit trail preserved)
+    PermanentlyFailed --> Healthy : admin clicks Retry\nAND next sync succeeds
+
+    state Healthy {
+        [*] --> Syncing
+        Syncing --> Cursor_Advance : records processed
+        Cursor_Advance --> [*] : SyncRunLog written
+    }
+
+    state CircuitOpen {
+        note : sync_paused = true\nhealth_status = circuit_open\nAdmin notification sent\nNo automatic retry
+    }

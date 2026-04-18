@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="920" height="600" preserveAspectRatio="xMinYMin meet" viewBox="0 0 920 600" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="920" height="600"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-600)" style="clip-path: url(#clip)">
+		<g transform="">
+			<rect x="0" y="0" width="920" height="600" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="304.78200000000004" y="576" style="font-family: Helvetica-Bold; font-size: 14px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,1152) scale(1,-1)">CivicRecords AI — Sync Failure State Machine</text>
+			<rect x="390.0" y="480" width="140.0" height="52" rx="8" ry="8" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 2; fill: rgb(86%,98%,90%); fill-rule: evenodd;"/>
+			<rect x="390.0" y="510" width="140.0" height="22" rx="8" ry="0" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(8%,39%,20%); fill-rule: evenodd;"/>
+			<text x="443.746" y="518" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,1036) scale(1,-1)">Healthy</text>
+			<text x="432.17125" y="486" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(8%,39%,20%); stroke:none;" transform="translate(0,972) scale(1,-1)">failure_count = 0</text>
+			<rect x="390.0" y="360" width="140.0" height="52" rx="8" ry="8" style="stroke: rgb(57%,25%,5%); stroke-linecap: butt; stroke-width: 2; fill: rgb(99%,95%,78%); fill-rule: evenodd;"/>
+			<rect x="390.0" y="390" width="140.0" height="22" rx="8" ry="0" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(57%,25%,5%); fill-rule: evenodd;"/>
+			<text x="439.246" y="398" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,796) scale(1,-1)">Degraded</text>
+			<text x="435.325" y="366" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(57%,25%,5%); stroke:none;" transform="translate(0,732) scale(1,-1)">1 ≤ failures &lt; 5</text>
+			<rect x="170.0" y="240" width="140.0" height="52" rx="8" ry="8" style="stroke: rgb(86%,14%,14%); stroke-linecap: butt; stroke-width: 2; fill: rgb(99%,88%,88%); fill-rule: evenodd;"/>
+			<rect x="170.0" y="270" width="140.0" height="22" rx="8" ry="0" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(86%,14%,14%); fill-rule: evenodd;"/>
+			<text x="214.2465" y="278" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,556) scale(1,-1)">CircuitOpen</text>
+			<text x="221.685" y="246" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(86%,14%,14%); stroke:none;" transform="translate(0,492) scale(1,-1)">failures ≥ 5</text>
+			<rect x="610.0" y="240" width="140.0" height="52" rx="8" ry="8" style="stroke: rgb(21%,25%,31%); stroke-linecap: butt; stroke-width: 2; fill: rgb(95%,95%,96%); fill-rule: evenodd;"/>
+			<rect x="610.0" y="270" width="140.0" height="22" rx="8" ry="0" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(21%,25%,31%); fill-rule: evenodd;"/>
+			<text x="639.986" y="278" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,556) scale(1,-1)">PermanentlyFailed</text>
+			<text x="659.6" y="246" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(21%,25%,31%); stroke:none;" transform="translate(0,492) scale(1,-1)">failures ≥ 10</text>
+			<rect x="390.0" y="120" width="140.0" height="52" rx="8" ry="8" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 2; fill: rgb(93%,96%,100%); fill-rule: evenodd;"/>
+			<rect x="390.0" y="150" width="140.0" height="22" rx="8" ry="0" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+			<text x="437.491" y="158" style="font-family: Helvetica-Bold; font-size: 9px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,316) scale(1,-1)">Dismissed</text>
+			<text x="432.0775" y="126" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(14%,38%,92%); stroke:none;" transform="translate(0,252) scale(1,-1)">admin dismissed</text>
+			<g transform="">
+				<path d="M 430,460 L 460,480 Z" style="stroke: rgb(10%,22%,36%); stroke-linecap: butt; stroke-width: 2;"/>
+				<polygon points="460 480, 451.1248 478.8906, 455.5624 472.2342" style="stroke: rgb(10%,22%,36%); stroke-linecap: butt; stroke-width: 0; fill: rgb(10%,22%,36%); fill-rule: evenodd;"/>
+			</g>
+			<rect x="422.0" y="452" width="16.0" height="16" rx="8" ry="0" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(10%,22%,36%); fill-rule: evenodd;"/>
+			<text x="414.16" y="466" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(10%,22%,36%); stroke:none;" transform="translate(0,932) scale(1,-1)">Start</text>
+			<g transform="">
+				<path d="M 466,532 L 466,360 Z" style="stroke: rgb(57%,25%,5%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="466 360, 470 368, 462 368" style="stroke: rgb(57%,25%,5%); stroke-linecap: butt; stroke-width: 0; fill: rgb(57%,25%,5%); fill-rule: evenodd;"/>
+				<text x="470.0" y="448.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(57%,25%,5%); stroke:none;" transform="translate(0,896) scale(1,-1)">sync error</text>
+			</g>
+			<g transform="">
+				<path d="M 466,360 L 466,532 Z" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="466 532, 462 524, 470 524" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 0; fill: rgb(8%,39%,20%); fill-rule: evenodd;"/>
+				<text x="470.0" y="448.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(8%,39%,20%); stroke:none;" transform="translate(0,896) scale(1,-1)">sync success</text>
+			</g>
+			<g transform="">
+				<path d="M 390,386 L 310,266 Z" style="stroke: rgb(86%,14%,14%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="310 266, 317.7658 270.4376, 311.1094 274.8752" style="stroke: rgb(86%,14%,14%); stroke-linecap: butt; stroke-width: 0; fill: rgb(86%,14%,14%); fill-rule: evenodd;"/>
+				<text x="354.0" y="328.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(86%,14%,14%); stroke:none;" transform="translate(0,656) scale(1,-1)">failures ≥ 5</text>
+			</g>
+			<g transform="">
+				<path d="M 530,386 L 610,266 Z" style="stroke: rgb(21%,25%,31%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="610 266, 608.8906 274.8752, 602.2342 270.4376" style="stroke: rgb(21%,25%,31%); stroke-linecap: butt; stroke-width: 0; fill: rgb(21%,25%,31%); fill-rule: evenodd;"/>
+				<text x="574.0" y="328.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(21%,25%,31%); stroke:none;" transform="translate(0,656) scale(1,-1)">failures ≥ 10</text>
+			</g>
+			<g transform="">
+				<path d="M 240,292 L 390,146 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="390 146, 387.0572 154.4463, 381.4773 148.7135" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+				<text x="319.0" y="221.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(14%,38%,92%); stroke:none;" transform="translate(0,442) scale(1,-1)">admin dismiss</text>
+			</g>
+			<g transform="">
+				<path d="M 680,292 L 530,146 Z" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="530 146, 538.5227 148.7135, 532.9428 154.4463" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 0; fill: rgb(14%,38%,92%); fill-rule: evenodd;"/>
+				<text x="609.0" y="221.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(14%,38%,92%); stroke:none;" transform="translate(0,442) scale(1,-1)">admin dismiss</text>
+			</g>
+			<g transform="">
+				<path d="M 240,240 L 530,386 Z" style="stroke: rgb(57%,25%,5%); stroke-linecap: butt; stroke-width: 1.5;"/>
+				<polygon points="530 386, 521.0558 385.9754, 524.6532 378.8298" style="stroke: rgb(57%,25%,5%); stroke-linecap: butt; stroke-width: 0; fill: rgb(57%,25%,5%); fill-rule: evenodd;"/>
+				<text x="389.0" y="315.0" style="font-family: Helvetica; font-size: 7px;fill: rgb(57%,25%,5%); stroke:none;" transform="translate(0,630) scale(1,-1)">cooldown reset</text>
+			</g>
+			<text x="30" y="100" style="font-family: Helvetica-Bold; font-size: 8px;fill: rgb(21%,25%,31%); stroke:none;" transform="translate(0,200) scale(1,-1)">States:</text>
+			<rect x="30" y="76" width="100" height="20" rx="3" ry="3" style="stroke: rgb(8%,39%,20%); stroke-linecap: butt; stroke-width: 1; fill: rgb(86%,98%,90%); fill-rule: evenodd;"/>
+			<text x="67.2875" y="84" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(8%,39%,20%); stroke:none;" transform="translate(0,168) scale(1,-1)">Healthy</text>
+			<rect x="140" y="76" width="100" height="20" rx="3" ry="3" style="stroke: rgb(57%,25%,5%); stroke-linecap: butt; stroke-width: 1; fill: rgb(99%,95%,78%); fill-rule: evenodd;"/>
+			<text x="173.53375" y="84" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(57%,25%,5%); stroke:none;" transform="translate(0,168) scale(1,-1)">Degraded</text>
+			<rect x="250" y="76" width="100" height="20" rx="3" ry="3" style="stroke: rgb(86%,14%,14%); stroke-linecap: butt; stroke-width: 1; fill: rgb(99%,88%,88%); fill-rule: evenodd;"/>
+			<text x="279.16125" y="84" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(86%,14%,14%); stroke:none;" transform="translate(0,168) scale(1,-1)">Circuit Open</text>
+			<rect x="360" y="76" width="100" height="20" rx="3" ry="3" style="stroke: rgb(21%,25%,31%); stroke-linecap: butt; stroke-width: 1; fill: rgb(95%,95%,96%); fill-rule: evenodd;"/>
+			<text x="388.745" y="84" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(21%,25%,31%); stroke:none;" transform="translate(0,168) scale(1,-1)">Perm. Failed</text>
+			<rect x="470" y="76" width="100" height="20" rx="3" ry="3" style="stroke: rgb(14%,38%,92%); stroke-linecap: butt; stroke-width: 1; fill: rgb(93%,96%,100%); fill-rule: evenodd;"/>
+			<text x="502.70875" y="84" style="font-family: Helvetica; font-size: 7.5px;fill: rgb(14%,38%,92%); stroke:none;" transform="translate(0,168) scale(1,-1)">Dismissed</text>
+		</g>
+	</g>
+</svg>

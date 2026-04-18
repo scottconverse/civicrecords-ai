@@ -1,0 +1,52 @@
+---
+title: CivicRecords AI — Records Request Lifecycle (v1.1+)
+---
+sequenceDiagram
+    autonumber
+    participant Req as Requester
+    participant Clerk as Records Clerk
+    participant Sys as CivicRecords AI
+    participant AI as Local LLM<br/>(Ollama)
+    participant Sup as Supervisor /<br/>City Attorney
+    participant Audit as Audit Log
+
+    Req->>Clerk: submits open records request (email / form / counter)
+    Clerk->>Sys: creates Request (status: received)
+    Sys->>Audit: log: request_created
+
+    Clerk->>Sys: Search documents (natural language query)
+    Sys->>AI: embed query → hybrid search (semantic + keyword)
+    AI-->>Sys: ranked results with citations
+    Sys-->>Clerk: results + AI summary
+
+    Clerk->>Sys: attach responsive documents to request
+    Sys->>AI: scan documents for exemptions (PII / statutory keywords)
+    AI-->>Sys: exemption flags (SSN, personnel, law enforcement, etc.)
+    Sys-->>Clerk: flags for review
+
+    loop For each exemption flag
+        Clerk->>Sys: Accept flag (will redact/withhold) OR Reject flag (not exempt)
+        Sys->>Audit: log: flag_reviewed (decision + reviewer)
+    end
+
+    Clerk->>AI: Generate Response Letter (optional)
+    AI-->>Clerk: draft letter (labeled AI-generated)
+    Clerk->>Sys: edit and save draft
+
+    Clerk->>Sys: Submit for Review (status: drafted)
+    Sys->>Sup: notification: request ready for review
+    Sys->>Audit: log: submitted_for_review
+
+    Sup->>Sys: review documents, flags, draft letter
+    alt Approved
+        Sup->>Sys: Approve (status: approved)
+        Sys->>Audit: log: request_approved
+        Clerk->>Req: deliver response
+        Clerk->>Sys: Mark Fulfilled (status: fulfilled)
+        Sys->>Audit: log: request_fulfilled
+    else Revision required
+        Sup->>Sys: Request Revision + review notes
+        Sys->>Clerk: notification: revision requested
+        Sys->>Audit: log: revision_requested
+        Clerk->>Sys: make corrections, resubmit
+    end
