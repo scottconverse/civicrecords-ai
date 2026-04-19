@@ -48,3 +48,13 @@ async def test_search_export_requires_auth(client: AsyncClient):
     """GET /search/export without auth returns 401."""
     resp = await client.get("/search/export?query=test&format=csv")
     assert resp.status_code == 401
+
+
+def test_ratchet_proof_intentional_failure():
+    """TEMPORARY — proves CI branch protection blocks merge on failure.
+
+    This test is expected to fail. The branch ci/verify-ratchet-proof
+    exists solely to prove the ratchet. The PR will be closed unmerged
+    and the branch deleted. DO NOT merge this branch.
+    """
+    assert False, "intentional failure — ratchet proof — will be removed"
