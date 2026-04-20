@@ -76,13 +76,17 @@ def test_testing_mode_bypasses_password_check():
     assert s.testing is True
 
 
-# ───────── Fresh-start integration scenario (placeholder → fatal) ─────────
-def test_fresh_start_with_env_example_placeholder_fails_fatally():
-    """The exact bootstrap-failure path the T2C plan requires.
-
-    A user copies `.env.example` to `.env` without editing FIRST_ADMIN_PASSWORD.
-    Settings() loads, the validator runs, and it raises — which is what
-    `docker compose up` experiences when the app tries to start.
+# ──────── Unit-level proof for the .env.example placeholder case ────────
+# NOTE: this is a unit-level proof that Settings() raises in-process when fed
+# the .env.example placeholder. The fresh-subprocess and docker-compose
+# integration coverage lives in:
+#   - backend/tests/test_bootstrap_integration.py (subprocess)
+#   - .github/workflows/ci.yml `bootstrap-failure` job (real docker compose run)
+def test_env_example_placeholder_value_is_in_blocklist_inline():
+    """The exact .env.example placeholder string is rejected by Settings()
+    when constructed inline. Acts as a tripwire: if someone changes the
+    placeholder in .env.example, this test goes red and the integration
+    tests must be updated in lockstep.
     """
     with pytest.raises((ValidationError, ValueError), match="FIRST_ADMIN_PASSWORD"):
         Settings(
