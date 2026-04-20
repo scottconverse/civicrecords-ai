@@ -23,6 +23,7 @@ image so the literal ``docker compose`` path is also exercised on every PR.
 from __future__ import annotations
 
 import os
+import pathlib
 import subprocess
 import sys
 
@@ -40,6 +41,14 @@ _ENV_PASSTHROUGH = frozenset({
     "LC_ALL",
 })
 
+# Project root that contains the `app` package. When the subprocess runs from
+# tmp_path (so .env in the parent's cwd can't interfere), Python's default
+# sys.path is just cwd; without an explicit PYTHONPATH the subprocess can't
+# `from app.config import ...`. This file lives at backend/tests/, so the
+# parent of its directory is the import root (`/app` in the docker container,
+# `<repo>/backend` locally).
+_PROJECT_ROOT = str(pathlib.Path(__file__).resolve().parent.parent)
+
 _VALID_JWT = "a" * 64
 _VALID_PASSWORD = "S3cure!FreshAdminPwd-2026"
 _PLACEHOLDER_PASSWORD = "CHANGE-ME-on-first-login"  # exact .env.example value
@@ -52,8 +61,16 @@ def _minimal_env(**overrides: str) -> dict[str, str]:
     Carries only the platform basics needed to launch Python; deliberately
     omits the test process's TESTING flag and its own valid password so the
     subprocess sees a fresh environment with only the overrides we set.
+    Forces PYTHONPATH to include the project root so `from app.config import
+    Settings` resolves even when cwd is a tmp dir.
     """
     env = {k: v for k, v in os.environ.items() if k in _ENV_PASSTHROUGH}
+    # Prepend project root to any inherited PYTHONPATH so the subprocess can
+    # import the `app` package regardless of cwd.
+    inherited_pp = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = (
+        _PROJECT_ROOT + os.pathsep + inherited_pp if inherited_pp else _PROJECT_ROOT
+    )
     env.update(overrides)
     return env
 
