@@ -19,6 +19,30 @@ Post-v1.1.0 commits on `master`. No version bump yet.
 - **CHANGELOG, UNIFIED-SPEC, installer button URLs (`ad44a86`, 2026-04-18):** CHANGELOG entries added for commits `301c4f3`/`c433beb`/`9c1d98b`/`23f0655` and moved into `[1.1.0]` where they belong. Stale "30s ceiling" corrected to "600s ceiling (D-FAIL-12)". UNIFIED-SPEC §17 test count updated to 432; priority 9 entry (Rule 9 deliverables) added; D-PROC-1 decision record added; §18 process criteria added; §19 Verification Log added at position 0. All 4 installer buttons in `docs/index.html` corrected from `/raw/master/` to `/releases/download/v1.1.0/`.
 
 ### Security
+- **T2C — Bootstrap and connector surface hardening (2026-04-20):** Two distinct hardening passes that ride together because the plan grouped them.
+
+  **(1) `FIRST_ADMIN_PASSWORD` startup validation.** The app previously had `JWT_SECRET` startup validation but no equivalent for `FIRST_ADMIN_PASSWORD`. A user who copied `.env.example` to `.env` and started the stack would create the first admin account with the literal placeholder string `CHANGE-ME-on-first-login` — operational, deployable, and trivially compromisable. New `Settings.check_first_admin_password` model-validator in `backend/app/config.py` rejects: the `.env.example` placeholder, the default `"CHANGE-ME"`, an empty value, anything shorter than 12 characters, and a small embedded blocklist of common defaults (`admin`, `admin123`, `password`, `letmein`, `Welcome1`, etc.). Behaves like the existing JWT validator: bypassed only when `testing=True`. Both `install.sh` (Linux/macOS) and `install.ps1` (Windows) now generate a 32-hex-char admin password on fresh install and substitute it into `.env`, then print it once for the operator to capture; this avoids both the placeholder failure mode and the shell/.env metacharacter hazards of mixed-symbol generators. `.env.example` updated with explicit instructions and a manual `openssl rand -base64 24` recipe.
+
+  **(2) SSRF/target-validator for connector URLs.** New module `backend/app/security/host_validator.py` rejects admin-supplied connector destinations that point at sensitive internal ranges. Wired into `RestApiConfig.base_url` and `RestApiConfig.token_url` (REST connector) and `ODBCConfig.connection_string` (ODBC connector) as Pydantic field validators — rejection happens at schema-validation time, before any HTTP client or pyodbc dial.
+
+  **Blocked targets (reject by default):**
+  - `127.0.0.0/8` — loopback IPv4
+  - `169.254.0.0/16` — link-local / cloud IMDS endpoints
+  - `::1/128` — loopback IPv6
+  - `0.0.0.0` — wildcard
+  - `localhost` — case-insensitive hostname
+  - `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` — RFC1918
+
+  **Override:** new `CONNECTOR_HOST_ALLOWLIST` setting (CSV in env, list in code) — exact-match hostnames or IPs only. No wildcards, no "disable all" flag. Auditor instruction: keep this narrow.
+
+  **ODBC fail-closed behavior:** the parser extracts the host from `Server=`, `Host=`, or `Data Source=` (case-insensitive, supports `host,port` / `host:port` / `{braced}` forms). If no parseable host field is found, validation **raises** rather than silently passing — explicit auditor instruction. This means DSN-only connection strings (`DSN=name`) are rejected. Operators who need DSN-based connections must refactor to `Server=...` form or rely on a future enhancement (out of scope for T2C).
+
+  **Tests added:**
+  - `backend/tests/test_host_validator.py` — parametrized coverage of every blocked range, boundary-adjacent public ranges (so the masks aren't accidentally widened), hostname case-insensitivity, ODBC parser variants (SQL Server `host,port` style, PostgreSQL `host:port`, braced values, `Data Source` alias), allowlist exact-match and case-insensitivity, allowlist rejection of wildcard literals, and fail-closed on empty/ambiguous input.
+  - `backend/tests/test_config_validation.py` — placeholder, blocklist, length, and valid-strong-password cases for `FIRST_ADMIN_PASSWORD`; testing-mode bypass; CSV parsing of `CONNECTOR_HOST_ALLOWLIST` (native list, CSV string, whitespace and empty-entry handling); the explicit fresh-start scenario test (`test_fresh_start_with_env_example_placeholder_fails_fatally`) that mirrors the docker-compose-up failure path required by the T2C verification gate.
+
+  **Existing-test cleanup (in scope, follows directly from the new validator):** four existing test files used `connection_string="DSN=test"` as schema-fixture data. With the new ODBC fail-closed rule those instances would raise. Updated to `connection_string="Server=db.example.gov;Database=test"` — functionally equivalent for unit-test purposes (real ODBC connection is mocked via `pyodbc` patching) and keeps the test intent intact. Files: `test_connector_schemas.py`, `test_odbc_connector.py`. The `_scrub_error` test in `test_datasources_router_tc.py` uses a DSN-shaped string as test input to a sanitizer and was left unchanged (not an ODBCConfig instance).
+
 - **T2B — `DataSourceRead.connection_config` credential exposure closed (2026-04-20):** `GET /datasources/` was accessible to all STAFF-and-above users and returned the full `DataSourceRead` schema, which included `connection_config: dict`. That JSONB blob contains every credential stored for the data source — REST API keys, bearer tokens, OAuth `client_secret`, ODBC `connection_string`, IMAP passwords — all readable by any authenticated staff member, not just admins who manage the sources.
 
   **The fix:** `connection_config` removed from `DataSourceRead`. A new `DataSourceAdminRead` subclass adds it back; `DataSourceAdminRead` is used only by `POST /datasources/` and `PATCH /datasources/{id}`, both of which are already gated at `require_role(UserRole.ADMIN)`. `GET /datasources/` continues to use `DataSourceRead` (redacted) for all callers including admins.
