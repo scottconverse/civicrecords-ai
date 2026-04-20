@@ -365,9 +365,8 @@ async def test_timeline_messages_deny_non_admin_with_null_department(
     staff_token_dept_a: str,
 ):
     """A null-dept non-admin must be denied even on a dept-A request that
-    they would normally not see anyway. The old check_department_access
-    returned silently here because it short-circuited on resource null-dept,
-    which this test would expose if the migration were incomplete."""
+    they would normally not see anyway. Under the fail-closed helper,
+    null user dept always denies for non-admin."""
     req_a_id = await _create_request_in_dept(client, staff_token_dept_a, "A probe")
     for method, path in [
         ("GET", f"/requests/{req_a_id}/timeline"),
@@ -384,39 +383,93 @@ async def test_timeline_messages_deny_non_admin_with_null_department(
 @pytest.mark.asyncio
 async def test_parameterized_cross_department_access_denied(
     client: AsyncClient,
-    staff_token_dept_a: str,
+    reviewer_token_dept_a: str,
     staff_token_dept_b: str,
     dept_b: uuid.UUID,
 ):
-    """Iterates the known set of T2A-scoped read/write endpoints and asserts
-    that a dept-A token is denied cross-department access on every one.
+    """Iterates every dept-scoped endpoint in the codebase and asserts that
+    a dept-A reviewer is denied cross-department access on every one.
 
-    New dept-scoped endpoints added after T2A should be appended to this
-    list to prevent silent regression. If a route is intentionally global
-    (like /city-profile), it does not belong here.
+    Uses a REVIEWER token (not STAFF) for the cross-dept caller because
+    several workflow endpoints (/approve, /reject, /ready-for-release) are
+    gated at REVIEWER. Reviewer satisfies STAFF too, so one token covers all
+    cases. A failing role check would produce 403 for the wrong reason, but
+    since REVIEWER passes every role gate here, a 403 here is always from
+    the department gate.
+
+    Coverage after the T2A-cleanup PR: every ``require_department_scope``
+    call site in ``requests/router.py`` (16 sites), ``documents/router.py``
+    (2), and ``exemptions/router.py`` (2 of 3; the third — PATCH
+    /exemptions/flags/{flag_id} — needs a seeded flag and is covered by a
+    targeted test instead).
+
+    New dept-scoped endpoints added after this must be appended below to
+    prevent silent regression. If a route is intentionally global (like
+    /city-profile), it does not belong here.
     """
     # Seed one dept-B request and one dept-B document.
     req_b_id = await _create_request_in_dept(client, staff_token_dept_b, "param probe")
     doc_b_id = await _seed_document_with_dept(dept_b, "param_probe")
+    # Placeholder child IDs. The parent request is loaded and dept-checked
+    # BEFORE the child lookup runs, so 403 always fires before any child-not-
+    # found 404 — these UUIDs never actually have to resolve.
+    placeholder_doc = str(uuid.uuid4())
+    placeholder_letter = str(uuid.uuid4())
 
     cases = [
-        ("GET",  f"/documents/{doc_b_id}",                   None),
-        ("GET",  f"/documents/{doc_b_id}/chunks",            None),
-        ("GET",  f"/requests/{req_b_id}",                    None),
-        ("GET",  f"/requests/{req_b_id}/timeline",           None),
-        ("POST", f"/requests/{req_b_id}/timeline",
-                 {"event_type": "note", "description": "nope"}),
-        ("GET",  f"/requests/{req_b_id}/messages",           None),
-        ("POST", f"/requests/{req_b_id}/messages",
-                 {"message_text": "nope", "is_internal": False}),
+        # documents (PR #16)
+        ("GET",    f"/documents/{doc_b_id}",                              None),
+        ("GET",    f"/documents/{doc_b_id}/chunks",                       None),
+        # requests — core
+        ("GET",    f"/requests/{req_b_id}",                               None),
+        ("PATCH",  f"/requests/{req_b_id}",                               {}),
+        # requests — attached documents
+        ("POST",   f"/requests/{req_b_id}/documents",
+                   {"document_id": str(uuid.uuid4()), "relevance_note": "nope"}),
+        ("GET",    f"/requests/{req_b_id}/documents",                     None),
+        ("DELETE", f"/requests/{req_b_id}/documents/{placeholder_doc}",   None),
+        # requests — workflow
+        ("POST",   f"/requests/{req_b_id}/submit-review",                 None),
+        ("POST",   f"/requests/{req_b_id}/ready-for-release",             None),
+        ("POST",   f"/requests/{req_b_id}/approve",                       None),
+        ("POST",   f"/requests/{req_b_id}/reject",                        None),
+        # requests — fees
+        ("GET",    f"/requests/{req_b_id}/fees",                          None),
+        ("POST",   f"/requests/{req_b_id}/fees",
+                   {"description": "nope", "unit_price": 0.0, "quantity": 1}),
+        ("POST",   f"/requests/{req_b_id}/estimate-fees",
+                   {"page_count": 1, "fee_schedule_id": str(uuid.uuid4())}),
+        ("POST",   f"/requests/{req_b_id}/fee-waiver",
+                   {"waiver_type": "other", "reason": "nope"}),
+        # requests — response letter
+        ("POST",   f"/requests/{req_b_id}/response-letter",               {}),
+        ("GET",    f"/requests/{req_b_id}/response-letter",               None),
+        ("PATCH",  f"/requests/{req_b_id}/response-letter/{placeholder_letter}", {}),
+        # requests — timeline + messages (PR #17)
+        ("GET",    f"/requests/{req_b_id}/timeline",                      None),
+        ("POST",   f"/requests/{req_b_id}/timeline",
+                   {"event_type": "note", "description": "nope"}),
+        ("GET",    f"/requests/{req_b_id}/messages",                      None),
+        ("POST",   f"/requests/{req_b_id}/messages",
+                   {"message_text": "nope", "is_internal": False}),
+        # exemptions
+        ("POST",   f"/exemptions/scan/{req_b_id}",                        None),
+        ("GET",    f"/exemptions/flags/{req_b_id}",                       None),
     ]
-    headers = {"Authorization": f"Bearer {staff_token_dept_a}"}
+
+    headers = {"Authorization": f"Bearer {reviewer_token_dept_a}"}
     failures = []
     for method, path, body in cases:
         if method == "GET":
             resp = await client.get(path, headers=headers)
-        else:
+        elif method == "POST":
             resp = await client.post(path, headers=headers, json=body)
+        elif method == "PATCH":
+            resp = await client.patch(path, headers=headers, json=body)
+        elif method == "DELETE":
+            resp = await client.delete(path, headers=headers)
+        else:
+            raise AssertionError(f"Unsupported method {method!r}")
         if resp.status_code != 403:
             failures.append(f"{method} {path} -> {resp.status_code}: {resp.text[:120]}")
     assert not failures, (

@@ -6,7 +6,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.logger import write_audit_log
-from app.auth.dependencies import require_role, check_department_access
+from app.auth.dependencies import require_role, require_department_scope
 from app.database import get_async_session
 from app.exemptions.engine import scan_request_documents
 from app.models.request import RecordsRequest
@@ -238,7 +238,7 @@ async def scan_for_exemptions(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    check_department_access(user, req.department_id)
+    require_department_scope(user, req.department_id)
 
     flags = await scan_request_documents(session, request_id, state_code)
 
@@ -304,7 +304,7 @@ async def list_flags(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    check_department_access(user, req.department_id)
+    require_department_scope(user, req.department_id)
 
     stmt = select(ExemptionFlag).where(
         ExemptionFlag.request_id == request_id
@@ -329,7 +329,7 @@ async def review_flag(
     # Department check via the flag's request
     req = await session.get(RecordsRequest, flag.request_id)
     if req:
-        check_department_access(user, req.department_id)
+        require_department_scope(user, req.department_id)
 
     if data.status not in (FlagStatus.ACCEPTED, FlagStatus.REJECTED, FlagStatus.REVIEWED):
         raise HTTPException(status_code=400, detail="Status must be accepted, rejected, or reviewed")

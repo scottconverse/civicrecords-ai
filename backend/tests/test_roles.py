@@ -75,8 +75,13 @@ async def test_liaison_can_list_departments(client: AsyncClient, admin_token: st
 
 @pytest.mark.asyncio
 async def test_liaison_department_scoping(client: AsyncClient, admin_token: str):
-    """Liaison users are department-scoped via check_department_access."""
-    from app.auth.dependencies import check_department_access
+    """Liaison users are department-scoped via require_department_scope.
+
+    Fail-closed semantics: a null resource department is NOT a shared
+    resource for non-admin users — cross-department access is denied in
+    every case except admin bypass and exact-match.
+    """
+    from app.auth.dependencies import require_department_scope
 
     # Create a mock-like user object
     class MockUser:
@@ -87,12 +92,14 @@ async def test_liaison_department_scoping(client: AsyncClient, admin_token: str)
     other_dept = uuid.uuid4()
 
     # Access own department — should not raise
-    check_department_access(user, user.department_id)
+    require_department_scope(user, user.department_id)
 
-    # Access shared resource (None) — should not raise
-    check_department_access(user, None)
+    # Access resource with null department — now denied (fail-closed).
+    with pytest.raises(Exception) as exc_info:
+        require_department_scope(user, None)
+    assert exc_info.value.status_code == 403
 
     # Access other department — should raise 403
     with pytest.raises(Exception) as exc_info:
-        check_department_access(user, other_dept)
+        require_department_scope(user, other_dept)
     assert exc_info.value.status_code == 403
