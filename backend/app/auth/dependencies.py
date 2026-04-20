@@ -36,28 +36,6 @@ def require_role(minimum_role: UserRole):
     return _check_role
 
 
-def check_department_access(user: User, resource_department_id: uuid.UUID | None) -> None:
-    """Raise 403 if non-admin user tries to access resource in another department.
-
-    Call this in endpoint logic after loading the resource.
-    Shared resources (department_id=None) are accessible to everyone.
-
-    NOTE: this helper is fail-open on ``resource_department_id is None``. New code
-    should prefer :func:`require_department_scope` which is fail-closed.
-    Migration of existing callers (requests, search, analytics routers) is
-    tracked as a follow-up to Tier 2A.
-    """
-    if user.role == UserRole.ADMIN:
-        return
-    if resource_department_id is None:
-        return  # shared resource
-    if user.department_id != resource_department_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: resource belongs to another department",
-        )
-
-
 def require_department_scope(user: User, resource_department_id: uuid.UUID | None) -> None:
     """Fail-closed department access check. Raises HTTP 403 on deny.
 
