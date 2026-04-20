@@ -6,7 +6,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.logger import write_audit_log
-from app.auth.dependencies import require_role, require_department_scope, has_department_access
+from app.auth.dependencies import require_role, require_department_or_404, has_department_access
 from app.database import get_async_session
 from app.exemptions.engine import scan_request_documents
 from app.models.request import RecordsRequest
@@ -238,7 +238,7 @@ async def scan_for_exemptions(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     flags = await scan_request_documents(session, request_id, state_code)
 
@@ -304,7 +304,7 @@ async def list_flags(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     stmt = select(ExemptionFlag).where(
         ExemptionFlag.request_id == request_id

@@ -1,109 +1,104 @@
-# Finding — child-before-parent 404 leaks resource existence
+# Finding — 404-vs-403 status code leaks dept-scoped resource existence
 
-**Date:** 2026-04-19
-**Surfaced by:** CI failure on PR #18 (`PATCH /requests/{id}/response-letter/{letter_id}` returned 404 instead of the expected 403) during the T2A-cleanup parameterized test.
+**Date:** 2026-04-19 (original finding) / 2026-04-20 (expanded scope during fix)
+**Original trigger:** CI failure on PR #18 (`PATCH /requests/{id}/response-letter/{letter_id}` returned 404 instead of the expected 403) during the T2A-cleanup parameterized test.
 **Severity:** Low–medium. Information disclosure, not an authorization bypass.
-**Status:** **Fixed in the info-leak follow-up PR** (fix commit on branch `ci/info-leak-fix-child-before-parent`, merged 2026-04-20). This doc lands with that PR as the durable record.
+**Status:** **Fixed in the info-leak follow-up PR** (branch `ci/info-leak-fix-child-before-parent`). Scope expanded mid-fix after a codebase-wide audit; see "Scope expansion" below.
 
-## The pattern
+## The original pattern (child-before-parent)
 
-Two handlers in the codebase loaded a child resource by its ID and returned 404 if missing BEFORE loading the parent request and running the department access check. This ordering let any authenticated staff user distinguish "this child exists but I can't access it" from "this child does not exist" by watching the 404-vs-403 difference.
+Two handlers loaded a **child** resource by its ID and returned 404 if missing BEFORE loading the parent request and running the department access check. The 404-vs-403 difference at the child level let an authenticated cross-department caller distinguish "this child exists in another dept" (403) from "this child does not exist" (404).
 
-## Confirmed call sites (both now fixed)
+| File | Function | Route | Fix |
+|---|---|---|---|
+| `backend/app/requests/router.py` | `update_response_letter` | `PATCH /requests/{id}/response-letter/{letter_id}` | **Reorder** — both IDs in path, so parent-request-load and dept-check now run before the letter lookup |
+| `backend/app/exemptions/router.py` | `review_flag` | `PATCH /exemptions/flags/{flag_id}` | **Inline 404-unification** — only `flag_id` in path, so the flag must load first. Uses `has_department_access` inline and raises 404 "Flag not found" for every failure mode |
 
-| File | Function | Route | Line (original) | Fix pattern |
-|---|---|---|---|---|
-| `backend/app/requests/router.py` | `update_response_letter` | `PATCH /requests/{id}/response-letter/{letter_id}` | 1158 | **Reorder** — both IDs are path params, so load parent request + dept-check before the letter lookup |
-| `backend/app/exemptions/router.py` | `review_flag` | `PATCH /exemptions/flags/{flag_id}` | 319 | **404-unification** — only `flag_id` is in the path, so the flag must load first to resolve its parent. Every failure mode (missing flag, missing parent request, cross-department) returns the same 404 "Flag not found" |
+## Scope expansion — parent-level 404-vs-403 pattern
 
-The two handlers needed different fix patterns because their URL shapes differ. The original version of this finding claimed both could be fixed by a straight reorder — that was incorrect for `review_flag` (the flag must load first to know the parent request). Corrected here.
-
-## Attack model
-
-An adversary with any STAFF-or-higher account in any department could:
-
-1. Acquire a candidate child UUID (e.g. from a leaked log, email, screenshot, or a prior legitimate context in the same tenant)
-2. Send PATCH with that child UUID
-3. Response is 404 → ID is fake; 403 → ID is real but in another department
-
-UUIDs are 122-bit random so brute-force enumeration is not viable. The defect applied when a specific ID was leaked or targeted.
-
-## Fix 1 — `update_response_letter` (reorder)
-
-Both `request_id` and `letter_id` are path parameters, so we can load the parent request first without needing the letter. This fully closes the leak — the dept check fires before any child-existence check runs.
+During the fix, a codebase-wide audit identified **the same 404-vs-403 disclosure at the parent level**. Every handler of the shape:
 
 ```python
-# BEFORE (broken)
-letter = await session.get(ResponseLetter, letter_id)
-if not letter or letter.request_id != request_id:
-    raise HTTPException(404, "Response letter not found")
-
 req = await session.get(RecordsRequest, request_id)
 if not req:
     raise HTTPException(404, "Request not found")
-require_department_scope(user, req.department_id)
-
-# AFTER (closed — reorder)
-req = await session.get(RecordsRequest, request_id)
-if not req:
-    raise HTTPException(404, "Request not found")
-require_department_scope(user, req.department_id)
-
-letter = await session.get(ResponseLetter, letter_id)
-if not letter or letter.request_id != request_id:
-    raise HTTPException(404, "Response letter not found")
+require_department_scope(user, req.department_id)   # raises 403 on cross-dept
 ```
 
-## Fix 2 — `review_flag` (404-unification)
+…has the same info-leak on the parent `request_id`. Fake id → 404. Real-id-in-another-dept → 403. Status code distinguishes the two.
 
-The URL is `/flags/{flag_id}` — only `flag_id` is in the path. The handler has no way to know the parent request without first loading the flag. Reorder is structurally impossible.
+The audit found 21 handlers with this shape in `requests/router.py`, 2 in `documents/router.py`, and 2 in `exemptions/router.py` (`scan_for_exemptions`, `list_flags`). Same exposure level as the original child-before-parent case — a caller with a guessed/leaked UUID can probe for existence in another dept. UUIDs are 122-bit random so brute-force enumeration is infeasible, but leaked/shared IDs make the disclosure practical.
 
-The fix is to make the external response uniform across all three failure modes: flag missing, parent request missing, or cross-department. All three return 404 "Flag not found" so the caller cannot distinguish via status code or body text.
+## The fix — `require_department_or_404` helper
 
-This required a new non-raising helper `has_department_access` (added in `backend/app/auth/dependencies.py` alongside `require_department_scope`) so the handler could branch on access without catching the 403 that `require_department_scope` raises.
+Added `require_department_or_404(user, resource_department_id, detail)` in `backend/app/auth/dependencies.py` alongside `require_department_scope`. Same fail-closed rules, but raises **404** (not 403) on denial so the external response is identical to "resource does not exist".
 
 ```python
-# BEFORE (broken + had a separate latent fail-open)
-flag = await session.get(ExemptionFlag, flag_id)
-if not flag:
-    raise HTTPException(404, "Flag not found")
-
-# Department check via the flag's request
-req = await session.get(RecordsRequest, flag.request_id)
-if req:
-    require_department_scope(user, req.department_id)
-# NOTE: if req is None (orphan flag), the dept check was silently skipped
-# and the handler proceeded to mutate the flag. That's a separate bug.
-
-# AFTER (closed — 404-unification, also fixes the orphan-flag fail-open)
-flag = await session.get(ExemptionFlag, flag_id)
-req = await session.get(RecordsRequest, flag.request_id) if flag else None
-if not flag or not req or not has_department_access(user, req.department_id):
-    raise HTTPException(404, "Flag not found")
+# backend/app/auth/dependencies.py
+def require_department_or_404(user, resource_department_id, detail="Not found"):
+    if not has_department_access(user, resource_department_id):
+        raise HTTPException(status_code=404, detail=detail)
 ```
 
-The prior `if req:` guard silently skipped the dept check when a flag referenced a missing request (data-integrity edge case). The rewrite also closes that fail-open — any missing parent now returns 404 uniformly.
+Every handler that previously called `require_department_scope(user, X.department_id)` was swapped to `require_department_or_404(user, X.department_id, "Request not found")` (or "Document not found" for document handlers).
 
-## Tradeoff of 404-unification
+`require_department_scope` stays in the codebase for use on surfaces where a semantic 403 is correct — e.g., admin-facing routes where the caller should know it's an authz issue, or analytics aggregates and list endpoints where there's no specific resource ID to probe.
 
-Legitimate same-tenant users who mistype a flag_id now see "Flag not found" for both "does not exist" and "exists but you cannot access it." From a security standpoint this is correct. From a UX standpoint it means a staff user who tries to open a colleague's flag from another department gets no hint that it exists — they just see 404. Documented tradeoff; not considered a UX regression because cross-department flag access was never a supported path.
+## Attack model (before fix)
+
+1. Attacker acquires a candidate resource UUID (from a leaked log, email, screenshot, prior legitimate context, or guessing if the ID is exposed via a URL)
+2. Attacker sends a request with that UUID from their own authenticated account in a different department
+3. Response is 404 → UUID is fake; 403 → UUID is real but in another department
+
+For a FOIA product this reveals: "request X exists in another dept" / "letter Y attached to request X exists". Sensitive for some request topics.
+
+## Scope (after fix)
+
+**Fully 404-unified via `require_department_or_404`:**
+
+| File | Call sites |
+|---|---|
+| `backend/app/requests/router.py` | 17 (GET/PATCH `/{id}`, attached documents, workflow, fees, response-letter, timeline, messages) |
+| `backend/app/documents/router.py` | 2 (GET `/{id}`, GET `/{id}/chunks`) |
+| `backend/app/exemptions/router.py` | 2 (POST `/scan/{request_id}`, GET `/flags/{request_id}`) |
+
+**404-unified inline (non-raising helper):**
+
+| File | Call sites |
+|---|---|
+| `backend/app/exemptions/router.py::review_flag` | 1 (PATCH `/flags/{flag_id}` — uses `has_department_access` inline because the flag must load first) |
+
+**Intentionally left at 403 (semantic denial, no info-leak concern):**
+
+- Every list endpoint (`GET /documents/`, `GET /analytics/operational`, `GET /requests/`) — no resource ID in path to probe; filters via WHERE clause; null-user-dept still raises 403 inline
+- `backend/app/city_profile/router.py` — intentionally global singleton, admin-write only (per T2A design decision)
+- `require_role(...)` role-gate 403s — unrelated to dept scoping
+
+## Tradeoff — 404-unification vs semantic 403
+
+Legitimate same-tenant users who mistype a resource ID now see "Not found" for both "does not exist" and "exists but you cannot access it." From a security standpoint this is the correct pattern — it's what most authz-sensitive REST APIs do (GitHub, Google Drive, Dropbox all unify on 404). From a UX standpoint it means a staff user who tries to open a colleague's request from another department gets no hint that it exists. Acceptable tradeoff: cross-department access was never a supported user path; a 403 would have disclosed structure the user wasn't authorized to learn about anyway.
 
 ## Regression tests
 
-`backend/tests/test_info_leak_hardening.py` (new) contains 6 tests:
+Three test files cover this:
 
-| Test | Asserts |
-|---|---|
-| `test_response_letter_patch_placeholder_letter_id_returns_403_cross_dept` | Cross-dept caller with a placeholder (non-existent) letter_id gets 403, not 404. Proves the info-leak is closed for this handler. |
-| `test_response_letter_patch_real_letter_id_returns_403_cross_dept` | Cross-dept caller with a real dept-B letter_id still gets 403. Regression guard. |
-| `test_response_letter_patch_admin_still_works` | Admin can PATCH any dept's letter. Over-correction guard. |
-| `test_review_flag_placeholder_id_returns_404` | Placeholder flag_id returns 404. Baseline. |
-| `test_review_flag_cross_department_returns_404_not_403` | Real dept-B flag accessed cross-dept returns 404 (not 403) with body "Flag not found". Proves the 404-unification. |
-| `test_review_flag_admin_still_works` | Admin can review any dept's flag. Over-correction guard. |
+**`backend/tests/test_info_leak_hardening.py`** (new, 6 tests, zero skips):
+- `test_response_letter_patch_placeholder_letter_id_returns_404_cross_dept` — placeholder letter_id cross-dept → 404
+- `test_response_letter_patch_real_letter_id_returns_404_cross_dept` — real dept-B letter_id cross-dept → 404
+- `test_response_letter_patch_admin_still_works` — admin bypass → 200
+- `test_review_flag_placeholder_id_returns_404` — baseline
+- `test_review_flag_cross_department_returns_404_not_403` — real dept-B flag cross-dept → 404 with body "Flag not found"
+- `test_review_flag_admin_still_works` — admin bypass → 200
 
-Zero test skips. Zero xfails.
+**`backend/tests/test_tier2a_hardening.py`** (existing file, assertions flipped):
+- Parameterized enforcement test asserts **404** (was 403) for every cross-dept case across 25 routes
+- Individual documents/timeline/messages cross-dept tests assert 404
+
+**`backend/tests/test_department_scoping.py`** (existing file, assertions flipped):
+- `test_staff_gets_request_in_other_department_404` (renamed from `_403`) — cross-dept `GET /requests/{id}` → 404
+- `test_reviewer_cannot_approve_other_department` — cross-dept workflow action → 404
 
 ## Not in scope for this PR
 
-- `PATCH /exemptions/flags/{flag_id}` was intentionally NOT in the parameterized enforcement test in `test_tier2a_hardening.py` because the test covers 403-on-cross-dept and this handler now returns 404-on-cross-dept. Adding it to the parameterized list would require the test to special-case two different expected status codes per row. Kept separate in `test_info_leak_hardening.py` where the 404 expectation is explicit.
-- Other handlers that might have similar child-before-parent patterns: grep-verified none. Only these two existed in `backend/app/`.
+- Handlers where a semantic 403 is intentional (admin routes, role checks, list endpoints with WHERE-clause filtering). Unchanged.
+- `/city-profile` — intentionally global, admin-write only. No dept scoping.

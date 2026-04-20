@@ -94,3 +94,29 @@ def has_department_access(user: User, resource_department_id: uuid.UUID | None) 
     if resource_department_id is None:
         return False
     return user.department_id == resource_department_id
+
+
+def require_department_or_404(
+    user: User,
+    resource_department_id: uuid.UUID | None,
+    detail: str = "Not found",
+) -> None:
+    """Dept-scope check with 404-unification.
+
+    Raises HTTP 404 (not 403) on denial so the external response is identical
+    to "resource does not exist". This prevents status-code-based disclosure
+    of cross-department resource existence: an attacker who guesses or
+    acquires a valid resource UUID cannot distinguish "exists in another
+    dept" (would have been 403) from "does not exist" (404) — both return
+    the same 404 with the same detail string.
+
+    Use this on routes where the path parameter alone is enough to identify
+    a scoped resource (every ``@router.*("/{some_id}..")`` handler that
+    loads that resource and relies on a related record's department_id).
+    Use :func:`require_department_scope` when a semantic 403 is correct —
+    e.g., admin surfaces where the caller should know it's an authz issue,
+    or flows where the path structure already requires the caller to know
+    the parent-scope identity.
+    """
+    if not has_department_access(user, resource_department_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)

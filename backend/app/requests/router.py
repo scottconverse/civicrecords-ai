@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit.logger import write_audit_log
 from app.notifications.service import queue_notification
 from app.config import settings
-from app.auth.dependencies import require_role, require_department_scope
+from app.auth.dependencies import require_role, require_department_or_404
 from app.database import get_async_session
 from app.models.city_profile import CityProfile
 from app.models.document import Document
@@ -211,7 +211,7 @@ async def get_request(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
     return req
 
 
@@ -225,7 +225,7 @@ async def update_request(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     if data.status is not None and data.status != req.status:
         valid = VALID_TRANSITIONS.get(req.status, set())
@@ -287,7 +287,7 @@ async def attach_document(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     doc = await session.get(Document, data.document_id)
     if not doc:
@@ -352,7 +352,7 @@ async def list_attached_documents(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     result = await session.execute(
         select(RequestDocument).where(RequestDocument.request_id == request_id)
@@ -371,7 +371,7 @@ async def remove_document(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     result = await session.execute(
         select(RequestDocument).where(
@@ -402,7 +402,7 @@ async def submit_for_review(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     if req.status not in (RequestStatus.SEARCHING, RequestStatus.DRAFTED):
         raise HTTPException(status_code=400, detail=f"Cannot submit for review from status {req.status.value}")
@@ -444,7 +444,7 @@ async def mark_ready_for_release(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     if req.status != RequestStatus.IN_REVIEW:
         raise HTTPException(status_code=400, detail=f"Can only mark ready for release from 'in_review' status, current: {req.status.value}")
@@ -486,7 +486,7 @@ async def approve_request(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     if req.status not in (RequestStatus.DRAFTED, RequestStatus.READY_FOR_RELEASE):
         raise HTTPException(status_code=400, detail=f"Can only approve from 'drafted' or 'ready_for_release' status, current: {req.status.value}")
@@ -529,7 +529,7 @@ async def reject_request(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     if req.status != RequestStatus.IN_REVIEW:
         raise HTTPException(status_code=400, detail="Can only reject from 'in_review' status")
@@ -574,7 +574,7 @@ async def get_timeline(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     result = await session.execute(
         select(RequestTimeline)
@@ -594,7 +594,7 @@ async def add_timeline_event(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     entry = RequestTimeline(
         request_id=request_id,
@@ -625,7 +625,7 @@ async def get_messages(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     result = await session.execute(
         select(RequestMessage)
@@ -645,7 +645,7 @@ async def add_message(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     message = RequestMessage(
         request_id=request_id,
@@ -675,7 +675,7 @@ async def get_fees(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     from app.models.fees import FeeLineItem
     result = await session.execute(
@@ -697,7 +697,7 @@ async def add_fee(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     item = FeeLineItem(
         request_id=request_id,
@@ -758,7 +758,7 @@ async def estimate_fees(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     schedule = await session.get(FeeSchedule, body.fee_schedule_id)
     if not schedule:
@@ -810,7 +810,7 @@ async def create_fee_waiver(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     if body.waiver_type not in ("indigency", "public_interest", "media", "government", "other"):
         raise HTTPException(status_code=422, detail=f"Invalid waiver_type: {body.waiver_type}")
@@ -857,7 +857,7 @@ async def review_fee_waiver(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     waiver = await session.get(FeeWaiver, waiver_id)
     if not waiver or waiver.request_id != request_id:
@@ -1080,7 +1080,7 @@ async def generate_response_letter(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     # Fetch attached documents with their exemption flags
     result = await session.execute(
@@ -1138,7 +1138,7 @@ async def get_response_letter(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     result = await session.execute(
         select(ResponseLetter)
@@ -1174,7 +1174,7 @@ async def update_response_letter(
     req = await session.get(RecordsRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
-    require_department_scope(user, req.department_id)
+    require_department_or_404(user, req.department_id, "Request not found")
 
     letter = await session.get(ResponseLetter, letter_id)
     if not letter or letter.request_id != request_id:

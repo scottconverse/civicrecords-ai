@@ -182,7 +182,10 @@ async def test_get_document_blocks_cross_department(
         f"/documents/{doc_b}",
         headers={"Authorization": f"Bearer {staff_token_dept_a}"},
     )
-    assert resp.status_code == 403, resp.text
+    # 404-unification on require_department_or_404: cross-dept access
+    # returns 404 so an attacker cannot distinguish "doc in another dept"
+    # from "doc does not exist" via status code.
+    assert resp.status_code == 404, resp.text
 
 
 @pytest.mark.asyncio
@@ -197,7 +200,8 @@ async def test_get_document_blocks_null_department_for_non_admin(
         f"/documents/{orphan}",
         headers={"Authorization": f"Bearer {staff_token_dept_a}"},
     )
-    assert resp.status_code == 403, resp.text
+    # 404-unification: null-resource-dept for non-admin returns 404.
+    assert resp.status_code == 404, resp.text
 
 
 @pytest.mark.asyncio
@@ -211,7 +215,8 @@ async def test_list_chunks_blocks_cross_department(
         f"/documents/{doc_b}/chunks",
         headers={"Authorization": f"Bearer {staff_token_dept_a}"},
     )
-    assert resp.status_code == 403, resp.text
+    # 404-unification: cross-dept chunks returns 404.
+    assert resp.status_code == 404, resp.text
 
 
 @pytest.mark.asyncio
@@ -311,7 +316,8 @@ async def test_timeline_get_blocks_cross_department(
         f"/requests/{req_b_id}/timeline",
         headers={"Authorization": f"Bearer {staff_token_dept_a}"},
     )
-    assert resp.status_code == 403, resp.text
+    # 404-unification: cross-dept timeline access returns 404.
+    assert resp.status_code == 404, resp.text
 
 
 @pytest.mark.asyncio
@@ -326,7 +332,8 @@ async def test_timeline_post_blocks_cross_department(
         json={"event_type": "note", "description": "Should not land"},
         headers={"Authorization": f"Bearer {staff_token_dept_a}"},
     )
-    assert resp.status_code == 403, resp.text
+    # 404-unification: cross-dept timeline write returns 404.
+    assert resp.status_code == 404, resp.text
 
 
 @pytest.mark.asyncio
@@ -340,7 +347,8 @@ async def test_messages_get_blocks_cross_department(
         f"/requests/{req_b_id}/messages",
         headers={"Authorization": f"Bearer {staff_token_dept_a}"},
     )
-    assert resp.status_code == 403, resp.text
+    # 404-unification: cross-dept messages read returns 404.
+    assert resp.status_code == 404, resp.text
 
 
 @pytest.mark.asyncio
@@ -355,7 +363,8 @@ async def test_messages_post_blocks_cross_department(
         json={"message_text": "Should not land", "is_internal": False},
         headers={"Authorization": f"Bearer {staff_token_dept_a}"},
     )
-    assert resp.status_code == 403, resp.text
+    # 404-unification: cross-dept messages write returns 404.
+    assert resp.status_code == 404, resp.text
 
 
 @pytest.mark.asyncio
@@ -373,7 +382,9 @@ async def test_timeline_messages_deny_non_admin_with_null_department(
         ("GET", f"/requests/{req_a_id}/messages"),
     ]:
         resp = await client.get(path, headers={"Authorization": f"Bearer {staff_token}"})
-        assert resp.status_code == 403, f"{method} {path}: {resp.text}"
+        # 404-unification: null-user-dept on a scoped endpoint returns 404
+        # (not 403) so the external response matches "request not found".
+        assert resp.status_code == 404, f"{method} {path}: {resp.text}"
 
 
 # ---------------------------------------------------------------------------
@@ -390,19 +401,25 @@ async def test_parameterized_cross_department_access_denied(
     """Iterates every dept-scoped endpoint in the codebase and asserts that
     a dept-A reviewer is denied cross-department access on every one.
 
+    After the info-leak follow-up PR applied 404-unification across every
+    RecordsRequest/Document-loading handler via ``require_department_or_404``,
+    cross-department access returns **404** (not 403). The external response
+    is identical to "resource does not exist", preventing status-code
+    disclosure of cross-dept resource existence. This test asserts 404 on
+    every case. A 403 from these routes would be a regression.
+
     Uses a REVIEWER token (not STAFF) for the cross-dept caller because
     several workflow endpoints (/approve, /reject, /ready-for-release) are
     gated at REVIEWER. Reviewer satisfies STAFF too, so one token covers all
-    cases. A failing role check would produce 403 for the wrong reason, but
-    since REVIEWER passes every role gate here, a 403 here is always from
-    the department gate.
+    cases. Role-gate 403s (which would be the wrong reason for a denial here)
+    are avoided because REVIEWER clears every role check.
 
-    Coverage after the T2A-cleanup PR: every ``require_department_scope``
-    call site in ``requests/router.py`` (17 sites — includes fee-waiver
-    review, added after auditor feedback on the first cleanup pass),
-    ``documents/router.py`` (2), and ``exemptions/router.py`` (2 of 3; the
-    third — PATCH /exemptions/flags/{flag_id} — needs a seeded flag and is
-    covered by a targeted test instead).
+    Coverage after the info-leak follow-up PR: every
+    ``require_department_or_404`` call site in ``requests/router.py`` (17
+    sites), ``documents/router.py`` (2), and ``exemptions/router.py`` (2 of
+    3 — the third is ``review_flag`` which uses ``has_department_access``
+    inline with the same 404-unification; covered by
+    ``test_info_leak_hardening.py``).
 
     New dept-scoped endpoints added after this must be appended below to
     prevent silent regression. If a route is intentionally global (like
@@ -494,9 +511,14 @@ async def test_parameterized_cross_department_access_denied(
             resp = await client.delete(path, headers=headers)
         else:
             raise AssertionError(f"Unsupported method {method!r}")
-        if resp.status_code != 403:
+        # 404-unification: every dept-scoped route must return 404 for
+        # cross-dept access. A 403 here would be a regression (means the
+        # route still uses require_department_scope instead of
+        # require_department_or_404).
+        if resp.status_code != 404:
             failures.append(f"{method} {path} -> {resp.status_code}: {resp.text[:120]}")
     assert not failures, (
-        "Cross-department enforcement regressed on the following routes:\n  "
+        "Cross-department enforcement regressed on the following routes "
+        "(expected 404 under 404-unification):\n  "
         + "\n  ".join(failures)
     )

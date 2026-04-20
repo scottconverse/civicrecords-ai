@@ -108,17 +108,18 @@ async def _seed_exemption_flag_on_request(
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_response_letter_patch_placeholder_letter_id_returns_403_cross_dept(
+async def test_response_letter_patch_placeholder_letter_id_returns_404_cross_dept(
     client: AsyncClient,
     staff_token_dept_b: str,
     reviewer_token_dept_a: str,
 ):
-    """With a placeholder (non-existent) letter_id, a cross-dept caller
-    previously got 404 "Response letter not found" because the letter
-    lookup fired before the dept check. After the reorder, the dept check
-    fires first and returns 403. This proves the info-leak is closed —
-    status code no longer distinguishes "letter exists in another dept"
-    from "letter does not exist"."""
+    """Cross-dept caller with a placeholder (non-existent) letter_id gets
+    404. After the reorder + 404-unification (this PR), every cross-dept
+    access to a request-scoped resource returns 404 — the external response
+    is identical to "does not exist", closing the status-code info-leak.
+    Before the fixes, the placeholder case returned 404 "Response letter
+    not found" (because letter lookup fired first), and a real cross-dept
+    letter_id would have returned 403 — attacker could distinguish."""
     req_b_id = await _create_request_in_dept(client, staff_token_dept_b, "letter probe")
     fake_letter_id = str(uuid.uuid4())  # almost certainly doesn't exist
     resp = await client.patch(
@@ -126,18 +127,18 @@ async def test_response_letter_patch_placeholder_letter_id_returns_403_cross_dep
         json={},
         headers={"Authorization": f"Bearer {reviewer_token_dept_a}"},
     )
-    assert resp.status_code == 403, resp.text
+    assert resp.status_code == 404, resp.text
 
 
 @pytest.mark.asyncio
-async def test_response_letter_patch_real_letter_id_returns_403_cross_dept(
+async def test_response_letter_patch_real_letter_id_returns_404_cross_dept(
     client: AsyncClient,
     staff_token_dept_b: str,
     reviewer_token_dept_a: str,
 ):
-    """With a real dept-B letter_id, cross-dept reviewer still gets 403.
-    This is the same behavior as before the reorder — confirms we didn't
-    regress the existing case."""
+    """With a real dept-B letter_id, cross-dept reviewer gets 404 (same as
+    the placeholder case above — 404-unification). Ensures the real-id
+    path doesn't accidentally leak 403."""
     req_b_id = await _create_request_in_dept(client, staff_token_dept_b, "real letter")
     letter_resp = await client.post(
         f"/requests/{req_b_id}/response-letter",
@@ -151,7 +152,7 @@ async def test_response_letter_patch_real_letter_id_returns_403_cross_dept(
         json={},
         headers={"Authorization": f"Bearer {reviewer_token_dept_a}"},
     )
-    assert resp.status_code == 403, resp.text
+    assert resp.status_code == 404, resp.text
 
 
 @pytest.mark.asyncio

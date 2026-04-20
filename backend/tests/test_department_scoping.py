@@ -72,10 +72,14 @@ async def test_staff_gets_request_in_own_department(
 
 
 @pytest.mark.asyncio
-async def test_staff_gets_request_in_other_department_403(
+async def test_staff_gets_request_in_other_department_404(
     client: AsyncClient,
     staff_token_dept_a: str, staff_token_dept_b: str,
 ):
+    """Cross-dept request access returns 404 (not 403) after the
+    404-unification info-leak fix — the external response is identical to
+    "request does not exist" so an attacker cannot probe for request IDs
+    in other departments."""
     create = await client.post(
         "/requests/",
         json={"requester_name": "Bob", "description": "Dept B"},
@@ -86,7 +90,7 @@ async def test_staff_gets_request_in_other_department_403(
         f"/requests/{req_id}",
         headers={"Authorization": f"Bearer {staff_token_dept_a}"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -170,7 +174,8 @@ async def test_reviewer_cannot_approve_other_department(
         f"/requests/{req_id}/ready-for-release",
         headers={"Authorization": f"Bearer {reviewer_token_dept_a}"},
     )
-    assert resp.status_code == 403
+    # 404-unification: cross-dept workflow actions return 404 (not 403).
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio

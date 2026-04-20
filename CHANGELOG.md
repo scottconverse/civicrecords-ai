@@ -19,13 +19,39 @@ Post-v1.1.0 commits on `master`. No version bump yet.
 - **CHANGELOG, UNIFIED-SPEC, installer button URLs (`ad44a86`, 2026-04-18):** CHANGELOG entries added for commits `301c4f3`/`c433beb`/`9c1d98b`/`23f0655` and moved into `[1.1.0]` where they belong. Stale "30s ceiling" corrected to "600s ceiling (D-FAIL-12)". UNIFIED-SPEC §17 test count updated to 432; priority 9 entry (Rule 9 deliverables) added; D-PROC-1 decision record added; §18 process criteria added; §19 Verification Log added at position 0. All 4 installer buttons in `docs/index.html` corrected from `/raw/master/` to `/releases/download/v1.1.0/`.
 
 ### Security
-- **Info-leak follow-up — child-before-parent existence disclosure closed (2026-04-20):** Fixes the pre-existing information-disclosure finding filed by the prior T2A-cleanup PR in `docs/FINDING-2026-04-19-info-leak-child-before-parent.md`. Two handlers previously loaded a child resource by its ID and returned 404-if-missing BEFORE running the parent-request department check, letting any cross-department authenticated caller distinguish "exists in another dept" (403) from "does not exist" (404) via status code.
-  - **`backend/app/requests/router.py` — `update_response_letter` (reorder fix):** Both `request_id` and `letter_id` are path parameters, so the parent request is now loaded and dept-checked BEFORE the letter lookup. Cross-dept callers now receive 403 regardless of whether the letter_id exists.
-  - **`backend/app/exemptions/router.py` — `review_flag` (404-unification fix):** Only `flag_id` is in the path, so reorder is structurally impossible — the flag must load first to know its parent request. Instead, every failure mode (missing flag, missing parent request, cross-department) now returns the same `404 "Flag not found"` response. An attacker cannot distinguish any of those via status code or body text. **This fix also closes a separate pre-existing fail-open** at the old L331-332: the prior code guarded the dept check behind `if req: require_department_scope(...)`, silently skipping the check if the flag referenced a missing request; the new unified check treats orphan flags as 404 too.
-  - **`backend/app/auth/dependencies.py` — new helper `has_department_access`:** Non-raising boolean variant of `require_department_scope`. Needed because `review_flag` branches on access rather than catching the 403 that `require_department_scope` raises. Same rules (admin True, null user dept False, null resource dept False, else exact match).
-  - **`docs/FINDING-2026-04-19-info-leak-child-before-parent.md` — finding doc lands with this PR.** Rewritten to reflect the actual fix pattern per handler (reorder for `update_response_letter`, 404-unification for `review_flag`) — the original draft claimed both could be fixed by reorder, which was wrong for `review_flag`. Correction documented in the file.
-  - **Tests added** in `backend/tests/test_info_leak_hardening.py` (6 tests, zero skips): cross-dept placeholder letter_id → 403 (proves the reorder closes the leak), cross-dept real letter_id → 403, admin bypass on letter PATCH → 200, placeholder flag_id → 404, real dept-B flag cross-dept → 404 with body "Flag not found" (proves 404-unification), admin bypass on flag review → 200.
-  - **UX tradeoff documented:** same-tenant users who mistype a flag_id now see "Flag not found" for both "does not exist" and "exists in another dept you cannot access." Correct from a security standpoint; not considered a UX regression because cross-dept flag access was never a supported path.
+- **Info-leak follow-up — 404-vs-403 status code disclosure closed across the dept-scoped surface (2026-04-20):** Started as a narrow fix for the two child-before-parent handlers filed in `docs/FINDING-2026-04-19-info-leak-child-before-parent.md`. During the fix a codebase-wide audit surfaced the **same 404-vs-403 disclosure at the parent level** — every handler that loads a RecordsRequest or Document by path-param ID and then raises 403 via `require_department_scope` had the identical status-code side channel. Scope was expanded to cover all of it. Owner directive 2026-04-20: "wrong move" to leave the broader pattern for a future PR.
+
+  **The pattern:** fake `request_id` → 404 "Request not found"; real `request_id` in another dept → 403. An authenticated cross-department caller could distinguish a leaked/guessed UUID's status via the difference. Same shape for documents, letters, flags.
+
+  **The fix — `require_department_or_404` helper** added in `backend/app/auth/dependencies.py`. Same fail-closed rules as `require_department_scope` but raises **404** (not 403) on denial, with a configurable detail string. The external response is identical to "resource does not exist", closing the status-code side channel.
+
+  **Coverage after this PR (404-unified via `require_department_or_404`):**
+  - `backend/app/requests/router.py` — 17 call sites (GET/PATCH `/{id}`, attached documents, workflow verbs, fees, response-letter, timeline, messages, fee-waiver review)
+  - `backend/app/documents/router.py` — 2 call sites (GET `/{id}`, GET `/{id}/chunks`)
+  - `backend/app/exemptions/router.py` — 2 call sites (POST `/scan/{request_id}`, GET `/flags/{request_id}`)
+  - `backend/app/exemptions/router.py::review_flag` — 404-unified inline via `has_department_access` (because the flag must load first — no call site to swap)
+
+  **The two original child-before-parent cases** remain fixed as filed:
+  - `update_response_letter` — reorder (parent-load + dept-check before letter lookup), now using `require_department_or_404`
+  - `review_flag` — inline 404-unification with `has_department_access`; also closes a separate pre-existing fail-open where the old code guarded the dept check behind `if req:` and silently skipped it if the flag referenced a missing parent
+
+  **Intentionally left at 403** (semantic denial, no info-leak):
+  - List endpoints (`GET /documents/`, `GET /analytics/operational`, request list filters) — no specific ID in path; null-user-dept still raises 403 inline
+  - `/city-profile` — intentionally global singleton per T2A design decision, admin-write only
+  - Role-gate 403s from `require_role(...)` — unrelated to dept scoping
+
+  **New helpers in `backend/app/auth/dependencies.py`:**
+  - `has_department_access(user, resource_department_id) -> bool` — non-raising variant, same rules
+  - `require_department_or_404(user, resource_department_id, detail) -> None` — fail-closed with 404 disclosure-closed denial
+
+  **Tests — cross-dept assertions flipped 403 → 404 where appropriate:**
+  - `backend/tests/test_info_leak_hardening.py` (new, 6 tests, zero skips): placeholder letter_id cross-dept → 404, real letter_id cross-dept → 404, admin bypass on letter PATCH → 200, placeholder flag_id → 404, real flag cross-dept → 404 with body "Flag not found", admin bypass on flag → 200
+  - `backend/tests/test_tier2a_hardening.py`: parameterized enforcement test now asserts 404 (was 403) across 25 cases; individual documents/timeline/messages cross-dept tests flipped; list-endpoint null-user-dept tests stay 403 (unchanged)
+  - `backend/tests/test_department_scoping.py`: `test_staff_gets_request_in_other_department_404` (renamed from `_403`); `test_reviewer_cannot_approve_other_department` assertion flipped to 404
+
+  **`docs/FINDING-2026-04-19-info-leak-child-before-parent.md`** rewritten to document the expanded scope and the two fix patterns (`require_department_or_404` for swap-compatible sites, inline `has_department_access` for `review_flag`).
+
+  **UX tradeoff:** same-tenant users who mistype a UUID now see "Not found" for both "does not exist" and "exists in another dept." Correct from a security standpoint (GitHub, Google Drive, Dropbox all unify on 404 for authz-sensitive resources). Acceptable because cross-dept access was never a supported user path.
 
 - **Partial Tier 2A auth/authz hardening (remediation plan §T2A — first slice, not full closure):** Covers four of the nine items in the agreed T2A scope. Explicitly **NOT closed**: apply `require_department_scope` to analytics / messages / timeline / city-profile routers, and add the parameterized cross-endpoint enforcement test. Those are tracked as follow-up PRs to complete T2A.
   - **Blocker (`ENG-002`) — role self-escalation via `PATCH /users/me` closed.** Introduced `UserSelfUpdate` schema in `backend/app/schemas/user.py`. It inherits `fastapi_users.schemas.BaseUserUpdate` but adds a `@model_validator(mode="before")` that rejects any payload containing `role` or `department_id` with HTTP 422. `backend/app/auth/router.py` now wires `fastapi_users.get_users_router(UserRead, UserSelfUpdate)` — the `/users/me` path no longer accepts privileged fields. Admin role and department changes continue to go through `/admin/users/{id}`.
