@@ -70,3 +70,83 @@ def require_department_scope(user: User, resource_department_id: uuid.UUID | Non
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: resource belongs to another department",
         )
+
+
+def has_department_access(user: User, resource_department_id: uuid.UUID | None) -> bool:
+    """Non-raising variant of ``require_department_scope``.
+
+    Returns ``True`` if the user would pass the same fail-closed rules,
+    ``False`` otherwise. Use this when the caller needs to unify the response
+    for "resource does not exist" and "resource exists but you cannot access
+    it" — for example, to prevent an information-disclosure side channel on
+    routes where the resource ID is the only path parameter.
+
+    Rules match ``require_department_scope`` exactly:
+    - Admin: True.
+    - Non-admin with ``user.department_id is None``: False.
+    - Non-admin with ``resource_department_id is None``: False.
+    - Non-admin otherwise: ``user.department_id == resource_department_id``.
+    """
+    if user.role == UserRole.ADMIN:
+        return True
+    if user.department_id is None:
+        return False
+    if resource_department_id is None:
+        return False
+    return user.department_id == resource_department_id
+
+
+def require_department_filter(user: User) -> uuid.UUID | None:
+    """Resolve the department_id to apply as a WHERE-clause filter on list
+    or aggregate endpoints. Fails closed for non-admin users with no
+    department.
+
+    Returns:
+        ``None`` for admin users — no filter; they see every department.
+        ``user.department_id`` for non-admin users with a department assignment.
+
+    Raises:
+        HTTP 403 for non-admin users with ``user.department_id is None``.
+        This is the list/aggregate analog of
+        :func:`require_department_or_404` — for list endpoints there is no
+        specific resource ID to probe, so a semantic 403 is correct; the
+        404-unification rationale does not apply.
+
+    Use this in list/aggregate/search handlers to avoid the "if user.role
+    != UserRole.ADMIN and user.department_id is not None" fail-open pattern
+    that silently skips the dept filter for a null-dept non-admin.
+    """
+    if user.role == UserRole.ADMIN:
+        return None
+    if user.department_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: user is not assigned to a department",
+        )
+    return user.department_id
+
+
+def require_department_or_404(
+    user: User,
+    resource_department_id: uuid.UUID | None,
+    detail: str = "Not found",
+) -> None:
+    """Dept-scope check with 404-unification.
+
+    Raises HTTP 404 (not 403) on denial so the external response is identical
+    to "resource does not exist". This prevents status-code-based disclosure
+    of cross-department resource existence: an attacker who guesses or
+    acquires a valid resource UUID cannot distinguish "exists in another
+    dept" (would have been 403) from "does not exist" (404) — both return
+    the same 404 with the same detail string.
+
+    Use this on routes where the path parameter alone is enough to identify
+    a scoped resource (every ``@router.*("/{some_id}..")`` handler that
+    loads that resource and relies on a related record's department_id).
+    Use :func:`require_department_scope` when a semantic 403 is correct —
+    e.g., admin surfaces where the caller should know it's an authz issue,
+    or flows where the path structure already requires the caller to know
+    the parent-scope identity.
+    """
+    if not has_department_access(user, resource_department_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)

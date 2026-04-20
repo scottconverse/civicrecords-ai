@@ -2,7 +2,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.auth.dependencies import require_department_scope, require_role
+from app.auth.dependencies import require_department_or_404, require_role
 from app.database import get_async_session
 from app.models.document import Document, DocumentChunk, IngestionStatus
 from app.models.user import User, UserRole
@@ -44,7 +44,7 @@ async def get_document(document_id: uuid.UUID, session: AsyncSession = Depends(g
     doc = await session.get(Document, document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    require_department_scope(user, doc.department_id)
+    require_department_or_404(user, doc.department_id, "Document not found")
     return doc
 
 @router.get("/{document_id}/chunks", response_model=list[DocumentChunkRead])
@@ -54,6 +54,6 @@ async def list_chunks(document_id: uuid.UUID, limit: int = Query(default=50, le=
     doc = await session.get(Document, document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    require_department_scope(user, doc.department_id)
+    require_department_or_404(user, doc.department_id, "Document not found")
     result = await session.execute(select(DocumentChunk).where(DocumentChunk.document_id == document_id).order_by(DocumentChunk.chunk_index).offset(offset).limit(limit))
     return result.scalars().all()
