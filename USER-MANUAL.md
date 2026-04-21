@@ -263,6 +263,17 @@ This means the system lost connection to that data source after repeated failure
 
 ## B.2 Installation
 
+> **Current install path — script-based setup scripts.** The scripts below configure and launch the Docker Compose stack. They do not install Docker Desktop, Docker Engine, WSL, or any other system prerequisite — those must be present before the scripts run. If Docker is not installed, the scripts will fail with a clear error and you must install Docker manually before retrying.
+>
+> **Planned — T5E (full-spectrum installer):** A future release will provide a downloadable guided installer that checks hardware compatibility, installs Docker and WSL where needed, verifies Ollama and Gemma 4 viability, and produces a truthful ready/not-ready result before claiming the system is operational. Until T5E ships, this script-based path is the only supported install method.
+
+**Before you begin — prerequisites:**
+
+1. Install **Docker Desktop** (Windows 10/11 or macOS 13+): [docker.com/get-started](https://www.docker.com/get-started)
+   *Linux:* Install **Docker Engine** 24+ and Docker Compose v2.
+2. Ensure Docker is running (you should see the Docker icon in your taskbar/menu bar, or `docker info` returns without error).
+3. Confirm system requirements: 8+ CPU cores, 32 GB RAM, 50 GB free disk.
+
 **Windows:**
 ```powershell
 git clone https://github.com/scottconverse/civicrecords-ai.git

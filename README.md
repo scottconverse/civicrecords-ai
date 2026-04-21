@@ -37,6 +37,8 @@ No open-source tool exists for the **responder side** of open records at the mun
 
 ### Install
 
+> **Current install path — script-based.** The scripts below configure and start the Docker Compose stack. They do not install Docker, WSL, or any other system prerequisites — those must already be present. A full-spectrum guided installer (with prerequisite detection, Docker/WSL setup, hardware compatibility checks, and Gemma 4 viability verification) is a planned deliverable tracked as [T5E in the remediation roadmap](docs/REMEDIATION-PLAN-2026-04-19.md).
+
 **Windows:**
 ```powershell
 git clone https://github.com/scottconverse/civicrecords-ai.git

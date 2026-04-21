@@ -691,6 +691,7 @@ The docs/ directory contains a comprehensive documentation set:
 | Version alignment across all files | [IMPLEMENTED] |
 | WCAG: 44px touch targets, skip nav, icon+color badges | [IMPLEMENTED] |
 | Full active discovery engine | [UI SHELL / PLANNED] |
+| Full-spectrum guided installer (prerequisite detection, Docker/WSL setup, hardware compatibility check, Gemma 4 viability check, truthful ready/not-ready result) | [PLANNED — T5E] |
 | GIS connector | [PLANNED] |
 | Public resident portal (5 pages) | [PLANNED] |
 | Federation as a full product surface | [PLANNED] |
@@ -809,7 +810,7 @@ docs/ — 20+ documentation files including manuals, specs, QA reports, architec
 scripts/ — install scripts, verification scripts
 test-data/ — test fixtures
 docker-compose.yml + 3 variant files (dev, gpu, host-ollama)
-install.ps1 (Windows), install.sh (macOS/Linux)
+install.ps1 (Windows), install.sh (macOS/Linux) — **current install path: script-based setup scripts that configure the Docker Compose stack. These require Docker Desktop (Windows/macOS) or Docker Engine (Linux) to already be installed and running before the scripts are invoked. They do not install Docker, do not check hardware compatibility, and do not verify Ollama or model viability. A full-spectrum guided installer — with prerequisite detection, Docker/WSL orchestration, hardware compatibility checks, and model-readiness verification — is a planned deliverable tracked as T5E in docs/REMEDIATION-PLAN-2026-04-19.md.**
 CHANGELOG.md, CONTRIBUTING.md, CLAUDE.md, USER-MANUAL.md, LICENSE (Apache 2.0)
 Backend modules (20): admin, analytics, audit, auth, catalog, city_profile, connectors, datasources, departments, documents, exemptions, ingestion, llm, models, notifications, onboarding, requests, schemas, search, service_accounts
 Backend model files (15): audit.py, city_profile.py, connectors.py, departments.py, document.py, exemption.py, fees.py, notifications.py, prompts.py, request.py, request_workflow.py, search.py, service_account.py, user.py

@@ -359,7 +359,7 @@ Estimated effort: 1-2 days
 
 ## Tier 5 - First-Boot Truth and Release Truth
 
-This tier cleans up the false story around install, onboarding, and what the repo actually ships.
+This tier cleans up the false story around install, onboarding, first boot, and what the repo actually ships. It also defines the path to a truthful full-spectrum installer experience rather than script-only setup.
 
 ### T5A - Onboarding persistence truth
 
@@ -409,6 +409,44 @@ Verification gate:
 - every published link and command is validated from the surface where users actually see it
 
 Estimated effort: 2-3 days
+
+### T5E - Full-Spectrum Installer
+
+Scope:
+
+- ship a downloadable installer path for end users that can be launched directly (double-click on Windows; equivalent guided local installer flow on macOS/Linux)
+- install or orchestrate installation of missing local prerequisites required to run CivicRecords AI, including Docker Desktop / Docker Engine, WSL and Windows feature enablement where required, and any other runtime dependencies not already present
+- perform machine compatibility checks before claiming readiness, including:
+  - CPU / RAM / disk prerequisites
+  - Docker availability and daemon health
+  - Ollama availability
+  - Gemma 4 compatibility and expected local runtime viability
+- produce a truthful ready / not-ready result with explicit remediation steps when the machine cannot support the configured local model/runtime
+- reuse the proven installer / prerequisite / compatibility logic from PatentForgeLocal where possible instead of re-inventing it in parallel
+- ensure the installer story, runtime behavior, and public docs all describe the same actual install path
+
+Why separate:
+
+- this is not just a docs-truth fix; it is a product/distribution capability
+- the current install scripts are not equivalent to a full-spectrum installer
+- first-boot truth is incomplete until a fresh user can reach a working local system through a guided, truthful install path
+
+Merge gate:
+
+- a fresh machine can reach a working CivicRecords AI install through the documented installer path
+- prerequisite detection and install/elevation flow is implemented or truthfully handed off where OS policy requires user confirmation
+- Gemma 4 / Ollama compatibility check exists and returns an actionable result
+- installer success and failure states are documented with exact operator guidance
+- README, landing page, UNIFIED-SPEC, and admin/manual docs all match the shipped installer behavior
+
+Verification gate:
+
+- browser/runtime evidence from a fresh-machine or clean-environment install walk
+- proof that missing prerequisites are either installed or surfaced with explicit next steps
+- proof that the installer does not claim readiness on a machine that cannot actually run the configured local model/runtime
+- explicit verification of at least one Windows install path, since Windows elevation / Docker Desktop / WSL handling is the highest-risk branch
+
+Estimated effort: 2-4 days depending on reuse from PatentForgeLocal and how much OS-specific elevation/install orchestration is pulled in
 
 Tier 5 closes the remaining Critical-class truthfulness work before release.
 
@@ -476,6 +514,7 @@ No tier advances until the previous tier is both merged and re-verified.
 1. Which connector types are truly implemented today, which are stubs, and which should be disabled instead of advertised?
 2. What is the intended Ollama truth for first boot: pull more models, change defaults, or health-gate the feature?
 3. Is the `Public` role being removed from this remediation release and deferred to a later portal milestone?
+4. Is the PatentForgeLocal installer logic being adopted as the baseline for CivicRecords AI, and if so, which parts are reused verbatim vs adapted?
 
 ---
 
