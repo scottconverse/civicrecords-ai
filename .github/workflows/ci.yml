@@ -82,6 +82,27 @@ jobs:
       - name: Build api image
         run: docker compose build api
 
+      - name: Verify docs/openapi.json not stale (T3D)
+        # Regenerate the OpenAPI schema inside the already-built api container
+        # (no live DB needed — FastAPI introspects at import time) and compare
+        # against the committed docs/openapi.json. Fails with an actionable
+        # message if the backend schema changed without a schema re-generation.
+        run: |
+          docker compose run --rm --no-deps api \
+            python scripts/generate_openapi.py > /tmp/openapi_fresh.json
+          python3 - <<'EOF'
+          import json, sys
+          committed = json.load(open("docs/openapi.json"))
+          fresh = json.load(open("/tmp/openapi_fresh.json"))
+          if committed != fresh:
+              sys.stderr.write("::error::docs/openapi.json is stale.\n")
+              sys.stderr.write("::error::Regenerate: cd backend && python scripts/generate_openapi.py -o ../docs/openapi.json\n")
+              sys.stderr.write("::error::Then rebuild types: cd frontend && npm run generate:types\n")
+              sys.stderr.write("::error::Commit both docs/openapi.json and frontend/src/generated/api.ts.\n")
+              sys.exit(1)
+          print("docs/openapi.json is current.")
+          EOF
+
       - name: pytest --collect-only — catches CLAUDE.md Hard Rule 1e failure mode
         # The previous auditor accepted "423 tests passing" from a dev report;
         # actual collection was 278. pytest exits nonzero on any collection
@@ -284,6 +305,18 @@ jobs:
 
       - name: Install dependencies (frozen lockfile)
         run: npm ci
+
+      - name: Verify src/generated/api.ts not stale (T3D)
+        # Re-run openapi-typescript against the committed docs/openapi.json and
+        # check that the committed src/generated/api.ts matches. Fails if the
+        # schema was updated without regenerating the frontend types.
+        run: |
+          npm run generate:types
+          if ! git diff --exit-code src/generated/api.ts; then
+            echo "::error::frontend/src/generated/api.ts is stale."
+            echo "::error::Run 'npm run generate:types' from the frontend/ directory and commit the result."
+            exit 1
+          fi
 
       - name: Run vitest suite
         # package.json "test" is already `vitest run`, so no -- --run needed.

@@ -24,17 +24,9 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pencil, Plus, UserX, Users as UsersIcon } from "lucide-react";
+import type { components } from "@/generated/api";
 
-interface User {
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: string;
-  is_active: boolean;
-  created_at: string;
-  last_login: string | null;
-  department_id: string | null;
-}
+type User = components["schemas"]["UserRead"];
 
 interface Department {
   id: string;

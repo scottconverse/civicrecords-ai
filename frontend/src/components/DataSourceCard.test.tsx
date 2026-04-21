@@ -1,13 +1,13 @@
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { SourceCard } from "./SourceCard";
+import { SourceCard, type DataSource } from "./SourceCard";
 
-const mockSource = {
+const mockSource: DataSource = {
   id: "test-source-id",
   name: "Test REST Source",
   source_type: "rest_api",
   is_active: true,
-  health_status: "healthy" as const,
+  health_status: "healthy",
   last_sync_at: null,
   next_sync_at: null,
   sync_schedule: "0 2 * * *",
@@ -16,6 +16,9 @@ const mockSource = {
   last_sync_status: null,
   active_failure_count: 0,
   consecutive_failure_count: 0,
+  created_by: "00000000-0000-0000-0000-000000000000",
+  created_at: "2024-01-01T00:00:00Z",
+  last_ingestion_at: null,
 };
 
 describe("SourceCard — Sync Now button", () => {

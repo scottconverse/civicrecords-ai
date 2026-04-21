@@ -18,6 +18,25 @@ Post-v1.1.0 commits on `master`. No version bump yet.
 ### Changed
 - **CHANGELOG, UNIFIED-SPEC, installer button URLs (`ad44a86`, 2026-04-18):** CHANGELOG entries added for commits `301c4f3`/`c433beb`/`9c1d98b`/`23f0655` and moved into `[1.1.0]` where they belong. Stale "30s ceiling" corrected to "600s ceiling (D-FAIL-12)". UNIFIED-SPEC §17 test count updated to 432; priority 9 entry (Rule 9 deliverables) added; D-PROC-1 decision record added; §18 process criteria added; §19 Verification Log added at position 0. All 4 installer buttons in `docs/index.html` corrected from `/raw/master/` to `/releases/download/v1.1.0/`.
 
+- **T3D — OpenAPI typegen: frontend types generated from backend schema (2026-04-21):** Three frontend surfaces were using hand-maintained TypeScript interfaces that drifted from the backend Pydantic schemas — `source_type: string` instead of the 4-value union, `role: string` instead of the 6-value `UserRole` enum, and a stale `imap_email` reference in `SourceCard.tsx` that survived the T3B connector taxonomy cleanup.
+
+  **What was added:**
+  - `backend/scripts/generate_openapi.py` — imports the FastAPI app at import time (no live DB) and emits the OpenAPI schema to stdout. Supports `-o <path>` for Windows (avoids BOM from PowerShell redirect). Run via Docker: `docker compose run --rm --no-deps api python scripts/generate_openapi.py > docs/openapi.json`.
+  - `docs/openapi.json` — committed generated artifact. Regenerate whenever backend schemas or routes change.
+  - `frontend/src/generated/api.ts` — committed generated artifact from `openapi-typescript`. Contains the full type surface including `DataSourceRead`, `UserRead`, `UserRole`, `SourceType`, and all other schemas.
+  - `"generate:types"` npm script in `frontend/package.json` — runs `openapi-typescript ../docs/openapi.json -o src/generated/api.ts`. One command to resync after any backend change.
+
+  **Migrations (hand-maintained interfaces replaced):**
+  - `SourceCard.tsx`: `export interface DataSource { source_type: string; ... }` replaced with `export type DataSource = components["schemas"]["DataSourceRead"]`. `source_type` is now `"file_system" | "manual_drop" | "rest_api" | "odbc"`. Six previously missing fields (`created_by`, `created_at`, `last_ingestion_at`, `last_error_message`, `connector_type`, `updated_at`) are now present in the type. Stale `source.source_type === "imap_email"` branch in the icon switch removed.
+  - `Users.tsx`: `interface User { role: string; ... }` replaced with `type User = components["schemas"]["UserRead"]`. `role` is now `"admin" | "staff" | "reviewer" | "read_only" | "liaison" | "public"`.
+  - `DataSources.tsx`: inherits the correct `DataSource` type via its existing import from `SourceCard` — no direct change needed.
+
+  **CI stale-artifact enforcement (two new steps):**
+  - Backend job: after `docker compose build api`, regenerates `docs/openapi.json` inside the container and diffs against the committed version. Fails with an actionable message listing the two commands to run if the schema has drifted.
+  - Frontend job: after `npm ci`, re-runs `npm run generate:types` and diffs `src/generated/api.ts` against HEAD. Fails with an actionable message if the types are stale.
+
+  **TypeScript:** `tsc --noEmit` passes clean. `DataSourceCard.test.tsx` updated to use typed `DataSource` mock with required generated fields.
+
 ### Fixed
 - **T3B+T3C — Connector taxonomy unified and test-connection made actionable (2026-04-21):** Five connectors had drifted to three or more different names across four layers (PostgreSQL enum, Python registry, ingestion dispatch, React UI). The divergence caused 422 validation errors when creating `manual_drop` or `file_system` sources (enum values didn't match the strings the UI submitted), and made `imap_email` appear to be a shipping connector when it was never fully implemented.
 

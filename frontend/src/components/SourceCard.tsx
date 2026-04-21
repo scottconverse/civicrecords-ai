@@ -5,22 +5,9 @@ import { Loader2 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { useSyncNow } from "@/hooks/useSyncNow";
 import { FailedRecordsPanel } from "./FailedRecordsPanel";
+import type { components } from "@/generated/api";
 
-export interface DataSource {
-  id: string;
-  name: string;
-  source_type: string;
-  is_active: boolean;
-  health_status: "healthy" | "degraded" | "circuit_open";
-  last_sync_at: string | null;
-  next_sync_at: string | null;
-  sync_schedule: string | null;
-  schedule_enabled: boolean;
-  sync_paused: boolean;
-  last_sync_status: string | null;
-  active_failure_count: number;
-  consecutive_failure_count: number;
-}
+export type DataSource = components["schemas"]["DataSourceRead"];
 
 const HEALTH_BADGE: Record<string, { dot: string; label: string }> = {
   healthy:      { dot: "bg-green-500",  label: "Healthy" },
@@ -28,7 +15,7 @@ const HEALTH_BADGE: Record<string, { dot: string; label: string }> = {
   circuit_open: { dot: "bg-red-500",    label: "Paused" },
 };
 
-function formatDateTime(iso: string | null): string {
+function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "Never";
   const d = new Date(iso);
   const utcStr = d.toUTCString().replace(" GMT", " UTC");
@@ -84,9 +71,8 @@ export function SourceCard({
         {/* Left panel */}
         <div className="w-[90px] bg-[#EBF3FA] flex flex-col items-center justify-center gap-2 p-3">
           <div className="text-3xl">
-            {source.source_type === "rest_api"    ? "🌐" :
-             source.source_type === "odbc"        ? "🗄️" :
-             source.source_type === "imap_email"  ? "📧" : "📁"}
+            {source.source_type === "rest_api" ? "🌐" :
+             source.source_type === "odbc"     ? "🗄️" : "📁"}
           </div>
           <div className="flex items-center gap-1">
             <span
