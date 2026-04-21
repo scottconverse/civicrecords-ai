@@ -391,12 +391,13 @@ class ConnectorDiagram(Flowable):
 
         # Left connectors
         for i, (lbl, sub) in enumerate([
-            ("File System", "local dirs"),
-            ("REST API",    "API key/Bearer/OAuth2"),
-            ("ODBC",        "pyodbc/SQL"),
+            ("File System",  "local dirs"),
+            ("Manual Drop",  "watched folder"),
+            ("REST API",     "API key/Bearer/OAuth2"),
+            ("ODBC",         "pyodbc/SQL"),
         ]):
             bx = 0.1 * inch
-            by = 1.7 * inch - i * (bh + 0.18 * inch)
+            by = 2.1 * inch - i * (bh + 0.15 * inch)
             box(bx, by, bw, bh, CIVIC_ACCENT, lbl, sub)
             # Arrow to protocol
             c.setStrokeColor(CIVIC_MID)
@@ -953,6 +954,8 @@ def build_readme_full(out_path):
     story += section_header("Available Connectors", styles, 2)
     story += bullet_list([
         "File System — local and network directories. Most common source type.",
+        "Manual Drop — watched drop folder for files exported manually by staff. "
+        "Use when a system has no API. Config key: drop_path.",
         "REST API — API key, Bearer token, OAuth2 client-credentials, Basic auth. "
         "JSON/XML/CSV response formats. Page/offset/cursor pagination. data_key dotted-path extraction.",
         "ODBC — SQL databases via pyodbc. Row-as-document with SQL-injection guards. "

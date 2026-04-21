@@ -102,8 +102,6 @@ def task_ingest_source(self, source_id: str, user_id: str | None = None):
             source_type = source.source_type.value if hasattr(source.source_type, 'value') else str(source.source_type)
 
             # Dispatch by source type
-            if source_type == "email":
-                return await _ingest_email_source(session, source, user_id)
             if source_type == "manual_drop":
                 return await _ingest_manual_drop_source(session, source, user_id)
 
@@ -126,112 +124,32 @@ def task_ingest_source(self, source_id: str, user_id: str | None = None):
                     # Per-record errors are absorbed into sync_failures inside the runner.
                     raise self.retry(exc=exc, countdown=30)
 
-            # Default: directory-based ingestion
-            directory = Path(config.get("path", ""))
-            if not directory.is_dir():
-                return {"error": f"Directory not found: {directory}"}
+            if source_type == "file_system":
+                directory = Path(config.get("path", ""))
+                if not directory.is_dir():
+                    return {"error": f"Directory not found: {directory}"}
 
-            stats = await ingest_directory(
-                session=session,
-                directory=directory,
-                source_id=source.id,
-            )
-            source.last_ingestion_at = datetime.now(timezone.utc)
-            await session.commit()
-
-            await write_audit_log(
-                session=session,
-                action="ingest_source",
-                resource_type="data_source",
-                resource_id=source_id,
-                user_id=uuid.UUID(user_id) if user_id else None,
-                details=stats,
-            )
-            return stats
-
-    return _run_async(_ingest())
-
-
-async def _ingest_email_source(session, source, user_id: str | None) -> dict:
-    """Ingest documents from an IMAP email source via the connector protocol."""
-    from app.connectors import imap_email as _imap_mod
-
-    connector = _imap_mod.ImapEmailConnector(source.connection_config)
-
-    authenticated = await connector.authenticate()
-    if not authenticated:
-        return {"error": "IMAP authentication failed"}
-
-    discovered = await connector.discover()
-
-    ingested = 0
-    skipped = 0
-    errors = 0
-
-    try:
-        for record in discovered:
-            try:
-                fetched = await connector.fetch(record.source_path)
-
-                # Extract safe attachments
-                safe_attachments = connector.extract_safe_attachments(fetched.content)
-
-                # Also ingest the email body itself as a document
-                email_doc = await ingest_file_from_bytes(
+                stats = await ingest_directory(
                     session=session,
-                    content=fetched.content,
-                    filename=fetched.filename,
-                    file_type="eml",
+                    directory=directory,
                     source_id=source.id,
                 )
-                if email_doc:
-                    ingested += 1
+                source.last_ingestion_at = datetime.now(timezone.utc)
+                await session.commit()
 
-                # Ingest each safe attachment
-                for attachment in safe_attachments:
-                    att_doc = await ingest_file_from_bytes(
-                        session=session,
-                        content=attachment.content,
-                        filename=attachment.filename,
-                        file_type=attachment.file_type,
-                        source_id=source.id,
-                    )
-                    if att_doc:
-                        ingested += 1
-
-            except Exception as exc:
-                logger.error(
-                    "Fetch failed",
-                    extra={
-                        "error_class": type(exc).__name__,
-                        "record_id": record.source_path,
-                        "status_code": getattr(exc, "status_code", None),
-                        "retry_count": getattr(exc, "retry_count", 0),
-                    },
+                await write_audit_log(
+                    session=session,
+                    action="ingest_source",
+                    resource_type="data_source",
+                    resource_id=source_id,
+                    user_id=uuid.UUID(user_id) if user_id else None,
+                    details=stats,
                 )
-                errors += 1
+                return stats
 
-        # Cursor-on-success: only write after all fetches complete without unhandled error
-        source.last_sync_at = datetime.now(timezone.utc)
-        source.last_sync_cursor = str(datetime.now(timezone.utc))
-        await session.commit()
+            return {"error": f"Unsupported source type: {source_type!r}"}
 
-    finally:
-        connector.close()
-
-    stats = {"ingested": ingested, "skipped": skipped, "errors": errors, "discovered": len(discovered)}
-
-    await write_audit_log(
-        session=session,
-        action="ingest_email_source",
-        resource_type="data_source",
-        resource_id=str(source.id),
-        user_id=uuid.UUID(user_id) if user_id else None,
-        details=stats,
-    )
-
-    logger.info("Email ingestion complete for source %s: %s", source.id, stats)
-    return stats
+    return _run_async(_ingest())
 
 
 async def _ingest_manual_drop_source(session, source, user_id: str | None) -> dict:

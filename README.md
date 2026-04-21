@@ -15,10 +15,10 @@ No open-source tool exists for the **responder side** of open records at the mun
 - **AI-Powered Search** — Natural language hybrid search (semantic + keyword) across all ingested city documents with source attribution, normalized relevance scores, and optional AI-generated summaries
 - **Document Ingestion** — Automatic parsing of PDF, DOCX, XLSX, CSV, email, HTML, and text files. Scanned documents processed via multimodal AI (Gemma 4) with Tesseract OCR fallback
 - **Exemption Detection** — Tier 1 PII detection (SSN, credit card with Luhn validation, phone, email, bank accounts, state-specific driver's licenses) plus per-state statutory keyword matching. Optional LLM secondary review. All flags require human confirmation
-- **Request Management** — Full lifecycle tracking with 11 statuses: intake, clarification, assignment, search, review, drafting, approval, fulfillment, closure. Timeline, messaging, fee tracking, and response letter generation
+- **Request Management** — Full lifecycle tracking with 10 statuses: received, clarification needed, assigned, searching, in review, ready for release, drafted, approved, fulfilled, closed. Timeline, messaging, fee tracking, and response letter generation
 - **Guided Onboarding** — 3-phase wizard helps cities configure their profile, identify data systems across 12 municipal domains, and surface coverage gaps
 - **Municipal Systems Catalog** — Curated knowledge base of 25+ municipal software vendors across 12 functional domains (finance, public safety, permitting, HR, etc.) with discovery hints and connector templates
-- **Universal Connector Framework** — Standardized protocol (authenticate/discover/fetch/health_check) for connecting to city data sources. Ships with file system, generic REST API (API key / Bearer / OAuth2 client-credentials / Basic auth; JSON/XML/CSV; page/offset/cursor pagination), and ODBC (SQL databases via pyodbc, row-as-document with SQL-injection guards) connectors. IMAP email, SMB/NFS, and SharePoint connectors on roadmap
+- **Universal Connector Framework** — Standardized protocol (authenticate/discover/fetch/health_check) for connecting to city data sources. Ships with four implemented connector types: `file_system` (local/mounted directories), `manual_drop` (watched drop folders), `rest_api` (generic REST API — API key / Bearer / OAuth2 client-credentials / Basic auth; JSON/XML/CSV; page/offset/cursor pagination), and `odbc` (SQL databases via pyodbc, row-as-document with SQL-injection guards). IMAP email, SMB/NFS, and SharePoint connectors on roadmap
 - **Scheduled Sync & Idempotent Ingestion** — Per-source cron scheduling (5-field expressions via croniter, evaluated in UTC with local-time disclosure, rolling 7-day min-interval validation, 5-minute floor) with `schedule_enabled` pause toggle. Idempotent pipeline: binary sources dedup by content hash, structured REST/ODBC sources dedup by stable source-path with canonical JSON serialization. Concurrent-update races prevented via `SELECT FOR UPDATE` + partial UNIQUE indexes; content updates atomically replace chunks and embeddings in the same transaction
 - **Sync Failure Tracking & Circuit Breaker** — Per-record failure tracking with two-layer retry (task-level exponential backoff + record-level per-tick retry with N=100/T=90s cap). Automatic circuit breaker after 5 consecutive full-run failures (`sync_paused`) with admin-feedback unpause grace period. `health_status` (healthy/degraded/circuit_open) computed live from failure counts. Admin UI: colored health badge, failed records panel with bulk retry/dismiss, Sync Now button with real-time polling progress
 - **Operational Analytics** — Real-time metrics: average response time, deadline compliance rate, overdue requests, status breakdown
@@ -93,10 +93,11 @@ All configuration is via environment variables in `.env`:
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords` |
 | `JWT_SECRET` | Secret key for JWT tokens | (must be set) |
 | `FIRST_ADMIN_EMAIL` | Initial admin account email | `admin@example.gov` |
-| `FIRST_ADMIN_PASSWORD` | Initial admin account password | (must be set) |
+| `FIRST_ADMIN_PASSWORD` | Initial admin account password | (must be set — min 12 chars; installer generates automatically; `.env.example` placeholder and common defaults rejected at startup) |
 | `OLLAMA_BASE_URL` | Ollama API endpoint | `http://ollama:11434` |
 | `REDIS_URL` | Redis connection string | `redis://redis:6379/0` |
 | `AUDIT_RETENTION_DAYS` | Audit log retention period | `1095` (3 years) |
+| `CONNECTOR_HOST_ALLOWLIST` | Comma-separated hostnames/IPs exempt from SSRF block (on-prem use) | (empty — RFC1918, loopback, and cloud IMDS ranges blocked by default) |
 
 ## Supported Platforms
 
@@ -160,7 +161,7 @@ docker compose exec postgres dropdb -U civicrecords civicrecords_test
 | **Staff** | Search, create requests, attach documents, scan for exemptions, review flags, manage fees | Built |
 | **Reviewer** | Everything Staff can do + approve/reject responses and exemption flags | Built |
 | **Read-Only** | View search results and request status only | Built |
-| **Liaison** | Scoped to assigned department, attach documents and add notes | MVP-NOW |
+| **Liaison** | Department-scoped read access to requests and search; Users/Audit Log/Onboarding nav hidden | Built |
 | **Public** | Submit requests, track own requests, search published records | v1.1 |
 
 Service accounts with hashed API keys enable instance-to-instance federation access.
@@ -179,15 +180,24 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 - Model registry CRUD endpoints (spec 6.7 compliance metadata)
 
 **Carried from v1.0.x:**
-- 11 staff workbench pages with shadcn/ui design system
+- 13 staff workbench pages + Login with shadcn/ui design system
 - 29 database tables, ~30 API endpoints
-- 432 backend + 5 frontend automated tests passing (see `backend/test_results_full.txt`)
+- 556 backend + 7 frontend automated tests passing (GitHub Actions CI-verified)
 - Guided onboarding, systems catalog, connector framework
 - Request timeline, messaging, fee tracking, response letter generation
 - Operational analytics and notification service
 - AMD GPU/NPU hardware auto-detection (ROCm on Linux, DirectML on Windows)
 - Login rate limiting, audit log archival, admin-only user creation
 - Tested on Windows 11 (Docker Desktop) and Ubuntu 22.04 (Docker Engine)
+
+**Post-v1.1.0 security hardening (on master, not yet released):**
+- **T2A** — Role self-escalation via `PATCH /users/me` closed (`UserSelfUpdate` schema); all 24 department-scoped handlers enforce `require_department_scope`; 404/403 status-code info-leak unified via `require_department_or_404`; Pattern D list-endpoint fail-open fixed on 4 routes; parameterized enforcement test covers 25 routes
+- **T2B** — `connection_config` redacted from `GET /datasources/` for all non-admin users (`DataSourceAdminRead` returned only on admin write endpoints). **ENG-001 runtime exposure: closed. At-rest storage (plaintext JSONB in DB) remains open — tracked as Tier 6.**
+- **T2C** — `FIRST_ADMIN_PASSWORD` startup validator (rejects `.env.example` placeholder, empty, <12 chars, and common defaults); SSRF host validator blocks loopback, IMDS, and RFC1918 ranges on REST and ODBC connector URLs at schema-validation time
+- **T3A** — Create-user form now POSTs to `/api/admin/users` (was `/api/auth/register`, which silently downgraded submitted roles to STAFF)
+- **CI** — 556 backend + 7 frontend tests; bootstrap-failure smoke test confirms stack rejects placeholder admin password
+
+> **ENG-001 standing caveat:** At-rest encryption for `data_sources.connection_config` is not yet implemented. The JSONB column is visible to any database superuser, `pg_dump` output, or restored backup. ENG-001 will not be fully closed until Tier 6 at-rest encryption lands.
 
 **Roadmap (per [canonical spec](docs/UNIFIED-SPEC.md)):**
 

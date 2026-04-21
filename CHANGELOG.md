@@ -19,6 +19,29 @@ Post-v1.1.0 commits on `master`. No version bump yet.
 - **CHANGELOG, UNIFIED-SPEC, installer button URLs (`ad44a86`, 2026-04-18):** CHANGELOG entries added for commits `301c4f3`/`c433beb`/`9c1d98b`/`23f0655` and moved into `[1.1.0]` where they belong. Stale "30s ceiling" corrected to "600s ceiling (D-FAIL-12)". UNIFIED-SPEC §17 test count updated to 432; priority 9 entry (Rule 9 deliverables) added; D-PROC-1 decision record added; §18 process criteria added; §19 Verification Log added at position 0. All 4 installer buttons in `docs/index.html` corrected from `/raw/master/` to `/releases/download/v1.1.0/`.
 
 ### Fixed
+- **T3B+T3C — Connector taxonomy unified and test-connection made actionable (2026-04-21):** Five connectors had drifted to three or more different names across four layers (PostgreSQL enum, Python registry, ingestion dispatch, React UI). The divergence caused 422 validation errors when creating `manual_drop` or `file_system` sources (enum values didn't match the strings the UI submitted), and made `imap_email` appear to be a shipping connector when it was never fully implemented.
+
+  **T3B — Canonical vocabulary enforced end-to-end:**
+  - Alembic migration `017_rename_connector_enum_values`: renames PostgreSQL enum values `upload → manual_drop` and `directory → file_system` in-place via `ALTER TYPE source_type RENAME VALUE`. Runs in a transaction, downgrade reverses both renames. No data loss, no column rebuild.
+  - `SourceType` enum in `document.py` updated to exactly four canonical values: `file_system`, `manual_drop`, `rest_api`, `odbc`.
+  - Connector registry (`connectors/__init__.py`) reduced to the four shipping types. `ImapEmailConnector` class remains on disk as roadmap groundwork but is not imported into `_REGISTRY` and cannot be reached from any dispatch path.
+  - Ingestion dispatch (`ingestion/tasks.py`): removed dead `email` dispatch branch and `_ingest_email_source` function; added explicit `file_system` case using `ingest_directory()`; replaced silent fallback with explicit error return for unknown source types.
+  - Frontend chooser (`DataSources.tsx`): reduced from 5 buttons to 4 (`file_system`, `manual_drop`, `rest_api`, `odbc`); imap button and imap form block removed; default source type set to `file_system`.
+
+  **T3C — test-connection and form submission made type-correct:**
+  - `handleTestConnection` rewritten to send type-specific payloads: `rest_api_config` dict (with all auth/pagination fields) for REST API, `odbc_config` dict for ODBC, `path` for file_system and manual_drop. Previously sent only generic fields, causing rest_api and odbc test-connections to always fail with "requires a config object."
+  - `handleSubmit` rewritten to persist type-correct `connection_config`: `{ path }` for file_system, `{ drop_path }` for manual_drop (matching `ManualDropConnector`'s config key), full auth+pagination config for rest_api, full connection string + table fields for odbc. Previously all types saved only `path/host/port/username`, making rest_api and odbc connectors unrunnable after save.
+  - `test_connection` router: removed imap case; renamed `file_share` → `file_system`; all error messages now name the bad path explicitly (`Path does not exist: /foo/bar`) rather than returning vague messages.
+  - `TestConnectionRequest` schema updated with canonical type comment.
+
+  **Tests added (`backend/tests/test_connector_taxonomy.py`):**
+  - `TestCanonicalVocabulary` (5 tests): enum has exactly the 4 canonical values; legacy `upload`/`directory`/`imap_email` values absent; registry has exactly 4 entries; imap class importable but not in registry.
+  - `TestConnectionActionableErrors` (9 async tests): all 4 connector types plus unknown type return human-readable, actionable error messages from test-connection; missing path, nonexistent path (with path named in message), valid path success, missing config for rest_api/odbc.
+
+  **Docs updated:** README connector framework list, `docs/index.html` connector card, UNIFIED-SPEC §2.5/§6.2/§11.1/§11.4 — all stale references to imap as [IMPLEMENTED] corrected to [PLANNED].
+
+  **Standing caveat:** `data_sources.connection_config` stored as plaintext JSONB. Runtime exposure closed at T2B. At-rest encryption (ENG-001) remains open until Tier 6.
+
 - **T3A — Admin user creation path pointed at the real admin-create endpoint (2026-04-20):** The Users page create-user form was POSTing to `/api/auth/register`, the public self-service registration endpoint. Two consequences: (1) the form bypassed admin-only audit and validation paths, and (2) `UserCreate.force_staff_role` (in `backend/app/schemas/user.py`) silently downgraded any submitted role to `STAFF` — so an admin who picked `admin` or `reviewer` in the role dropdown got back a `staff` user with no error. Visible UX bug, not just code drift. Switched the create call to `POST /api/admin/users` (the admin-only endpoint that already accepts the same payload shape and honors the role faithfully via `AdminUserCreateRequest`). One-line change in `frontend/src/pages/Users.tsx`.
 
   **Accessibility fix in the same file (in-scope cleanup, found while writing the component test):** the three create-form labels (`Full Name`, `Email`, `Password`) were bare `<label>` elements with no `htmlFor` attribute and not wrapping their `<Input>`. Screen readers and keyboard users couldn't activate inputs via the label, and Testing Library's `getByLabelText` couldn't find the association at all. Added `htmlFor`/`id` pairs (`create-user-fullname`, `create-user-email`, `create-user-password`). Browser-verified: clicking each label now focuses the corresponding input. The edit-form labels have the same pre-existing gap; left for a follow-up to keep this PR scoped to T3A.

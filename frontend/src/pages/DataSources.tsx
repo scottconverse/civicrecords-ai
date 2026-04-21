@@ -72,8 +72,8 @@ export default function DataSources({ token }: { token: string }) {
   const [wizardStep, setWizardStep] = useState(1);
   const [formData, setFormData] = useState({
     // common
-    name: "", sourceType: "manual_drop",
-    // imap / file_share
+    name: "", sourceType: "file_system",
+    // file_system / manual_drop
     host: "", port: "", path: "", username: "", password: "",
     // rest_api
     base_url: "", endpoint_path: "/", auth_method: "none",
@@ -106,7 +106,7 @@ export default function DataSources({ token }: { token: string }) {
   const resetWizard = () => {
     setWizardStep(1);
     setFormData({
-      name: "", sourceType: "manual_drop",
+      name: "", sourceType: "file_system",
       host: "", port: "", path: "", username: "", password: "",
       base_url: "", endpoint_path: "/", auth_method: "none",
       api_key: "", key_location: "header", key_header: "X-API-Key",
@@ -123,17 +123,47 @@ export default function DataSources({ token }: { token: string }) {
     setTesting(true);
     setTestResult(null);
     try {
+      const body: Record<string, unknown> = { source_type: formData.sourceType };
+
+      if (formData.sourceType === "rest_api") {
+        const cfg: Record<string, unknown> = {
+          base_url: formData.base_url,
+          endpoint_path: formData.endpoint_path,
+          auth_method: formData.auth_method,
+          pagination_style: formData.pagination_style,
+          max_records: parseInt(formData.max_records) || 1000,
+        };
+        if (formData.auth_method === "api_key") {
+          cfg.api_key = formData.api_key;
+          cfg.key_location = formData.key_location;
+          cfg.key_header = formData.key_header;
+        } else if (formData.auth_method === "bearer") {
+          cfg.token = formData.token;
+        } else if (formData.auth_method === "oauth2") {
+          cfg.client_id = formData.client_id;
+          cfg.client_secret = formData.client_secret;
+          cfg.token_url = formData.token_url;
+        } else if (formData.auth_method === "basic") {
+          cfg.username = formData.rest_username;
+          cfg.password = formData.rest_password;
+        }
+        body.rest_api_config = cfg;
+      } else if (formData.sourceType === "odbc") {
+        body.odbc_config = {
+          connection_string: formData.connection_string,
+          table_name: formData.table_name,
+          pk_column: formData.pk_column,
+          ...(formData.modified_column ? { modified_column: formData.modified_column } : {}),
+          batch_size: parseInt(formData.batch_size) || 500,
+        };
+      } else {
+        body.path = formData.path || undefined;
+      }
+
       const result = await apiFetch<{ success: boolean; message: string }>("/datasources/test-connection", {
         token,
         method: "POST",
-        body: JSON.stringify({
-          source_type: formData.sourceType,
-          host: formData.host || undefined,
-          port: formData.port ? parseInt(formData.port) : undefined,
-          path: formData.path || undefined,
-          username: formData.username || undefined,
-          password: formData.password || undefined,
-        }),
+        body: JSON.stringify(body),
       });
       setTestResult(result);
     } catch (e) {
@@ -146,12 +176,42 @@ export default function DataSources({ token }: { token: string }) {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const config: Record<string, string> = {};
-      if (formData.path) config.path = formData.path;
-      if (formData.host) config.host = formData.host;
-      if (formData.port) config.port = formData.port;
-      if (formData.username) config.username = formData.username;
-      // Never persist password in connection_config — handle via secure vault in production
+      let config: Record<string, unknown> = {};
+      if (formData.sourceType === "file_system") {
+        config = { path: formData.path };
+      } else if (formData.sourceType === "manual_drop") {
+        config = { drop_path: formData.path };
+      } else if (formData.sourceType === "rest_api") {
+        config = {
+          base_url: formData.base_url,
+          endpoint_path: formData.endpoint_path,
+          auth_method: formData.auth_method,
+          pagination_style: formData.pagination_style,
+          max_records: parseInt(formData.max_records) || 1000,
+        };
+        if (formData.auth_method === "api_key") {
+          config.api_key = formData.api_key;
+          config.key_location = formData.key_location;
+          config.key_header = formData.key_header;
+        } else if (formData.auth_method === "bearer") {
+          config.token = formData.token;
+        } else if (formData.auth_method === "oauth2") {
+          config.client_id = formData.client_id;
+          config.client_secret = formData.client_secret;
+          config.token_url = formData.token_url;
+        } else if (formData.auth_method === "basic") {
+          config.username = formData.rest_username;
+          config.password = formData.rest_password;
+        }
+      } else if (formData.sourceType === "odbc") {
+        config = {
+          connection_string: formData.connection_string,
+          table_name: formData.table_name,
+          pk_column: formData.pk_column,
+          batch_size: parseInt(formData.batch_size) || 500,
+        };
+        if (formData.modified_column) config.modified_column = formData.modified_column;
+      }
       await apiFetch("/datasources/", {
         token,
         method: "POST",
@@ -216,8 +276,7 @@ export default function DataSources({ token }: { token: string }) {
                       <label className="text-sm font-medium">Source Type</label>
                       <div className="grid grid-cols-3 gap-2 mt-2">
                         {[
-                          { type: "imap", icon: Mail, label: "IMAP Email" },
-                          { type: "file_share", icon: FolderOpen, label: "File Share" },
+                          { type: "file_system", icon: FolderOpen, label: "File System" },
                           { type: "manual_drop", icon: Upload, label: "Manual Drop" },
                           { type: "rest_api", icon: Globe, label: "REST API" },
                           { type: "odbc", icon: Database, label: "ODBC / Database" },
@@ -244,27 +303,7 @@ export default function DataSources({ token }: { token: string }) {
                 {/* Step 2: Connection config */}
                 {wizardStep === 2 && (
                   <>
-                    {formData.sourceType === "imap" && (
-                      <>
-                        <div>
-                          <label className="text-sm font-medium">IMAP Server</label>
-                          <Input value={formData.host} onChange={(e) => setFormData({ ...formData, host: e.target.value })} placeholder="imap.gmail.com" />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Port</label>
-                          <Input value={formData.port} onChange={(e) => setFormData({ ...formData, port: e.target.value })} placeholder="993" />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Username</label>
-                          <Input value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} placeholder="records@city.gov" />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Password</label>
-                          <Input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
-                        </div>
-                      </>
-                    )}
-                    {(formData.sourceType === "file_share" || formData.sourceType === "manual_drop") && (
+                    {(formData.sourceType === "file_system" || formData.sourceType === "manual_drop") && (
                       <div>
                         <label className="text-sm font-medium">Directory Path</label>
                         <Input value={formData.path} onChange={(e) => setFormData({ ...formData, path: e.target.value })} placeholder="/mnt/records or C:\Records\Public" />

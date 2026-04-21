@@ -15,8 +15,8 @@ from app.models.user import Base
 
 
 class SourceType(str, enum.Enum):
-    UPLOAD = "upload"
-    DIRECTORY = "directory"
+    MANUAL_DROP = "manual_drop"
+    FILE_SYSTEM = "file_system"
     REST_API = "rest_api"
     ODBC = "odbc"
 

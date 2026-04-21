@@ -354,26 +354,39 @@ Reads files from a local or network-mounted directory.
 
 ```json
 {
-  "source_type": "filesystem",
+  "source_type": "file_system",
   "connection_config": {
-    "root_path": "/mnt/city-documents",
-    "file_extensions": [".pdf", ".docx", ".xlsx", ".csv", ".txt"],
-    "recursive": true,
-    "max_file_size_mb": 50
+    "path": "/mnt/city-documents"
   }
 }
 ```
 
 | Field | Description |
 |---|---|
-| `root_path` | Absolute path visible to the Docker container |
-| `file_extensions` | List of extensions to ingest (omit for all supported types) |
-| `recursive` | Traverse subdirectories |
-| `max_file_size_mb` | Files larger than this are skipped |
+| `path` | Absolute path visible to the Docker container (local dir or network mount) |
 
 **Supported file types:** PDF, DOCX, XLSX, CSV, TXT, HTML, EML. Scanned PDFs processed via Gemma 4 multimodal + Tesseract OCR fallback.
 
-### B.5.2 REST API Connector
+### B.5.2 Manual Drop Connector
+
+Watches a drop folder for files uploaded manually by staff. Use when a system has no API and staff exports files by hand.
+
+```json
+{
+  "source_type": "manual_drop",
+  "connection_config": {
+    "drop_path": "/mnt/drop/incoming"
+  }
+}
+```
+
+| Field | Description |
+|---|---|
+| `drop_path` | Directory the connector watches for new files |
+
+**Workflow:** Staff places exported files in the drop folder. On each sync, the connector ingests any files not yet processed, then leaves them in place (files are never deleted).
+
+### B.5.3 REST API Connector
 
 Connects to any REST API that returns JSON, XML, or CSV.
 
@@ -416,7 +429,7 @@ Connects to any REST API that returns JSON, XML, or CSV.
 
 **Rate limiting:** The connector honors `Retry-After` response headers, sleeping up to 600 seconds before retrying (D10 spec). Malformed headers fall back to exponential backoff.
 
-### B.5.3 ODBC Connector
+### B.5.4 ODBC Connector
 
 Connects to SQL databases via pyodbc (SQL Server, MySQL, PostgreSQL, Oracle, SQLite).
 
@@ -424,16 +437,24 @@ Connects to SQL databases via pyodbc (SQL Server, MySQL, PostgreSQL, Oracle, SQL
 {
   "source_type": "odbc",
   "connection_config": {
-    "dsn": "DRIVER={ODBC Driver 17 for SQL Server};SERVER=10.0.1.5;DATABASE=TylerNewWorld;UID=readonly_user;PWD=password",
-    "query": "SELECT id, document_title, document_text, created_date FROM documents WHERE department_code = 'PD'",
-    "id_column": "id",
-    "text_columns": ["document_title", "document_text"],
+    "connection_string": "DRIVER={ODBC Driver 17 for SQL Server};Server=10.0.1.5;Database=TylerNewWorld;UID=readonly_user;PWD=password",
+    "table_name": "documents",
+    "pk_column": "id",
+    "modified_column": "updated_at",
     "batch_size": 500
   }
 }
 ```
 
-**Security:** Queries are validated against an allowlist of safe SQL patterns. Only `SELECT` statements are permitted. Parameters are never interpolated into query strings.
+| Field | Description |
+|---|---|
+| `connection_string` | Full ODBC connection string (never logged or echoed) |
+| `table_name` | Table to ingest. Each row becomes one document. |
+| `pk_column` | Primary key column for deduplication |
+| `modified_column` | Optional timestamp column — used for incremental sync |
+| `batch_size` | Rows fetched per query (default 500) |
+
+**Security:** Only `SELECT` queries are issued. `table_name` and `pk_column` are validated against a safe-identifier pattern — SQL injection via those fields is blocked at schema validation time.
 
 ---
 

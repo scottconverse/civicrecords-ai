@@ -1,13 +1,11 @@
 from app.connectors.base import BaseConnector
 from app.connectors.file_system import FileSystemConnector
-from app.connectors.imap_email import ImapEmailConnector
 from app.connectors.manual_drop import ManualDropConnector
 from app.connectors.rest_api import RestApiConnector
 from app.connectors.odbc import OdbcConnector
 
 _REGISTRY: dict[str, type[BaseConnector]] = {
     "file_system": FileSystemConnector,
-    "imap_email": ImapEmailConnector,
     "manual_drop": ManualDropConnector,
     "rest_api": RestApiConnector,
     "odbc": OdbcConnector,

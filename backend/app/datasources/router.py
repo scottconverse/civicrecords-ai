@@ -174,10 +174,10 @@ async def upload_file(file: UploadFile = File(...), session: AsyncSession = Depe
         dest.unlink(missing_ok=True)
         raise HTTPException(status_code=413, detail="File too large (max 100 MB)")
     tmp_path = str(dest)
-    result = await session.execute(select(DataSource).where(DataSource.name == "_uploads", DataSource.source_type == SourceType.UPLOAD))
+    result = await session.execute(select(DataSource).where(DataSource.name == "_uploads", DataSource.source_type == SourceType.MANUAL_DROP))
     upload_source = result.scalar_one_or_none()
     if not upload_source:
-        upload_source = DataSource(name="_uploads", source_type=SourceType.UPLOAD, created_by=user.id)
+        upload_source = DataSource(name="_uploads", source_type=SourceType.MANUAL_DROP, created_by=user.id)
         session.add(upload_source)
         await session.commit()
         await session.refresh(upload_source)
@@ -241,7 +241,7 @@ class TestConnectionRequest(BaseModel):
     Security: credentials in this request body are never persisted, never
     written to audit logs, and never returned in the response.
     """
-    source_type: str  # imap/file_share/manual_drop/rest_api/odbc
+    source_type: str  # file_system/manual_drop/rest_api/odbc
     host: str | None = None
     port: int | None = None
     path: str | None = None
@@ -271,40 +271,38 @@ async def test_connection(
     This endpoint validates the connection parameters and attempts a test
     connection. Credentials are NOT persisted, NOT logged, and NOT returned.
     """
-    if body.source_type == "imap":
-        if not body.host or not body.username:
-            return TestConnectionResponse(success=False, message="IMAP requires host and username")
-        try:
-            import imaplib
-            port = body.port or 993
-            conn = imaplib.IMAP4_SSL(body.host, port)
-            if body.username and body.password:
-                conn.login(body.username, body.password)
-            conn.logout()
-            return TestConnectionResponse(success=True, message=f"Connected to {body.host}:{port}")
-        except Exception as e:
-            # Never expose credentials in error messages
-            error_msg = str(e)
-            if body.password and body.password in error_msg:
-                error_msg = "Authentication failed"
-            return TestConnectionResponse(success=False, message=f"IMAP connection failed: {error_msg}")
-
-    elif body.source_type == "file_share":
+    if body.source_type == "file_system":
         if not body.path:
-            return TestConnectionResponse(success=False, message="File share requires a path")
+            return TestConnectionResponse(success=False, message="file_system requires a path")
         target = Path(body.path)
-        if target.exists() and target.is_dir():
-            file_count = len(list(target.iterdir()))
-            return TestConnectionResponse(success=True, message=f"Path accessible: {file_count} items found")
-        return TestConnectionResponse(success=False, message=f"Path not accessible or not a directory")
+        if not target.exists():
+            return TestConnectionResponse(
+                success=False,
+                message=f"Path does not exist: {body.path}. Verify the directory is accessible from the server.",
+            )
+        if not target.is_dir():
+            return TestConnectionResponse(
+                success=False,
+                message=f"Path exists but is not a directory: {body.path}",
+            )
+        file_count = len(list(target.iterdir()))
+        return TestConnectionResponse(success=True, message=f"Directory accessible: {file_count} items found")
 
     elif body.source_type == "manual_drop":
         if not body.path:
-            return TestConnectionResponse(success=False, message="Manual drop requires a path")
+            return TestConnectionResponse(success=False, message="manual_drop requires a drop_path")
         target = Path(body.path)
-        if target.exists() and target.is_dir():
-            return TestConnectionResponse(success=True, message="Drop folder accessible")
-        return TestConnectionResponse(success=False, message="Drop folder not accessible")
+        if not target.exists():
+            return TestConnectionResponse(
+                success=False,
+                message=f"Drop folder does not exist: {body.path}. Create the directory and ensure the server process can read it.",
+            )
+        if not target.is_dir():
+            return TestConnectionResponse(
+                success=False,
+                message=f"Drop path exists but is not a directory: {body.path}",
+            )
+        return TestConnectionResponse(success=True, message=f"Drop folder accessible: {body.path}")
 
     elif body.source_type in ("rest_api", "odbc"):
         config_dict = body.rest_api_config if body.source_type == "rest_api" else body.odbc_config

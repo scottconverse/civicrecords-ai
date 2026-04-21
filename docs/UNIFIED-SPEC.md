@@ -9,7 +9,7 @@ April 13, 2026
 | Supersedes | All prior spec versions (v2.0, v2.2, v3.0, v3.0.1) |
 | Repository | github.com/scottconverse/civicrecords-ai |
 | Current release | v1.1.0 (April 13, 2026) — versions aligned across all files |
-| Test suite | 432 automated backend tests (v1.1.0 post-audit hardening) — all passing; see `backend/test_results_full.txt` |
+| Test suite | 556 automated backend tests + 7 frontend tests — all passing; GitHub Actions CI-verified (run 24705180533) |
 | Method | GitHub API crawl of repo structure, README, CHANGELOG, config files, module directories, and in-repo RECONCILIATION doc |
 
 Status Legend: [IMPLEMENTED] evidenced in code, tests, and routes. [PARTIAL] present but incomplete. [UI SHELL] interface exists without full backend capability. [PLANNED] not implemented. [NEW in v1.1.0] added in current release.
@@ -65,11 +65,11 @@ Notification service: 12 templates, SMTP delivery, dispatched via PATCH dynamic 
 Operational analytics and dashboard with coverage gap indicators
 Guided onboarding with LLM-powered adaptive interview
 Municipal systems catalog (12 domains, 25+ vendors)
-Connector framework (file system, IMAP email, manual drop)
+Connector framework (file system, generic REST API, ODBC via pyodbc, IMAP email, manual drop)
 Central LLM client with context manager, token budgeting, and prompt injection sanitization
 Compliance templates (5 documents) and model registry
 Hash-chained audit logging with CSV/JSON export
-432 automated backend tests (all passing post-audit hardening; artifact: `backend/test_results_full.txt`)
+556 automated backend tests + 7 frontend tests (all passing; CI-verified)
 Not yet implemented: public resident portal, public search/request tracking, full active network discovery engine, cross-instance federation workflows, liaison department-scoped UI (role exists, full scoping not complete), Tier 2/3 redaction.
 
 ## 3. User Groups & RBAC
@@ -91,7 +91,7 @@ Not yet implemented: public resident portal, public search/request tracking, ful
 | Journalist / researcher | Search existing records and request additional material. | Robust search, saved filters, exportable results, request history. |
 
 ### 3.3 RBAC Role Hierarchy [IMPLEMENTED]
-All 6 roles are defined in UserRole enum with a numeric hierarchy. Role hierarchy enforced via check_department_access() and role-threshold checks on endpoints.
+All 6 roles are defined in UserRole enum with a numeric hierarchy. Role hierarchy enforced via `require_department_scope`, `require_department_or_404`, `require_department_filter`, and role-threshold checks on endpoints. (`check_department_access` was removed in T2A-cleanup — all callers migrated to the fail-closed helpers.)
 
 | Role | Level | Scope | Status |
 |---|---|---|---|
@@ -174,7 +174,7 @@ All modules listed with their implementation status:
 | datasources | Source CRUD, 3-step wizard, test-connection endpoint | [IMPLEMENTED] |
 | documents | Document metadata, chunk management | [IMPLEMENTED] |
 | ingestion | Two-track pipeline (parsers + multimodal OCR), retry endpoint, macro stripping | [IMPLEMENTED] |
-| connectors | Universal protocol (authenticate/discover/fetch/health_check): file_system, imap_email, manual_drop | [IMPLEMENTED] |
+| connectors | Universal protocol (authenticate/discover/fetch/health_check): file_system, manual_drop, rest_api, odbc | [IMPLEMENTED] |
 | catalog | Municipal systems catalog (12 domains, 25+ vendors), auto-loader | [IMPLEMENTED] |
 | city_profile | City configuration, gap map, template variable source | [IMPLEMENTED] |
 | onboarding | 3-phase wizard, LLM-powered adaptive interview with fallback | [IMPLEMENTED] |
@@ -208,7 +208,7 @@ audit_log: id, user_id, action, resource_type, resource_id, details (JSON), ip_a
 service_accounts: id, name, api_key_hash (SHA-256), role, scopes (JSON), created_by, is_active
 
 ### 6.2 Documents & Ingestion
-data_sources: id, name, type (file_share/database/email/upload/sharepoint/api), connection_config (encrypted JSON), schedule, status, created_by, department_id
+data_sources: id, name, source_type (file_system/manual_drop/rest_api/odbc), connection_config (JSONB — plaintext; see ENG-001/Tier 6), schedule, status, created_by, department_id
 documents: id, source_id, source_path, filename, display_name, file_type, file_hash (SHA-256), file_size, ingestion_status, ingested_at, metadata (JSON), department_id
 document_chunks: id, document_id, chunk_index, content_text, embedding Vector(768), token_count
 
@@ -460,7 +460,7 @@ Guided onboarding wizard with LLM-powered adaptive interview [IMPLEMENTED]
 City profile API with gap map [IMPLEMENTED]
 Municipal systems catalog — 12 functional domains, 25+ vendor systems, bundled JSON with auto-loader [IMPLEMENTED]
 Connector framework — universal protocol (authenticate/discover/fetch/health_check) [IMPLEMENTED]
-Connectors: file_system.py, imap_email.py, manual_drop.py [IMPLEMENTED]
+Connectors (4 shipped): file_system, manual_drop, rest_api, odbc [IMPLEMENTED] — imap_email class exists on disk as roadmap groundwork but is not registered or reachable from shipping flows
 Dashboard coverage gaps — GET /admin/coverage-gaps [IMPLEMENTED]
 
 ### 11.2 What Is Not Yet Implemented
@@ -490,7 +490,7 @@ Continuous discovery and self-healing [PLANNED]
 | Protocol | Best For | Status |
 |---|---|---|
 | File System / SMB | Shared drives, document repos, scanned archives | [IMPLEMENTED] |
-| SMTP / IMAP Journal | Email archives (#1 source for records requests) | [IMPLEMENTED] |
+| SMTP / IMAP Journal | Email archives (#1 source for records requests) | [PLANNED] |
 | Manual / Export Drop | Systems with no API — clerk uploads | [IMPLEMENTED] |
 | REST API (Modern SaaS) | Tyler, Accela, NEOGOV, cloud platforms | [IMPLEMENTED] |
 | ODBC / JDBC Bridge | On-prem databases, legacy SQL, AS/400 | [IMPLEMENTED] |
@@ -500,7 +500,7 @@ Continuous discovery and self-healing [PLANNED]
 ### 11.5 Security for Connectors
 Network discovery: disabled by default, explicit IT opt-in, audit-logged.
 Every connection: admin must review, confirm, provide credentials, authorize.
-Credentials: AES-256 encrypted at rest. Never logged, exported, or displayed after entry.
+Credentials (API): `connection_config` fields are redacted from non-admin API responses (T2B); admin write endpoints return the full config. At-rest storage is **plaintext JSONB** — visible to DB superusers, pg_dump outputs, and backups. AES-256 at-rest encryption is tracked as **ENG-001 / Tier 6** and is not yet implemented. Credentials are never logged, returned on GET, or displayed after initial admin entry.
 Test-connection endpoint: dedicated schema, never persists credentials, never logs connection strings.
 Least-privilege: read-only accounts. System never writes to source systems.
 CJIS Compliance: Architecture satisfies encryption (5.10.1), audit logging (5.4), access control (5.5), no cloud egress (5.10.3.2). City must satisfy fingerprint checks (5.12), signed addendum, and security training (5.2). Compliance gate blocks public safety connector activation until confirmed.
@@ -521,6 +521,11 @@ API keys hashed (SHA-256) before storage
 No telemetry, no outbound connections, no crash reporting
 SMTP credentials never logged or displayed after entry
 All LLM outputs labeled as AI-generated drafts
+T2A — Department scope enforcement: role self-escalation via `PATCH /users/me` closed (`UserSelfUpdate` schema); all 24 department-scoped request handlers use `require_department_scope` (fail-closed); 404/403 status-code info-leak unified via `require_department_or_404` across 21 handler call sites; Pattern D list-endpoint fail-open closed on `GET /requests/`, `/requests/stats`, `POST /search/query`, `GET /search/export` via `require_department_filter`; parameterized cross-endpoint enforcement test covers 25 routes; `review_fee_waiver` gap found by auditor during review and fixed in same PR
+T2B — Connection credential redaction: `connection_config` removed from `DataSourceRead`; `DataSourceAdminRead` (full config) returned only by admin write endpoints (`POST /datasources/`, `PATCH /datasources/{id}`). Runtime credential exposure to non-admin users: **closed**. At-rest storage exposure (plaintext JSONB): **open**, tracked as ENG-001 / Tier 6
+T2C — Bootstrap hardening: `Settings.check_first_admin_password` model-validator rejects `.env.example` placeholder, empty value, <12 chars, and an embedded blocklist of common defaults; installers generate a 32-hex-char password and substitute it into `.env`; bootstrap-failure CI job confirms non-zero exit with placeholder
+T2C — SSRF protection: `backend/app/security/host_validator.py` rejects connector URLs targeting loopback (127.0.0.0/8, ::1), link-local/IMDS (169.254.0.0/16), RFC1918 (10/8, 172.16/12, 192.168/16), and 0.0.0.0 at Pydantic schema-validation time; `CONNECTOR_HOST_ALLOWLIST` env var for on-prem overrides (exact-match only, no wildcards); ODBC fail-closed on unparseable host field
+T3A — Admin user creation: `frontend/src/pages/Users.tsx` create-user form POSTs to `/api/admin/users` (was `/api/auth/register`, which routed through `UserCreate.force_staff_role` and silently downgraded any submitted role to STAFF); three create-form labels received `htmlFor`/`id` associations
 
 ## 13. Accessibility
 Target: WCAG 2.2 AA. Session B (keyboard navigation audit) is complete as of this commit. **Session B also revealed that the Phase 1 hotfix claim in `b6627db` — that focus visibility was Met post-`2663836` — is incorrect.** The claim was based on CSS class-presence inspection, not on computed styles in a live browser. A real keyboard walk showed the intended 3px ring never renders on any shadcn primitive (see F1). Corrected below. Form error handling and full screen reader audit remain pending for Session C.
@@ -660,6 +665,7 @@ The docs/ directory contains a comprehensive documentation set:
 | 1.0.0 | April 12 | Design system (shadcn/ui), 11 pages, request lifecycle, fees, analytics, notifications, connectors, context manager | 104 |
 | 1.1.0 | April 13 | Departments, 50-state exemptions, compliance templates, central LLM client, notification dispatch, user mgmt, search enhancements, fee waivers, rich text, macro stripping, coverage gaps, version alignment | 274 |
 | _unreleased_ | April 14 | `request_received` dispatch on create, Mark Fulfilled 404 fix, SENT status removal (migration 010), schema drift fix (migration 011), spec v3.1 import, Session A accessibility (global `:focus-visible` fallback + Geist Variable font wiring), Session B accessibility audit (14-page keyboard walk, findings F1–F7, Phase 1 focus-visibility claim corrected from Met to Partial), Session B.1 accessibility fixes (F2: `data-table.tsx` keyboard row activation; F1: `ring-[3px]` on Button/Input/SelectTrigger), Session B.2/C accessibility fixes (F3: DOM-confirmed resolved in base-ui v1.3.0; F4: 15 SelectTrigger `aria-label`s; F5: `LoadingRegion` component + `role="status"` on Dashboard/DataSources; F6: CardTitle `as` prop + 7 `<h2>` in RequestDetail; dialog focus trap verified; form error handling flagged for Session C) | 276 |
+| _unreleased_ | April 19–21 | Security remediation T2A–T3A (8 merged PRs, #14 + #16–22): CI ratchet (GitHub Actions, collected-vs-passed cross-check, bootstrap-failure smoke test); auth/authz hardening across 24 dept-scoped handlers (require_department_scope, require_department_or_404, require_department_filter); 404/403 info-leak unified; Pattern D list fail-open closed; review_fee_waiver gap fixed; connection_config redacted from DataSourceRead (ENG-001 runtime closed, storage open); FIRST_ADMIN_PASSWORD startup validator; SSRF host validator; admin user creation path fixed; 556 backend + 7 frontend tests | 556 |
 
 ## 16. Capability Summary
 
@@ -681,7 +687,7 @@ The docs/ directory contains a comprehensive documentation set:
 | Operational analytics and coverage gap dashboard | [IMPLEMENTED] |
 | Compliance templates (5 docs) and model registry | [IMPLEMENTED] |
 | Hash-chained audit logging with export | [IMPLEMENTED] |
-| 432 automated backend tests (all passing; artifact: `backend/test_results_full.txt`) | [IMPLEMENTED] |
+| 556 automated backend tests + 7 frontend tests (all passing; CI-verified, run 24705180533) | [IMPLEMENTED] |
 | Version alignment across all files | [IMPLEMENTED] |
 | WCAG: 44px touch targets, skip nav, icon+color badges | [IMPLEMENTED] |
 | Full active discovery engine | [UI SHELL / PLANNED] |
@@ -716,7 +722,7 @@ Based on the repository as it exists now:
 5. Connector expansion — **DONE (d335c5b).** `RestApiConnector` + `OdbcConnector` shipped. 61 connector tests passing. See `CHANGELOG.md`.
    5a. **P6a — Idempotency contract split** — **DONE (`e462c7e`, 2026-04-16).** Dedup contract split by connector type: binary sources use `(source_id, file_hash)`, structured REST/ODBC use `(source_id, source_path)`. Canonical JSON serialization + envelope-pollution detection at test-connection. `SELECT … FOR UPDATE` + partial UNIQUE indexes (`uq_documents_binary_hash`, `uq_documents_structured_path`) prevent concurrent-update races. Atomic chunk/embedding replacement on content UPDATE. Migration 014. 382+19 tests passing. See `docs/superpowers/specs/2026-04-16-p6a-idempotency-design.md`.
    5b. **P6b — Cron scheduler rewrite** — **DONE (`c670ef1`, 2026-04-17).** `schedule_minutes` interval replaced with 5-field cron `sync_schedule` via croniter (Apache 2.0). `schedule_enabled` toggle preserves expression when paused. Trigger logic: `get_next(datetime) <= now`. Rolling 7-day (2016-tick) min-interval validation rejects adversarial crons; 5-min floor. UTC evaluation with UI disclosure. Allowlist migration (13 entries) converts legacy intervals; non-allowlist values null + recorded in `_migration_015_report`. Migration 015 also drops `schedule_minutes` and adds 8 P7 stub columns. 395/397 tests passing (+13 new). D-SCHED-5 three-state card display deferred to P7. See `docs/superpowers/specs/2026-04-16-p6b-scheduler-design.md`.
-   5c. **P7 — Sync failures, circuit breaker, UI polish** — **DONE (`32ceb9c`, 2026-04-17).** Per-record failure tracking (`sync_failures` table), two-layer retry (task-level 3×30s→90s→270s + record-level 5×/7-day), circuit breaker (5 full-run failures → `sync_paused`, unpause grace threshold=2), `health_status` computed at response time via LEFT JOIN (circuit_open > degraded > healthy). Option B SourceCard layout with `FailedRecordsPanel` (5 states: loading/empty/populated/error + circuit-open banner), Sync Now button with exponential backoff polling (5s→10s→20s→30s, 15-min timeout, elapsed display). 429/Retry-After honored at connector layer (capped 600s, D-FAIL-12). IntegrityError → `permanently_failed` (D-FAIL-10). `sync_run_log` one row per run. Bulk retry/dismiss actions. `formatNextRun()` UTC+local display in wizard Step 3. `conftest` migrated to `alembic upgrade head` subprocess (true migration parity). **P7 QA pass (`301c4f3`, 2026-04-17):** Retry-After crash fix (ValueError on malformed headers → backoff); grace period activation fix (DB-persisted `sync_paused_reason` sentinel replaces transient Python attribute); SourceCard + FailedRecordsPanel ARIA accessibility (role/img, aria-label, aria-live, aria-hidden, role/region, role/alert); `⚠️` copy fix. 4 adversarial Retry-After tests + 2 grace-period integration tests added. **432 backend tests passing (full Docker suite, 0 failures, 0 errors); 5 frontend tests passing.** Test suite hardened in v1.1.0 post-audit: per-test DB recreation via `DROP DATABASE WITH FORCE`, per-test async engine, `_SessionProxy` pattern, `db_session_factory` engine disposal, `ingest_file` connector_type + SELECT FOR UPDATE to close binary-ingest race. See `backend/test_results_full.txt` for the verified artifact. *(5a–5c shipped prior to Rule 9 enforcement. Rule 9 deliverables produced separately in `c433beb`.)* See `docs/superpowers/specs/2026-04-16-p7-sync-failures-design.md`.
+   5c. **P7 — Sync failures, circuit breaker, UI polish** — **DONE (`32ceb9c`, 2026-04-17).** Per-record failure tracking (`sync_failures` table), two-layer retry (task-level 3×30s→90s→270s + record-level 5×/7-day), circuit breaker (5 full-run failures → `sync_paused`, unpause grace threshold=2), `health_status` computed at response time via LEFT JOIN (circuit_open > degraded > healthy). Option B SourceCard layout with `FailedRecordsPanel` (5 states: loading/empty/populated/error + circuit-open banner), Sync Now button with exponential backoff polling (5s→10s→20s→30s, 15-min timeout, elapsed display). 429/Retry-After honored at connector layer (capped 600s, D-FAIL-12). IntegrityError → `permanently_failed` (D-FAIL-10). `sync_run_log` one row per run. Bulk retry/dismiss actions. `formatNextRun()` UTC+local display in wizard Step 3. `conftest` migrated to `alembic upgrade head` subprocess (true migration parity). **P7 QA pass (`301c4f3`, 2026-04-17):** Retry-After crash fix (ValueError on malformed headers → backoff); grace period activation fix (DB-persisted `sync_paused_reason` sentinel replaces transient Python attribute); SourceCard + FailedRecordsPanel ARIA accessibility (role/img, aria-label, aria-live, aria-hidden, role/region, role/alert); `⚠️` copy fix. 4 adversarial Retry-After tests + 2 grace-period integration tests added. **432 backend tests passing (full Docker suite, 0 failures, 0 errors); 5 frontend tests passing** at time of this P7 entry. Test suite hardened in v1.1.0 post-audit: per-test DB recreation via `DROP DATABASE WITH FORCE`, per-test async engine, `_SessionProxy` pattern, `db_session_factory` engine disposal, `ingest_file` connector_type + SELECT FOR UPDATE to close binary-ingest race. (Current count is 556 backend + 7 frontend following T2A–T3A remediation.) *(5a–5c shipped prior to Rule 9 enforcement. Rule 9 deliverables produced separately in `c433beb`.)* See `docs/superpowers/specs/2026-04-16-p7-sync-failures-design.md`.
 6. Spec alignment — **DONE**. The in-repo `docs/UNIFIED-SPEC.md` is now this v3.1 document, kept current through commit `2663836` + this hotfix. (Completed alongside the SENT removal and notification_log/exemption_rules drift fixes; see migrations 010 and 011.)
 7. Public portal buildout — implement the requester-facing surface only after internal staff workflows are stable and fully documented.
 8. CHANGELOG font correction — **DONE** in `2663836`. The v1.0.0 entry and the actual wiring now both reflect Geist Variable.
@@ -811,7 +817,7 @@ Frontend pages (14): AuditLog, CityProfile, Dashboard, DataSources, Discovery, E
 Test modules (45): test_admin, test_analytics, test_audit, test_auth, test_catalog, test_chunker, test_city_profile, test_compliance_templates, test_coverage_gaps, test_datasource_connection, test_datasources, test_department_scoping, test_departments, test_documents, test_embedder, test_exemption_dashboard, test_exemption_features, test_exemption_rules_seed, test_exemptions, test_fee_lifecycle, test_fee_schedules, test_fees, test_health, test_imap_connector, test_ingestion_retry, test_llm_client, test_manual_drop, test_messages, test_model_registry, test_notification_dispatch, test_notifications, test_onboarding_interview, test_parsers, test_pipeline, test_prompt_injection, test_requests, test_response_letter, test_roles, test_search_api, test_search_engine, test_search_features, test_service_accounts, test_smtp_delivery, test_timeline, test_user_management
 
 ## Appendix B: Bottom-Line Summary
-CivicRecords AI at v1.1.0 is a substantially complete internal staff platform. In three releases over two days, the codebase grew from an 80-test foundation to a 274-test system with department-level access control, 50-state exemption coverage, a complete notification pipeline, a central LLM client with prompt injection sanitization, fee waiver workflows, a rich text editor, macro stripping, search enhancements, coverage gap monitoring, and user management improvements.
-The system is well beyond a simple MVP: it has professional security hardening (ReDoS protection, self-demotion guards, credential safety, macro stripping), operational polish (retry, priority indicators, citation rendering, empty states), and accessibility foundations (44px touch targets, skip navigation, icon+color badges).
-What remains: public-facing portal, full active network discovery, expanded connector suite (REST API, ODBC, GIS), liaison-scoped UI completion, Tier 2/3 redaction, and a full accessibility audit (focus styles, keyboard navigation, screen reader testing).
+CivicRecords AI at v1.1.0 is a substantially complete internal staff platform. In three releases over two days, then a security remediation sprint (T2A–T3A), the codebase grew from an 80-test foundation to a 556-test system with department-level access control, 50-state exemption coverage, a complete notification pipeline, a central LLM client with prompt injection sanitization, fee waiver workflows, a rich text editor, macro stripping, search enhancements, coverage gap monitoring, user management improvements, and post-v1.1.0 auth/authz hardening across 24 department-scoped handlers, credential redaction, bootstrap hardening, and SSRF protection.
+The system is well beyond a simple MVP: it has professional security hardening (ReDoS protection, self-demotion guards, credential redaction, SSRF host validation, FIRST_ADMIN_PASSWORD validation, macro stripping), operational polish (retry, priority indicators, citation rendering, empty states), and accessibility foundations (44px touch targets, skip navigation, icon+color badges, full F1–F6 keyboard/SR audit complete).
+What remains: at-rest encryption for `connection_config` (ENG-001 / Tier 6); connector taxonomy unification (T3B); test-connection truthfulness (T3C); OpenAPI typegen (T3D); UI runtime and accessibility polish (Tier 4); first-boot truth cleanup (Tier 5); public-facing portal; full active network discovery; GIS connector. REST API and ODBC connectors shipped post-v1.1.0.
 This document (v3.1) is the single source of truth and is now the in-repo `docs/UNIFIED-SPEC.md`.
