@@ -9,7 +9,7 @@ April 13, 2026
 | Supersedes | All prior spec versions (v2.0, v2.2, v3.0, v3.0.1) |
 | Repository | github.com/scottconverse/civicrecords-ai |
 | Current release | v1.1.0 (April 13, 2026) — versions aligned across all files |
-| Test suite | 556 automated backend tests + 7 frontend tests — all passing; GitHub Actions CI-verified (run 24705180533) |
+| Test suite | 569 automated backend tests + 7 frontend tests — all passing; GitHub Actions CI-verified (run 24727777171) |
 | Method | GitHub API crawl of repo structure, README, CHANGELOG, config files, module directories, and in-repo RECONCILIATION doc |
 
 Status Legend: [IMPLEMENTED] evidenced in code, tests, and routes. [PARTIAL] present but incomplete. [UI SHELL] interface exists without full backend capability. [PLANNED] not implemented. [NEW in v1.1.0] added in current release.
@@ -65,11 +65,11 @@ Notification service: 12 templates, SMTP delivery, dispatched via PATCH dynamic 
 Operational analytics and dashboard with coverage gap indicators
 Guided onboarding with LLM-powered adaptive interview
 Municipal systems catalog (12 domains, 25+ vendors)
-Connector framework (file system, generic REST API, ODBC via pyodbc, IMAP email, manual drop)
+Connector framework (4 shipped: file_system, manual_drop, rest_api, odbc; imap_email class exists as roadmap groundwork, not registered)
 Central LLM client with context manager, token budgeting, and prompt injection sanitization
 Compliance templates (5 documents) and model registry
 Hash-chained audit logging with CSV/JSON export
-556 automated backend tests + 7 frontend tests (all passing; CI-verified)
+569 automated backend tests + 7 frontend tests (all passing; CI-verified)
 Not yet implemented: public resident portal, public search/request tracking, full active network discovery engine, cross-instance federation workflows, liaison department-scoped UI (role exists, full scoping not complete), Tier 2/3 redaction.
 
 ## 3. User Groups & RBAC
@@ -466,7 +466,7 @@ Dashboard coverage gaps — GET /admin/coverage-gaps [IMPLEMENTED]
 ### 11.2 What Is Not Yet Implemented
 Active network scanning/discovery [UI SHELL — Discovery.tsx exists as preview page]
 Automatic service fingerprinting [PLANNED]
-REST API, ODBC/JDBC, GIS, Vendor SDK connectors [PLANNED]
+GIS, Vendor SDK, IMAP email connectors [PLANNED] (REST API and ODBC shipped in T3B)
 Continuous discovery and self-healing [PLANNED]
 
 ### 11.3 Municipal Systems Catalog
@@ -675,7 +675,7 @@ The docs/ directory contains a comprehensive documentation set:
 | Department scoping and access controls | [IMPLEMENTED] |
 | 6-role RBAC hierarchy with numeric levels | [IMPLEMENTED] |
 | Onboarding / city profile / systems catalog / LLM interview | [IMPLEMENTED] |
-| Connector framework (file system, IMAP, manual drop) | [IMPLEMENTED] |
+| Connector framework (4 shipped: file_system, manual_drop, rest_api, odbc) | [IMPLEMENTED] |
 | Hybrid search with department filter, CSV export, citation rendering | [IMPLEMENTED] |
 | Request lifecycle (10 statuses) with priority indicators | [IMPLEMENTED] |
 | Fee tracking with estimation, line items, waiver workflows | [IMPLEMENTED] |
@@ -687,11 +687,11 @@ The docs/ directory contains a comprehensive documentation set:
 | Operational analytics and coverage gap dashboard | [IMPLEMENTED] |
 | Compliance templates (5 docs) and model registry | [IMPLEMENTED] |
 | Hash-chained audit logging with export | [IMPLEMENTED] |
-| 556 automated backend tests + 7 frontend tests (all passing; CI-verified, run 24705180533) | [IMPLEMENTED] |
+| 569 automated backend tests + 7 frontend tests (all passing; CI-verified, run 24727777171) | [IMPLEMENTED] |
 | Version alignment across all files | [IMPLEMENTED] |
 | WCAG: 44px touch targets, skip nav, icon+color badges | [IMPLEMENTED] |
 | Full active discovery engine | [UI SHELL / PLANNED] |
-| REST API / ODBC / GIS connectors | [PLANNED] |
+| GIS connector | [PLANNED] |
 | Public resident portal (5 pages) | [PLANNED] |
 | Federation as a full product surface | [PLANNED] |
 | Tier 2/3 redaction (NER, visual AI) | [PLANNED] |
@@ -817,7 +817,7 @@ Frontend pages (14): AuditLog, CityProfile, Dashboard, DataSources, Discovery, E
 Test modules (45): test_admin, test_analytics, test_audit, test_auth, test_catalog, test_chunker, test_city_profile, test_compliance_templates, test_coverage_gaps, test_datasource_connection, test_datasources, test_department_scoping, test_departments, test_documents, test_embedder, test_exemption_dashboard, test_exemption_features, test_exemption_rules_seed, test_exemptions, test_fee_lifecycle, test_fee_schedules, test_fees, test_health, test_imap_connector, test_ingestion_retry, test_llm_client, test_manual_drop, test_messages, test_model_registry, test_notification_dispatch, test_notifications, test_onboarding_interview, test_parsers, test_pipeline, test_prompt_injection, test_requests, test_response_letter, test_roles, test_search_api, test_search_engine, test_search_features, test_service_accounts, test_smtp_delivery, test_timeline, test_user_management
 
 ## Appendix B: Bottom-Line Summary
-CivicRecords AI at v1.1.0 is a substantially complete internal staff platform. In three releases over two days, then a security remediation sprint (T2A–T3A), the codebase grew from an 80-test foundation to a 556-test system with department-level access control, 50-state exemption coverage, a complete notification pipeline, a central LLM client with prompt injection sanitization, fee waiver workflows, a rich text editor, macro stripping, search enhancements, coverage gap monitoring, user management improvements, and post-v1.1.0 auth/authz hardening across 24 department-scoped handlers, credential redaction, bootstrap hardening, and SSRF protection.
+CivicRecords AI at v1.1.0 is a substantially complete internal staff platform. In three releases over two days, then a security remediation sprint (T2A–T3A), the codebase grew from an 80-test foundation to a 569-test system (556 at T2A–T3A close; 13 net added by T3B/T3C) with department-level access control, 50-state exemption coverage, a complete notification pipeline, a central LLM client with prompt injection sanitization, fee waiver workflows, a rich text editor, macro stripping, search enhancements, coverage gap monitoring, user management improvements, and post-v1.1.0 auth/authz hardening across 24 department-scoped handlers, credential redaction, bootstrap hardening, and SSRF protection.
 The system is well beyond a simple MVP: it has professional security hardening (ReDoS protection, self-demotion guards, credential redaction, SSRF host validation, FIRST_ADMIN_PASSWORD validation, macro stripping), operational polish (retry, priority indicators, citation rendering, empty states), and accessibility foundations (44px touch targets, skip navigation, icon+color badges, full F1–F6 keyboard/SR audit complete).
-What remains: at-rest encryption for `connection_config` (ENG-001 / Tier 6); connector taxonomy unification (T3B); test-connection truthfulness (T3C); OpenAPI typegen (T3D); UI runtime and accessibility polish (Tier 4); first-boot truth cleanup (Tier 5); public-facing portal; full active network discovery; GIS connector. REST API and ODBC connectors shipped post-v1.1.0.
+What remains: at-rest encryption for `connection_config` (ENG-001 / Tier 6); OpenAPI typegen (T3D); UI runtime and accessibility polish (Tier 4); first-boot truth cleanup (Tier 5); public-facing portal; full active network discovery; GIS connector. Connector taxonomy unification (T3B) and test-connection truthfulness (T3C) are complete as of CI run 24727777171 (569 tests, 0 failures).
 This document (v3.1) is the single source of truth and is now the in-repo `docs/UNIFIED-SPEC.md`.
