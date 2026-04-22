@@ -52,6 +52,16 @@ export function formatNextRun(cron: string): string {
   }
 }
 
+// Source-type choices for the Step 1 radiogroup. Declared at module scope so
+// the keyboard handler can index into the list to move selection with arrow
+// keys without re-deriving the order inside the render.
+const SOURCE_TYPES: { type: string; icon: typeof FolderOpen; label: string }[] = [
+  { type: "file_system", icon: FolderOpen, label: "File System" },
+  { type: "manual_drop", icon: Upload, label: "Manual Drop" },
+  { type: "rest_api", icon: Globe, label: "REST API" },
+  { type: "odbc", icon: Database, label: "ODBC / Database" },
+];
+
 const SCHEDULE_PRESETS: { label: string; cron: string | null }[] = [
   { label: "Every 15 minutes", cron: "*/15 * * * *" },
   { label: "Every 30 minutes", cron: "*/30 * * * *" },
@@ -424,21 +434,49 @@ export default function DataSources({ token }: { token: string }) {
                         aria-labelledby="ds-type-label"
                         className="grid grid-cols-3 gap-2 mt-2"
                       >
-                        {[
-                          { type: "file_system", icon: FolderOpen, label: "File System" },
-                          { type: "manual_drop", icon: Upload, label: "Manual Drop" },
-                          { type: "rest_api", icon: Globe, label: "REST API" },
-                          { type: "odbc", icon: Database, label: "ODBC / Database" },
-                        ].map(({ type, icon: Icon, label }) => {
+                        {SOURCE_TYPES.map(({ type, icon: Icon, label }, idx) => {
                           const selected = formData.sourceType === type;
                           return (
                             <button
                               key={type}
+                              id={`ds-type-${type}`}
                               type="button"
                               role="radio"
                               aria-checked={selected}
                               tabIndex={selected ? 0 : -1}
                               onClick={() => setFormData({ ...formData, sourceType: type })}
+                              onKeyDown={(e) => {
+                                // WAI-ARIA radiogroup keyboard pattern: Arrow keys and
+                                // Home/End move selection (and focus) within the group.
+                                // Selected radio is the single tab stop — arrow keys
+                                // navigate inside the group without leaving it.
+                                let nextIndex = idx;
+                                switch (e.key) {
+                                  case "ArrowRight":
+                                  case "ArrowDown":
+                                    nextIndex = (idx + 1) % SOURCE_TYPES.length;
+                                    break;
+                                  case "ArrowLeft":
+                                  case "ArrowUp":
+                                    nextIndex = (idx - 1 + SOURCE_TYPES.length) % SOURCE_TYPES.length;
+                                    break;
+                                  case "Home":
+                                    nextIndex = 0;
+                                    break;
+                                  case "End":
+                                    nextIndex = SOURCE_TYPES.length - 1;
+                                    break;
+                                  default:
+                                    return;
+                                }
+                                e.preventDefault();
+                                const nextType = SOURCE_TYPES[nextIndex].type;
+                                setFormData((prev) => ({ ...prev, sourceType: nextType }));
+                                // Move focus so activation follows focus — required for
+                                // screen readers to announce the new selection.
+                                const nextEl = document.getElementById(`ds-type-${nextType}`);
+                                nextEl?.focus();
+                              }}
                               className={`p-3 rounded-lg border text-center transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
                             >
                               <Icon className="h-5 w-5 mx-auto mb-1" />

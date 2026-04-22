@@ -117,6 +117,85 @@ describe("DataSources — Add Source wizard accessibility + validation (T4C)", (
     expect(nameInput.getAttribute("aria-invalid")).toBeNull();
   });
 
+  it("Source Type radiogroup: ArrowRight on selected radio flips aria-checked and moves the tab stop", async () => {
+    await openWizard();
+
+    const fileSystem = screen.getByRole("radio", { name: /file system/i });
+    const manualDrop = screen.getByRole("radio", { name: /manual drop/i });
+
+    // Initial state: File System is the single tab stop.
+    expect(fileSystem.getAttribute("aria-checked")).toBe("true");
+    expect(fileSystem.getAttribute("tabindex")).toBe("0");
+    expect(manualDrop.getAttribute("aria-checked")).toBe("false");
+    expect(manualDrop.getAttribute("tabindex")).toBe("-1");
+
+    // Dispatch ArrowRight on the currently-selected radio.
+    await act(async () => {
+      fireEvent.keyDown(fileSystem, { key: "ArrowRight" });
+    });
+
+    // Handler must run and change selection. This is keyboard-driven state
+    // (not a click) — the only way aria-checked could have moved is via the
+    // onKeyDown we wired.
+    expect(fileSystem.getAttribute("aria-checked")).toBe("false");
+    expect(manualDrop.getAttribute("aria-checked")).toBe("true");
+
+    // Roving tabindex must follow selection — otherwise the next Tab would
+    // skip the group or revisit the wrong radio.
+    expect(fileSystem.getAttribute("tabindex")).toBe("-1");
+    expect(manualDrop.getAttribute("tabindex")).toBe("0");
+
+    // Newly-selected radio must be a real focusable element (id set so the
+    // handler's document.getElementById().focus() had a real target).
+    expect(manualDrop.id).toBe("ds-type-manual_drop");
+  });
+
+  it("Source Type radiogroup: ArrowLeft wraps from first → last; End jumps to last; ArrowDown/ArrowUp behave like Right/Left", async () => {
+    await openWizard();
+    const fileSystem = screen.getByRole("radio", { name: /file system/i });
+    const manualDrop = screen.getByRole("radio", { name: /manual drop/i });
+    const odbc = screen.getByRole("radio", { name: /odbc \/ database/i });
+
+    // ArrowLeft from index 0 wraps to last.
+    await act(async () => {
+      fireEvent.keyDown(fileSystem, { key: "ArrowLeft" });
+    });
+    expect(odbc.getAttribute("aria-checked")).toBe("true");
+    expect(odbc.getAttribute("tabindex")).toBe("0");
+
+    // End jumps to last (already there, but also from a non-last position).
+    await act(async () => {
+      fireEvent.keyDown(odbc, { key: "Home" });
+    });
+    expect(fileSystem.getAttribute("aria-checked")).toBe("true");
+    await act(async () => {
+      fireEvent.keyDown(fileSystem, { key: "End" });
+    });
+    expect(odbc.getAttribute("aria-checked")).toBe("true");
+
+    // ArrowUp behaves like ArrowLeft (navigates backward through the group).
+    await act(async () => {
+      fireEvent.keyDown(odbc, { key: "ArrowUp" });
+    });
+    // One step back from ODBC (index 3) is REST API (index 2).
+    const restApi = screen.getByRole("radio", { name: /rest api/i });
+    expect(restApi.getAttribute("aria-checked")).toBe("true");
+
+    // ArrowDown behaves like ArrowRight.
+    await act(async () => {
+      fireEvent.keyDown(restApi, { key: "ArrowDown" });
+    });
+    expect(odbc.getAttribute("aria-checked")).toBe("true");
+
+    // Non-navigation keys are ignored (no state change).
+    await act(async () => {
+      fireEvent.keyDown(odbc, { key: "a" });
+    });
+    expect(odbc.getAttribute("aria-checked")).toBe("true");
+    expect(fileSystem.getAttribute("aria-checked")).toBe("false");
+    expect(manualDrop.getAttribute("aria-checked")).toBe("false");
+  });
+
   it("step 2 Directory Path: blocks Next with an actionable role=alert error", async () => {
     await openWizard();
 
