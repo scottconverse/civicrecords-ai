@@ -26,7 +26,7 @@ jobs:
     name: Build Windows installer (unsigned)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Inno Setup
         run: choco install innosetup -y
@@ -93,7 +93,7 @@ jobs:
           cat "build/${BASENAME}.sha256"
 
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-installer
           path: |
@@ -105,9 +105,9 @@ jobs:
     needs: [build-windows-installer]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts/
 

@@ -40,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate hermetic .env for the compose stack
         # docker-compose.yml reads env_file: .env. We synthesize a minimal,
@@ -160,7 +160,7 @@ jobs:
 
       - name: Upload logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-logs-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -190,7 +190,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Synthesize a placeholder-password .env (the failure-mode env)
         # Set FIRST_ADMIN_PASSWORD to the exact .env.example value. JWT_SECRET
@@ -263,7 +263,7 @@ jobs:
 
       - name: Upload bootstrap logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bootstrap-failure-logs-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -293,11 +293,11 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node 22
         # Matches the declared prerequisite in CONTRIBUTING.md ("Node.js 22+").
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
