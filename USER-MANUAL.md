@@ -159,7 +159,7 @@ Exemption detection finds content that may be legally protected from release —
 When the system analyzes a document, it may produce flags:
 
 - **Tier 1 — Pattern matches:** Social Security numbers, credit card numbers, phone numbers, email addresses, bank account numbers, and driver's license formats (all 50 states and DC).
-- **Tier 2 — Statutory keywords:** Phrases matching exemption language in your state's open records law (180 rules covering all 50 states and DC).
+- **Tier 2 — Statutory keywords:** Phrases matching exemption language in your state's open records law — **175 state-scoped rules across 51 jurisdictions** (50 states + DC), auto-seeded on first boot by T5B. The seed source additionally defines 5 universal PII rules (180 total in `STATE_RULES_REGISTRY`) that are **not** currently seeded automatically because they lack a two-letter `state_code`; those are deferred pending a schema relaxation.
 - **Tier 3 — LLM review (optional):** If enabled, an AI model reviews flagged content and adds context.
 
 ### Reviewing a Flag
@@ -267,9 +267,14 @@ This means the system lost connection to that data source after repeated failure
 
 ## B.2 Installation
 
-> **Current install path — script-based setup scripts.** The scripts below configure and launch the Docker Compose stack. They do not install Docker Desktop, Docker Engine, WSL, or any other system prerequisite — those must be present before the scripts run. If Docker is not installed, the scripts will fail with a clear error and you must install Docker manually before retrying.
+There are two supported install paths. Pick the one that matches your platform and how you prefer to install software.
+
+> **Install paths currently shipped:**
 >
-> **Planned — T5E (full-spectrum installer):** A future release will provide a downloadable guided installer that checks hardware compatibility, installs Docker and WSL where needed, verifies Ollama and Gemma 4 viability, and produces a truthful ready/not-ready result before claiming the system is operational. Until T5E ships, this script-based path is the only supported install method.
+> 1. **Windows double-click installer (T5E, UNSIGNED).** A real `.exe` installer built with Inno Setup 6.x is produced on every `v*` tag and published to GitHub Releases as `CivicRecordsAI-<version>-Setup.exe`. **It is unsigned by design for this release** (Scott-locked B3=α posture) — Windows SmartScreen will show "Windows protected your PC — Unknown publisher." on first run. Click **More info → Run anyway** to proceed. A SHA-256 checksum is published alongside each release asset for independent verification. The installer bundles the repo snapshot, runs a prerequisite check (Docker Desktop, WSL 2 + Virtual Machine Platform, 32 GB RAM floor, optional host Ollama), then runs `install.ps1` through `launch-install.ps1`. See [`installer/windows/README.md`](installer/windows/README.md) for the full SmartScreen walkthrough, the split Start/Install shortcut model, and checksum-verify steps.
+> 2. **Script-based install (macOS / Linux — and Windows if you prefer CLI).** The scripts below configure and launch the Docker Compose stack. They do **not** install Docker Desktop, Docker Engine, WSL, or any other system prerequisite — those must be present before the scripts run. If Docker is not installed, the scripts fail with a clear error and you must install Docker manually before retrying.
+>
+> **Cross-platform parity:** No native installer ships for macOS or Linux. That parity is explicit follow-on work and is not scheduled. macOS and Linux operators use the script path below.
 
 **Before you begin — prerequisites:**
 
@@ -278,7 +283,9 @@ This means the system lost connection to that data source after repeated failure
 2. Ensure Docker is running (you should see the Docker icon in your taskbar/menu bar, or `docker info` returns without error).
 3. Confirm system requirements: 8+ CPU cores, 32 GB RAM, 50 GB free disk.
 
-**Windows:**
+**Windows (double-click installer):** Download `CivicRecordsAI-<version>-Setup.exe` from the [GitHub Releases page](https://github.com/scottconverse/civicrecords-ai/releases) for the tag you want, double-click it, acknowledge the SmartScreen "Unknown publisher" prompt (expected — see above), and follow the installer prompts. On first launch the installer automatically runs the full bootstrap (prereq check → model pull → first-boot seed).
+
+**Windows (script path):**
 ```powershell
 git clone https://github.com/scottconverse/civicrecords-ai.git
 cd civicrecords-ai
@@ -293,12 +300,13 @@ bash install.sh
 ```
 
 The installer:
-1. Creates `.env` from `.env.example` (prompts for required values)
+1. Creates `.env` from `.env.example` (prompts for required values; generates a strong admin password when run interactively)
 2. Pulls Docker images (~8–12 GB first time)
-3. Pulls the Ollama model (`nomic-embed-text` always; `gemma4` or your configured model)
+3. Pulls `nomic-embed-text` and the Gemma 4 tag you select in the 4-model picker (default `gemma4:e4b`)
 4. Starts all 7 Docker Compose services
 5. Runs database migrations
 6. Creates the initial admin account
+7. **First-boot seed (T5B):** on the very first boot, `app/main.lifespan` auto-seeds 175 state-scoped exemption rules across 51 jurisdictions, 5 compliance templates, and 12 notification templates. The seed is idempotent — a subsequent boot reports `created=0, skipped=175/5/12` and preserves any admin customizations.
 
 After installation, open `http://localhost:8080` in your browser.
 

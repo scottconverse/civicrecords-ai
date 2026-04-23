@@ -39,7 +39,7 @@ Staff corollary: Any records clerk should be able to triage, search, review, red
 Not a records management system — it indexes and searches what already exists.
 Not a legal advisor — it surfaces suggestions, staff make all decisions.
 Not a cloud service — every deployment is a sovereign instance owned by the city.
-Not a public-facing portal yet — internal staff tool first. Public portal is [PLANNED].
+Not a full public-facing portal. A minimal public surface ships in T5D behind the `PORTAL_MODE=public` install-time switch (landing page + resident-registration + records-request submission form, Option A authenticated-submission only). Broader public features — resident dashboard, published-records search, track-my-request — remain [PLANNED]. See §4.2 and §8.9.
 
 ### 2.4 Design Stance & Principles
 Transparent, calm, accessible, and government-appropriate. Trust through clarity, not visual excitement.
@@ -69,8 +69,9 @@ Connector framework (4 shipped: file_system, manual_drop, rest_api, odbc; imap_e
 Central LLM client with context manager, token budgeting, and prompt injection sanitization
 Compliance templates (5 documents) and model registry
 Hash-chained audit logging with CSV/JSON export
-569 automated backend tests + 7 frontend tests (all passing; CI-verified)
-Not yet implemented: public resident portal, public search/request tracking, full active network discovery engine, cross-instance federation workflows, liaison department-scoped UI (role exists, full scoping not complete), Tier 2/3 redaction.
+593 automated backend tests + 36 frontend tests (all passing; CI-verified, run 24817110396 on `a57a897`)
+Post-v1.1.0 Tier 5 additions (2026-04-22/23): onboarding interview persistence with `has_dedicated_it` + `onboarding_status` lifecycle (T5A `1782573`); first-boot baseline seeding of 175 state-scoped exemption rules across 51 jurisdictions + 5 compliance templates + 12 notification templates, idempotent (T5B `61449c5`); 4-model Gemma 4 installer picker (`gemma4:e2b`, `gemma4:e4b` default, `gemma4:26b`, `gemma4:31b`) purging fake `gemma4:12b` / `gemma4:27b` tags (T5C `7721cf0`); `PORTAL_MODE=public|private` install-time switch + minimal public surface — landing, resident-registration, authenticated records-request submission (T5D `a57a897`); Windows unsigned double-click installer via Inno Setup 6.x with Start-vs-Install flow split and tag-derived version sourcing (T5E `1d5429d`).
+Not yet implemented: published-records search, resident dashboard, track-my-request suite, full active network discovery engine, cross-instance federation workflows, macOS/Linux native installer (script path only), Tier 2/3 redaction, signed Windows installer (α posture locked).
 
 ## 3. User Groups & RBAC
 
@@ -83,12 +84,14 @@ Not yet implemented: public resident portal, public search/request tracking, ful
 | Legal / reviewer | Review exemptions, redactions, and sensitive material. | Review queue, exemption tags, redaction ledger, approval state. |
 | City IT administrator | Install, configure, and maintain the system. | Docker Compose, admin panel, model management, audit export. |
 
-### 3.2 Public Users [PLANNED]
+### 3.2 Public Users [PARTIAL — T5D minimal surface shipped 2026-04-23]
 
-| User Group | Primary Need | Design Response |
-|---|---|---|
-| Resident / first-time requester | Submit a request without knowing the exact record title. | Guided request flow, plain-language examples, estimated turnaround. |
-| Journalist / researcher | Search existing records and request additional material. | Robust search, saved filters, exportable results, request history. |
+Public-mode deployments (`PORTAL_MODE=public`) expose the minimum-viable resident surface shipped in T5D. Broader journalist/research workflows remain [PLANNED] and are not implied by the minimal surface.
+
+| User Group | Primary Need | Design Response | Status |
+|---|---|---|---|
+| Resident / first-time requester | Submit a request without knowing the exact record title. | Guided request flow, plain-language examples, estimated turnaround. | [PARTIAL — T5D ships authenticated submission (register → sign in → submit). Guided scope helper and plain-language category picker remain [PLANNED].] |
+| Journalist / researcher | Search existing records and request additional material. | Robust search, saved filters, exportable results, request history. | [PLANNED — no published-records search or public search filters shipped in T5D.] |
 
 ### 3.3 RBAC Role Hierarchy [IMPLEMENTED]
 All 6 roles are defined in UserRole enum with a numeric hierarchy. Role hierarchy enforced via `require_department_scope`, `require_department_or_404`, `require_department_filter`, and role-threshold checks on endpoints. (`check_department_access` was removed in T2A-cleanup — all callers migrated to the fail-closed helpers.)
@@ -100,7 +103,7 @@ All 6 roles are defined in UserRole enum with a numeric hierarchy. Role hierarch
 | staff | 4 | Request management, search, ingestion, exemption review, fee management | [IMPLEMENTED] |
 | liaison | 3 | Department-scoped via check_department_access(); can view department resources but cannot create requests or manage exemptions | [IMPLEMENTED] |
 | read_only | 2 | View dashboards and reports only | [IMPLEMENTED] |
-| public | 1 | Submit requests, track own requests, search published records | [IMPLEMENTED — role defined, no public endpoints yet] |
+| public | 1 | Submit requests (T5D), track own requests [PLANNED], search published records [PLANNED] | [IMPLEMENTED (partial) — T5D (`a57a897`) adds authenticated `POST /public/requests` (`UserRole.PUBLIC` only) + `GET /config/portal-mode`. Resident dashboard + track-my-request UI + published-records search are not shipped.] |
 
 Service accounts with hashed API keys (SHA-256) enable instance-to-instance federation access.
 
@@ -126,16 +129,19 @@ The frontend/src/pages/ directory contains 14 .tsx files:
 | Audit Log | Audit event viewer with authenticated CSV/JSON export | [IMPLEMENTED] |
 | Login | JWT authentication | [IMPLEMENTED] |
 
-### 4.2 Public Portal [PLANNED]
-No public-facing pages exist in the repository. Target design for future implementation:
+### 4.2 Public Portal [PARTIAL — T5D minimal surface shipped 2026-04-23]
+
+T5D ships the minimal public surface (3 pages) under Scott-locked B4=(b) + Option A (register-first, authenticated submission). Broader public-portal pages remain [PLANNED] and are not implied by the T5D scope. When `PORTAL_MODE=private` (the default), none of these pages are reachable — the login screen is the only externally reachable surface.
 
 | Page | Purpose | Status |
 |---|---|---|
-| Home | Search bar, common categories, response-time guidance | [PLANNED] |
-| Search Records | Published records index with filters | [PLANNED] |
-| Make a Request | Guided intake wizard with scope helper | [PLANNED] |
-| Track a Request | Public timeline, messages, delivered files, fees | [PLANNED] |
-| Help & Policy | Open records law summary, fee schedule, exemptions, contact | [PLANNED] |
+| Public Landing (`/public`) | Minimal calm landing page explaining the public surface and routing residents to register/submit | [IMPLEMENTED — T5D (`a57a897`). `frontend/src/pages/PublicLanding.tsx`.] |
+| Resident Registration (`/public/register`) | Self-service account creation. `UserCreate.force_public_role` guarantees `UserRole.PUBLIC` assignment regardless of client-supplied role. | [IMPLEMENTED — T5D (`a57a897`). `frontend/src/pages/PublicRegister.tsx`.] |
+| Records-Request Submission (`/public/submit`) | Authenticated submission form posting to `POST /public/requests`. Staff roles receive 403 here. | [IMPLEMENTED — T5D (`a57a897`). `frontend/src/pages/PublicSubmit.tsx`.] |
+| Home / published records landing | Search bar, common categories, response-time guidance | [PLANNED — out of T5D scope.] |
+| Search Records | Published records index with filters | [PLANNED — out of T5D scope.] |
+| Track a Request | Public timeline, messages, delivered files, fees | [PLANNED — out of T5D scope.] |
+| Help & Policy | Open records law summary, fee schedule, exemptions, contact | [PLANNED — out of T5D scope.] |
 
 ### 4.3 Navigation Rules
 Staff workbench: Sidebar navigation (240px fixed, 56px header). Grouped sections: Workflow / Setup / Administration. Active page highlighted with left border accent.
@@ -803,13 +809,17 @@ The docs/ directory contains a comprehensive documentation set:
 | Operational analytics and coverage gap dashboard | [IMPLEMENTED] |
 | Compliance templates (5 docs) and model registry | [IMPLEMENTED] |
 | Hash-chained audit logging with export | [IMPLEMENTED] |
-| 569 automated backend tests + 7 frontend tests (all passing; CI-verified, run 24727777171) | [IMPLEMENTED] |
+| 593 automated backend tests + 36 frontend tests (all passing; CI-verified, run 24817110396 on `a57a897`) | [IMPLEMENTED] |
 | Version alignment across all files | [IMPLEMENTED] |
 | WCAG: 44px touch targets, skip nav, icon+color badges | [IMPLEMENTED] |
+| Onboarding interview persists answers + `has_dedicated_it` + `onboarding_status` lifecycle + skip-truth | [IMPLEMENTED — T5A, 2026-04-22 at `1782573`. See §5.2 `onboarding`.] |
+| First-boot baseline seeding: 175 state-scoped exemption rules across 51 jurisdictions + 5 compliance templates + 12 notification templates, idempotent, visibly logged | [IMPLEMENTED — T5B, 2026-04-22 at `61449c5`. See §8.7.] |
+| 4-model Gemma 4 installer picker (`gemma4:e2b`, `gemma4:e4b` default, `gemma4:26b`, `gemma4:31b`) with per-model disk/RAM advisories and `supportable_against_target` boolean; fake `gemma4:12b` and `gemma4:27b` tags purged repo-wide | [IMPLEMENTED — T5C, 2026-04-22 at `7721cf0`.] |
+| `PORTAL_MODE=public\|private` install-time switch with conditional `/auth/register` and `/public/*` route mounting + typed `GET /config/portal-mode` | [IMPLEMENTED — T5D, 2026-04-23 at `a57a897`. See §8.9.] |
 | Full active discovery engine | [UI SHELL / PLANNED] |
 | Full-spectrum guided installer: Windows unsigned double-click installer (Inno Setup 6.x) with prerequisite detection (Docker Desktop, WSL 2, 32 GB RAM floor, optional host Ollama), split Start-vs-Install shortcuts, tag-derived version sourcing, T5C 4-model Gemma 4 picker + auto-pull, and T5B first-boot baseline seeding | [IMPLEMENTED — T5E, 2026-04-22. Windows only; macOS/Linux remain on script-based install (`install.sh`). Unsigned by design per Scott-locked B3=α posture. See §8.8 and `installer/windows/README.md`.] |
 | GIS connector | [PLANNED] |
-| Public resident portal (5 pages) | [PLANNED] |
+| Public resident portal — minimal surface (landing + resident-registration + records-request submission form) behind `PORTAL_MODE=public` install-time switch (Option A register-first; authenticated `UserRole.PUBLIC` only) | [IMPLEMENTED — T5D, 2026-04-23 at `a57a897`. Scope is minimal (3 public pages); resident dashboard, published-records search, and track-my-request remain PLANNED. See §8.9.] |
 | Federation as a full product surface | [PLANNED] |
 | Tier 2/3 redaction (NER, visual AI) | [PLANNED] |
 | Redaction ledger | [PLANNED] |
@@ -936,7 +946,23 @@ Frontend pages (14): AuditLog, CityProfile, Dashboard, DataSources, Discovery, E
 Test modules (45): test_admin, test_analytics, test_audit, test_auth, test_catalog, test_chunker, test_city_profile, test_compliance_templates, test_coverage_gaps, test_datasource_connection, test_datasources, test_department_scoping, test_departments, test_documents, test_embedder, test_exemption_dashboard, test_exemption_features, test_exemption_rules_seed, test_exemptions, test_fee_lifecycle, test_fee_schedules, test_fees, test_health, test_imap_connector, test_ingestion_retry, test_llm_client, test_manual_drop, test_messages, test_model_registry, test_notification_dispatch, test_notifications, test_onboarding_interview, test_parsers, test_pipeline, test_prompt_injection, test_requests, test_response_letter, test_roles, test_search_api, test_search_engine, test_search_features, test_service_accounts, test_smtp_delivery, test_timeline, test_user_management
 
 ## Appendix B: Bottom-Line Summary
-CivicRecords AI at v1.1.0 is a substantially complete internal staff platform. In three releases over two days, then a security remediation sprint (T2A–T3A), the codebase grew from an 80-test foundation to a 569-test system (556 at T2A–T3A close; 13 net added by T3B/T3C) with department-level access control, 50-state exemption coverage, a complete notification pipeline, a central LLM client with prompt injection sanitization, fee waiver workflows, a rich text editor, macro stripping, search enhancements, coverage gap monitoring, user management improvements, and post-v1.1.0 auth/authz hardening across 24 department-scoped handlers, credential redaction, bootstrap hardening, and SSRF protection.
+CivicRecords AI at v1.1.0 (plus the full Tier 5 post-release sweep) is a substantially complete internal staff platform with a minimal public surface and a real Windows double-click installer. From an 80-test foundation at v0.1.0 the codebase has grown to **593 automated backend tests + 36 frontend tests** (CI-verified, run [24817110396](https://github.com/scottconverse/civicrecords-ai/actions/runs/24817110396) on `a57a897`, all 3 required jobs green) with department-level access control, 50-state exemption coverage, a complete notification pipeline, a central LLM client with prompt injection sanitization, fee waiver workflows, a rich text editor, macro stripping, search enhancements, coverage gap monitoring, user management improvements, post-v1.1.0 auth/authz hardening across 24 department-scoped handlers, credential redaction, bootstrap hardening, and SSRF protection.
+
 The system is well beyond a simple MVP: it has professional security hardening (ReDoS protection, self-demotion guards, credential redaction, SSRF host validation, FIRST_ADMIN_PASSWORD validation, macro stripping), operational polish (retry, priority indicators, citation rendering, empty states), and accessibility foundations (44px touch targets, skip navigation, icon+color badges, full F1–F6 keyboard/SR audit complete).
-What remains: at-rest encryption for `connection_config` (ENG-001 / Tier 6); public-facing portal (T5D portal-switch posture locked B4=(b) minimal public surface, held until T5E commits); full active network discovery; GIS connector; cross-platform native installer parity for macOS/Linux (follow-on to T5E, not scheduled). Connector taxonomy unification (T3B) and test-connection truthfulness (T3C) are complete as of CI run 24727777171 (569 tests, 0 failures). OpenAPI typegen (T3D) and UI runtime + responsive AppShell + accessible Add Source wizard + Dashboard/Settings service-health fix (Tier 4 — T4A, T4B, T4C) are implemented locally post that CI run and verified via vitest (19/19 frontend tests pass, zero React ref warnings) plus browser QA at 480×900 and 1280×900. Tier 5 installer slices (T5A onboarding, T5B first-boot seed, T5C Gemma 4 picker, T5E Windows unsigned installer) are all implemented; T5A/T5B/T5C/T3D regen are pushed, T5E is in the working tree awaiting commit (unsigned by design per Scott-locked B3=α posture). The first-boot truth cleanup promised in earlier revisions is covered by T5B baseline seeding — §8.7.
+
+**Tier 5 status — FULLY SHIPPED (2026-04-22/23):** all five slices pushed to `origin/master` and individually CI-verified. T5C Gemma 4 tag purge + 4-model installer picker (`7721cf0`). T5A onboarding persistence + `has_dedicated_it` + `onboarding_status` lifecycle + skip-truth (`1782573`). T5B first-boot baseline seeding — 175 state-scoped exemption rules + 5 compliance templates + 12 notification templates, idempotent, visibly logged (`61449c5`). T5D `PORTAL_MODE=public|private` install-time switch + minimal public surface under Scott-locked B4=(b) + Option A register-first (`a57a897`). T5E Windows unsigned double-click installer via Inno Setup 6.x with Start-vs-Install flow split and tag-derived version sourcing (`1d5429d`; CI-flake fix `e898319`). T3D regen after T5A schema change (`bf3c9c3`). CI workflow Node 20 runtime bump (`5dbeed7`). All slices shipped under Hard Rule 9 (six-artifact doc gate) with matching CHANGELOG + README + USER-MANUAL + docs/index.html updates in the same commit.
+
+**What remains (not in Tier 5 scope, intentionally deferred):**
+- **Tier 6 — at-rest encryption for `data_sources.connection_config` (ENG-001).** STILL OPEN and HELD. T2B runtime exposure is closed; at-rest plaintext storage remains. Required to fully close ENG-001. Not authorized to start.
+- **Cross-platform native installer parity for macOS/Linux.** Follow-on to T5E; not scheduled. macOS/Linux remain on the script path (`install.sh`).
+- **Signed Windows installer.** Scott-locked B3=α (unsigned by design for this slice). Signing is not a deferred Tier 5 item; it is explicitly out of the T5E slice. Any future signing work would be a new decision.
+- **Public-portal expansion beyond B4=(b).** Published-records search, resident dashboard, track-my-request suite are all PLANNED and explicitly out of the T5D minimal surface. Expansion requires explicit Scott re-scoping.
+- **Full active network discovery engine.**
+- **GIS connector.**
+- **Cross-instance federation workflows** (role + service-account primitives exist; full product surface PLANNED).
+- **Tier 2/3 redaction** (NER, visual AI).
+- **CI hygiene — GitHub Actions Node 20 deprecation follow-through.** `5dbeed7` landed the workflow action bumps; the runner-side Node 20 → Node 24 default flip on 2026-06-02 must be clean by that date.
+
+The standing caveat remains: **the `[Unreleased]` CHANGELOG section is not yet cut to a versioned release.** Tagging `v1.2.0` is a separate decision after the Tier 5 truth/docs sweep lands. Do not interpret this sweep or any single post-release commit as `v1.2.0`.
+
 This document (v3.1) is the single source of truth and is now the in-repo `docs/UNIFIED-SPEC.md`.

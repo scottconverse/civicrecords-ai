@@ -1,8 +1,18 @@
 # CivicRecords AI - Remediation Plan
 
-**Date:** 2026-04-19  
-**Scope:** Merge the two audit streams into one execution plan for current `master` without overstating what is already proven.  
-**Status:** Drafted for execution sequencing, not final sign-off.
+> **CLOSED — 2026-04-23.** All tiers planned in this document have either shipped or been deliberately deferred under explicit decisions. Canonical status and forward-looking scope now live in [`docs/UNIFIED-SPEC.md`](UNIFIED-SPEC.md) (Appendix B: Bottom-Line Summary). This file is retained for historical reference only — do not treat any remaining "planned" language below as an open commitment.
+>
+> **Shipped against this plan:** T0 GitHub token → scoped + swept clean. T1 CI ratchet → merged PR #14. T2A auth/authz sweep → merged PRs #17/#18/#19. T2B DataSource runtime redaction → merged PR #20 (at-rest encryption deferred as Tier 6 / ENG-001, explicitly HELD). T2C bootstrap hardening → merged PR #21. T3A admin user creation path → merged PR #22. T3B connector taxonomy → closed at `abf1f77`. T3C test-connection correctness → included in `dc4e45c`. T3D OpenAPI typegen → closed at `8385130`, regenerated at `bf3c9c3` after T5A schema change. Tier 4 responsive AppShell + Dashboard/Settings service-health fix + Add Source wizard a11y + UX-001 radiogroup keyboard + QA-001 Settings truth → closed on remote at `0457947` (CI 24755065796 green). Tier 5 (T5A onboarding persistence, T5B first-boot baseline seeding, T5C Gemma 4 tag purge + 4-model installer picker, T5D `PORTAL_MODE` install-time switch + minimal public surface, T5E Windows unsigned double-click installer via Inno Setup 6.x) — all five slices pushed and CI-verified individually, end-of-tier truth/docs sweep landed 2026-04-23. CI run [24817110396](https://github.com/scottconverse/civicrecords-ai/actions/runs/24817110396) on `a57a897`: all 3 required jobs green.
+>
+> **Deferred (explicit decisions, not in scope of this remediation plan):** Tier 6 at-rest encryption for `data_sources.connection_config` (HELD — ENG-001 not fully closed until this lands); signed Windows installer (T5E locked B3=α unsigned); broader public portal beyond T5D minimal surface (locked B4=(b)); macOS/Linux native installer parity (follow-on to T5E); published-records search; resident dashboard; track-my-request suite; full active network discovery; GIS connector; cross-instance federation as a full product surface; Tier 2/3 redaction engine.
+>
+> For current repo state see [`docs/UNIFIED-SPEC.md`](UNIFIED-SPEC.md) §15 (Release History), §16 (Capability Summary), and Appendix B.
+
+---
+
+**Date:** 2026-04-19
+**Scope:** Merge the two audit streams into one execution plan for current `master` without overstating what is already proven.
+**Status:** CLOSED 2026-04-23 — see banner above. (Historical: "Drafted for execution sequencing, not final sign-off.")
 
 ---
 
