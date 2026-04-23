@@ -126,7 +126,16 @@ mkdir -p "$REPO_ROOT/build"
 # ─── Compile the installer ────────────────────────────────────────────────
 echo ""
 echo "Compiling installer…"
-"$ISCC" "/DMyAppVersion=$APP_VERSION" "$REPO_ROOT/installer/windows/civicrecords-ai.iss"
+# MSYS / Git-Bash on Windows auto-converts arguments that start with "/" to
+# Windows paths before passing them to native binaries. That heuristic
+# mangles "/DMyAppVersion=…" (treats the leading /D as a Windows drive
+# root and splits on = / :), and ISCC then sees two positional arguments
+# and errors with "You may not specify more than one script filename."
+# Fix: pre-convert the .iss path to Windows form with cygpath, then turn
+# path conversion off for the single ISCC invocation so "/DMyAppVersion=…"
+# arrives verbatim.
+ISS_SCRIPT_WIN="$(cygpath -w "$REPO_ROOT/installer/windows/civicrecords-ai.iss")"
+MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' "$ISCC" "/DMyAppVersion=$APP_VERSION" "$ISS_SCRIPT_WIN"
 
 # OutputBaseFilename in the .iss is CivicRecordsAI-{#MyAppVersion}-Setup,
 # so the expected artifact name below is derived from the same resolved
