@@ -1008,6 +1008,6 @@ The system is well beyond a simple MVP: it has professional security hardening (
 - **Tier 2/3 redaction** (NER, visual AI).
 - **CI hygiene — GitHub Actions Node 20 deprecation follow-through.** `5dbeed7` landed the workflow action bumps; the runner-side Node 20 → Node 24 default flip on 2026-06-02 must be clean by that date.
 
-The standing caveat remains: **the `[Unreleased]` CHANGELOG section is not yet cut to a versioned release.** Tagging `v1.2.0` is a separate decision after the Tier 5 truth/docs sweep lands. Do not interpret this sweep or any single post-release commit as `v1.2.0`.
+**Release state:** `v1.2.0` was cut on 2026-04-23 at commit `cc06abc` (initial release-prep landed at `0b404c4`; two release-pipeline corrections `673e140` + `cc06abc` followed before the tag produced a clean unsigned Windows installer). The GitHub Release page has the `.exe` plus its `.sha256` and is published (not draft). The `[Unreleased]` CHANGELOG block above `[1.2.0]` is intentionally empty and is the collection point for post-v1.2.0 work.
 
 This document (v3.1) is the single source of truth and is now the in-repo `docs/UNIFIED-SPEC.md`.
