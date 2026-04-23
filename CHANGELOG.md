@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Post-v1.1.0 commits on `master`. No version bump yet.
+Post-v1.2.0 commits on `master`. No version bump yet.
+
+## [1.2.0] - 2026-04-23
+
+Tier 5 installer/onboarding/seeding/model-picker/portal-mode slices and Tier 6 at-rest encryption (ENG-001 closed) tagged together. CI green on `d556904` (run 24853147133). Unsigned Windows `.exe` installer produced on tag push via Inno Setup 6.x.
 
 ### Added
 - **T5D — Install-time portal switch, private vs. public (locked scope B4=(b), 2026-04-22):** Adds a single install-time configuration knob — `PORTAL_MODE` — that determines whether a deployment exposes any public-facing surface at all. The default is `private` (staff-only; the login screen is the only externally reachable page). The alternate is `public`, which exposes an exact minimal surface locked by Scott 2026-04-22 under Option A: a public landing page, a resident-registration path, and an authenticated records-request submission form for `UserRole.PUBLIC` users. Anonymous walk-up submission is intentionally **not** supported; published-records search, a full resident dashboard, and a track-my-request suite are explicitly out of scope for this slice.

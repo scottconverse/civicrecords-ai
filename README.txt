@@ -168,6 +168,8 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 
 ## Status
 
+**v1.2.0** — 2026-04-23 release. Tier 5 (installer + onboarding + seeding + model picker + portal mode) and Tier 6 (at-rest encryption, ENG-001 closed) ship together. CI green on `d556904` (run 24853147133). Backend 617/617 pytest, frontend 36/36 vitest. README.md has the full Tier 5/6 narrative; this plaintext mirror carries the summary only.
+
 **v1.1.0** — Phase 2 release with department access controls, 50-state exemption rules, and compliance templates.
 
 **New in v1.1.0:**
@@ -190,14 +192,15 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 - Login rate limiting, audit log archival, admin-only user creation
 - Tested on Windows 11 (Docker Desktop) and Ubuntu 22.04 (Docker Engine)
 
-**Post-v1.1.0 security hardening (on master, not yet released):**
+**In v1.2.0 — security hardening (all tagged in this release):**
 - **T2A** — Role self-escalation via `PATCH /users/me` closed (`UserSelfUpdate` schema); all 24 department-scoped handlers enforce `require_department_scope`; 404/403 status-code info-leak unified via `require_department_or_404`; Pattern D list-endpoint fail-open fixed on 4 routes; parameterized enforcement test covers 25 routes
-- **T2B** — `connection_config` redacted from `GET /datasources/` for all non-admin users (`DataSourceAdminRead` returned only on admin write endpoints). **ENG-001 runtime exposure: closed. At-rest storage (plaintext JSONB in DB) remains open — tracked as Tier 6.**
+- **T2B** — `connection_config` redacted from `GET /datasources/` for all non-admin users (`DataSourceAdminRead` returned only on admin write endpoints). **ENG-001 runtime exposure: closed.**
+- **Tier 6 / ENG-001** — At-rest encryption for `data_sources.connection_config` via Fernet (AES-128-CBC + HMAC-SHA256) envelope at the SQLAlchemy TypeDecorator layer; reversible Alembic migration `019_encrypt_connection_config`; new required `ENCRYPTION_KEY` env var (installer auto-generates on fresh installs). **ENG-001 now fully closed** (both runtime and at-rest halves of the connector-credentials exposure gap).
 - **T2C** — `FIRST_ADMIN_PASSWORD` startup validator (rejects `.env.example` placeholder, empty, <12 chars, and common defaults); SSRF host validator blocks loopback, IMDS, and RFC1918 ranges on REST and ODBC connector URLs at schema-validation time
 - **T3A** — Create-user form now POSTs to `/api/admin/users` (was `/api/auth/register`, which silently downgraded submitted roles to STAFF)
-- **CI** — 556 backend + 7 frontend tests; bootstrap-failure smoke test confirms stack rejects placeholder admin password
+- **CI** — 617 backend + 36 frontend tests (CI-verified on `d556904`, run 24853147133); bootstrap-failure smoke test confirms stack rejects placeholder admin password
 
-> **ENG-001 standing caveat:** At-rest encryption for `data_sources.connection_config` is not yet implemented. The JSONB column is visible to any database superuser, `pg_dump` output, or restored backup. ENG-001 will not be fully closed until Tier 6 at-rest encryption lands.
+> **ENG-001 (historical — closed 2026-04-23):** At-rest encryption for `data_sources.connection_config` landed in Tier 6 as part of v1.2.0. Prior to this release the JSONB column was plaintext and visible to any database superuser, `pg_dump` output, or restored backup. The column is now stored as a Fernet envelope keyed off `ENCRYPTION_KEY`. T2B closed the runtime exposure in an earlier sprint; Tier 6 closes the at-rest half.
 
 **Roadmap (per [canonical spec](docs/UNIFIED-SPEC.md)):**
 
@@ -209,4 +212,4 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 | **Phase 3** | Public portal | Public homepage, search, guided request wizard, request tracker, help pages | Planned (v1.1) |
 | **Phase 4** | Transparency layer | Open records library, reporting dashboards, public archive, federation | Planned (v2.0) |
 
-*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.1.0) includes backend work from Phases 0-2 but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*
+*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.2.0) includes backend work from Phases 0-2 and partial Phase 3 (T5D minimal public portal surface), but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*

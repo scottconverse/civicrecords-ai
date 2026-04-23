@@ -8,23 +8,23 @@ April 13, 2026
 | Status | Canonical — verified against repository at commit head |
 | Supersedes | All prior spec versions (v2.0, v2.2, v3.0, v3.0.1) |
 | Repository | github.com/scottconverse/civicrecords-ai |
-| Current release | v1.1.0 (April 13, 2026) — versions aligned across all files |
-| Test suite | 569 automated backend tests + 7 frontend tests — all passing; GitHub Actions CI-verified (run 24727777171) |
+| Current release | v1.2.0 (April 23, 2026) — versions aligned across all files |
+| Test suite | 617 automated backend tests + 36 frontend tests — all passing; GitHub Actions CI-verified (run 24853147133 on commit `d556904`) |
 | Method | GitHub API crawl of repo structure, README, CHANGELOG, config files, module directories, and in-repo RECONCILIATION doc |
 
-Status Legend: [IMPLEMENTED] evidenced in code, tests, and routes. [PARTIAL] present but incomplete. [UI SHELL] interface exists without full backend capability. [PLANNED] not implemented. [NEW in v1.1.0] added in current release.
+Status Legend: [IMPLEMENTED] evidenced in code, tests, and routes. [PARTIAL] present but incomplete. [UI SHELL] interface exists without full backend capability. [PLANNED] not implemented. [NEW in v1.1.0] / [NEW in v1.2.0] indicate which release introduced a feature.
 
 ## 1. Purpose of This Document
 This is the single source of truth for CivicRecords AI. It merges comprehensive design detail with implementation status verified directly against the repository at commit head. Every feature is tagged with its actual implementation state.
 When narrative claims and repository evidence disagree, repository evidence wins. This document replaces all prior spec versions.
 
 ### 1.1 Version Alignment (Resolved)
-As of v1.1.0, version numbers are aligned across all four authoritative files:
-backend/app/config.py: APP_VERSION = "1.1.0"
-backend/pyproject.toml: version = "1.1.0"
-frontend/package.json: version = "1.1.0"
-CHANGELOG.md: [1.1.0] - 2026-04-13
-The version drift documented in prior spec versions has been resolved. The CHANGELOG now covers three releases: 0.1.0 (foundation), 1.0.0 (design system + core features), and 1.1.0 (department scoping, compliance, and feature sprint).
+As of v1.2.0, version numbers are aligned across all four authoritative files:
+backend/app/config.py: APP_VERSION = "1.2.0"
+backend/pyproject.toml: version = "1.2.0"
+frontend/package.json: version = "1.2.0"
+CHANGELOG.md: [1.2.0] - 2026-04-23
+The version drift documented in prior spec versions has been resolved and remains resolved. The CHANGELOG now covers four releases: 0.1.0 (foundation), 1.0.0 (design system + core features), 1.1.0 (department scoping, compliance, and feature sprint), and 1.2.0 (Tier 5 installer/onboarding/seeding/model-picker/portal-mode + Tier 6 at-rest encryption ENG-001 closure).
 
 ## 2. Product Summary
 
@@ -51,7 +51,7 @@ Operational calm over case chaos — staff views aid triage, not add clutter.
 Human-in-the-loop always — no auto-redaction, no auto-denial, no auto-release.
 
 ### 2.5 Current Product Scope
-As of v1.1.0, the system implements:
+As of v1.2.0, the system implements:
 Local deployment on a single-machine Docker stack (7 services)
 Internal authentication with 6-role RBAC hierarchy
 Department-level access controls with staff scoping
@@ -831,8 +831,7 @@ The docs/ directory contains a comprehensive documentation set:
 | 0.1.0 | April 12 | Foundation: Docker stack, auth, ingestion, search, requests, exemptions, 8 pages | 80 |
 | 1.0.0 | April 12 | Design system (shadcn/ui), 11 pages, request lifecycle, fees, analytics, notifications, connectors, context manager | 104 |
 | 1.1.0 | April 13 | Departments, 50-state exemptions, compliance templates, central LLM client, notification dispatch, user mgmt, search enhancements, fee waivers, rich text, macro stripping, coverage gaps, version alignment | 274 |
-| _unreleased_ | April 14 | `request_received` dispatch on create, Mark Fulfilled 404 fix, SENT status removal (migration 010), schema drift fix (migration 011), spec v3.1 import, Session A accessibility (global `:focus-visible` fallback + Geist Variable font wiring), Session B accessibility audit (14-page keyboard walk, findings F1–F7, Phase 1 focus-visibility claim corrected from Met to Partial), Session B.1 accessibility fixes (F2: `data-table.tsx` keyboard row activation; F1: `ring-[3px]` on Button/Input/SelectTrigger), Session B.2/C accessibility fixes (F3: DOM-confirmed resolved in base-ui v1.3.0; F4: 15 SelectTrigger `aria-label`s; F5: `LoadingRegion` component + `role="status"` on Dashboard/DataSources; F6: CardTitle `as` prop + 7 `<h2>` in RequestDetail; dialog focus trap verified; form error handling flagged for Session C) | 276 |
-| _unreleased_ | April 19–21 | Security remediation T2A–T3A (8 merged PRs, #14 + #16–22): CI ratchet (GitHub Actions, collected-vs-passed cross-check, bootstrap-failure smoke test); auth/authz hardening across 24 dept-scoped handlers (require_department_scope, require_department_or_404, require_department_filter); 404/403 info-leak unified; Pattern D list fail-open closed; review_fee_waiver gap fixed; connection_config redacted from DataSourceRead (ENG-001 runtime closed, storage open); FIRST_ADMIN_PASSWORD startup validator; SSRF host validator; admin user creation path fixed; 556 backend + 7 frontend tests | 556 |
+| 1.2.0 | April 23 | **Tier 6 / ENG-001 at-rest encryption closed** (Fernet envelope on `data_sources.connection_config`, reversible migration 019, required `ENCRYPTION_KEY`). **Tier 5 complete:** T5A onboarding persistence + lifecycle; T5B first-boot baseline seeding (175 state rules + 5 compliance templates + 12 notification templates, idempotent); T5C 4-model Gemma 4 installer picker (`gemma4:e4b` default, fake tags purged); T5D install-time `PORTAL_MODE` switch with minimal public surface (landing + resident-registration + authenticated submission); T5E unsigned Windows `.exe` installer via Inno Setup 6.x + GH Actions `windows-latest`. **Earlier unreleased work folded in:** April 14 accessibility Sessions A/B/B.1/B.2/C (Geist Variable font, `ring-[3px]` focus, data-table keyboard activation, 15 SelectTrigger `aria-label`s, `LoadingRegion`, CardTitle `as` prop); April 19–21 security remediation T2A–T3D (CI ratchet, dept-scope hardening, info-leak unified, Pattern D closed, T2B `connection_config` redaction, `FIRST_ADMIN_PASSWORD` validator, SSRF host validator, admin-create path fix, OpenAPI typegen + stale-check gate); April 21–22 T4A responsive AppShell + T4B Dashboard/Settings service-health truth + T4C Add-Source wizard a11y + Button `forwardRef` + UX-001/QA-001. CI green on `d556904` (run 24853147133). | 617 |
 
 ## 16. Capability Summary
 

@@ -175,11 +175,13 @@ docker compose exec postgres dropdb -U civicrecords civicrecords_test
 | **Reviewer** | Everything Staff can do + approve/reject responses and exemption flags | Built |
 | **Read-Only** | View search results and request status only | Built |
 | **Liaison** | Department-scoped read access to requests and search; Users/Audit Log/Onboarding nav hidden | Built |
-| **Public** | Submit requests (T5D, authenticated only); track own requests [planned]; search published records [planned] | T5D `a57a897` (post-v1.1.0) |
+| **Public** | Submit requests (T5D, authenticated only); track own requests [planned]; search published records [planned] | T5D `a57a897` (v1.2.0) |
 
 Service accounts with hashed API keys enable instance-to-instance federation access.
 
 ## Status
+
+**v1.2.0** — 2026-04-23 release. Tier 5 (installer + onboarding + seeding + model picker + portal mode) and Tier 6 (at-rest encryption, ENG-001 closed) ship together. CI green on `d556904` (run 24853147133). Backend 617/617 pytest, frontend 36/36 vitest, unsigned Windows installer produced on tag push.
 
 **v1.1.0** — Phase 2 release with department access controls, 50-state exemption rules, and compliance templates.
 
@@ -203,7 +205,7 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 - Login rate limiting, audit log archival, admin-only user creation
 - Tested on Windows 11 (Docker Desktop) and Ubuntu 22.04 (Docker Engine)
 
-**Post-v1.1.0 — Tier 5 (all five slices shipped on master, `[Unreleased]` — not yet cut as a versioned release):**
+**In v1.2.0 — Tier 5 (all five slices shipped 2026-04-22 → 2026-04-23, tagged in this release):**
 
 - **T5C — 4-model Gemma 4 installer picker, 2026-04-22 (`7721cf0`):** Picker now shows exactly four supported Gemma 4 tags: `gemma4:e2b`, `gemma4:e4b` (default), `gemma4:26b`, `gemma4:31b` — with per-model disk footprint, min/recommended RAM advisories, and a `supportable_against_target` boolean against the locked Windows 11 / 32 GB baseline. The fake tags `gemma4:12b` and `gemma4:27b` that contaminated `install.sh`, `install.ps1`, `scripts/detect_hardware.*`, and `backend/app/config.py` have been purged repo-wide. Host RAM is re-verified empirically at install time regardless of picker selection.
 - **T5A — Onboarding persistence, 2026-04-22 (`1782573`):** The single-phase LLM-powered adaptive interview now actually persists each answer onto the `CityProfile` singleton (creating the row on the first answer), normalizes yes/no → bool for `has_dedicated_it`, and transitions `onboarding_status` (not_started → in_progress → complete). Skip advances the walk truthfully (previously it dropped answers silently). Coverage: 4 new persistence tests + 2 skip-truth regression tests; migration `018_city_profile_state_nullable.py` relaxes a constraint the persistence path needed.
@@ -213,7 +215,7 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 - **T3D regen** (`bf3c9c3`) — Regenerated `docs/openapi.json` and `frontend/src/generated/api.ts` after the T5A schema change; CI's stale-check gate enforces this on every subsequent backend schema or route change.
 - **CI hygiene** (`5dbeed7`) — Bumped `actions/checkout@v4` and `actions/setup-node@v4` for Node 24 runtime support ahead of the 2026-06-02 GitHub runner default flip.
 
-**Post-v1.1.0 security hardening carried from earlier sprints (on master, not yet released):**
+**In v1.2.0 — security hardening carried from earlier sprints (all tagged in this release):**
 - **T2A** — Role self-escalation via `PATCH /users/me` closed (`UserSelfUpdate` schema); all 24 department-scoped handlers enforce `require_department_scope`; 404/403 status-code info-leak unified via `require_department_or_404`; Pattern D list-endpoint fail-open fixed on 4 routes; parameterized enforcement test covers 25 routes
 - **T2B** — `connection_config` redacted from `GET /datasources/` for all non-admin users (`DataSourceAdminRead` returned only on admin write endpoints). **ENG-001 runtime exposure: closed.**
 - **Tier 6 / ENG-001 — At-rest encryption for `data_sources.connection_config`, 2026-04-23:** Connector credentials are now encrypted at rest using Fernet (AES-128-CBC + HMAC-SHA256) via a transparent SQLAlchemy `EncryptedJSONB` TypeDecorator; envelope shape is `{"v": 1, "ct": "<fernet-token>"}`. A new required `ENCRYPTION_KEY` env var (installer auto-generates on fresh installs) drives the encryption; a reversible Alembic migration (`019_encrypt_connection_config`) encrypts existing plaintext rows and decrypts on downgrade. Operator verification: `docker compose run --rm --no-deps api python scripts/verify_at_rest.py`. **ENG-001 now fully closed.** Key rotation is not supported in this release and is tracked as a future slice; the versioned envelope (`"v": 1`) leaves the door open.
@@ -233,4 +235,4 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 | **Phase 3** | Public portal | Public homepage, search, guided request wizard, request tracker, help pages | Partial — T5D minimal surface shipped (landing + resident-registration + authenticated submission); published-records search, resident dashboard, and track-my-request remain Planned |
 | **Phase 4** | Transparency layer | Open records library, reporting dashboards, public archive, federation | Planned (v2.0) |
 
-*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.1.0) includes backend work from Phases 0-2 but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*
+*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.2.0) includes backend work from Phases 0-2 and partial Phase 3 (T5D minimal public portal surface), but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*
