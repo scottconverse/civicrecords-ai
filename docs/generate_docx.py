@@ -610,13 +610,15 @@ def build_readme_docx(out_path):
     h = doc.add_heading("Status", level=1)
     apply_h1_style(h)
     body_para(doc,
-        "v1.1.0 — Phase 2 release with department access controls, 50-state exemption rules, "
-        "and compliance templates."
+        "v1.2.0 — Tier 5 + Tier 6 complete. Adds minimal public request portal (T5D), "
+        "unsigned Windows installer (T5E), and ENG-001 closed "
+        "(Tier 6 at-rest Fernet encryption on data_sources.connection_config shipped 2026-04-23). "
+        "Builds on Phase 2 department access controls, 50-state exemption rules, and compliance templates."
     )
     for item in [
         "29 database tables managed by 16 Alembic migration scripts",
         "~30 REST API endpoints under /api/v1/",
-        "423 backend + 5 frontend automated tests passing",
+        "617 backend + 36 frontend automated tests passing",
         "Tested on Windows 11 (Docker Desktop) and Ubuntu 22.04 (Docker Engine)",
         "AMD GPU/NPU hardware auto-detection (ROCm on Linux, DirectML on Windows)",
     ]:

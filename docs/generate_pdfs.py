@@ -753,8 +753,11 @@ def build_readme_full(out_path):
         "Runs entirely on local hardware — no cloud, no telemetry, no vendor lock-in",
     ], styles)
     story.append(P(
-        "Current release: <b>v1.1.0</b> (April 2026). 29 database tables, ~30 API endpoints, "
-        "423 backend + 5 frontend automated tests.",
+        "Current release: <b>v1.2.0</b> (April 23, 2026). 29 database tables, ~30 API endpoints, "
+        "617 backend + 36 frontend automated tests. Tier 5 and Tier 6 complete — ENG-001 "
+        "(at-rest encryption for <tt>data_sources.connection_config</tt> via Fernet envelope) "
+        "is closed. Tier 5 shipped the minimal public portal (T5D) and unsigned Windows "
+        "installer (T5E).",
         styles["body"]
     ))
 
@@ -832,7 +835,7 @@ def build_readme_full(out_path):
         ["UI library",  "shadcn/ui + Tailwind CSS", "latest",   "Civic blue design tokens"],
         ["Auth",        "JWT + bcrypt",             "—",        "6-role RBAC hierarchy"],
         ["Containers",  "Docker Compose",           "v2",       "7-service stack"],
-        ["Testing",     "pytest / vitest",          "latest",   "423 backend + 5 frontend tests"],
+        ["Testing",     "pytest / vitest",          "latest",   "617 backend + 36 frontend tests"],
     ]
     story.append(make_table(tech_data, [1.0*inch, 1.6*inch, 0.7*inch, 3.2*inch], styles))
 
@@ -1043,7 +1046,7 @@ def build_readme_full(out_path):
     # --- 12. Test Suite ---
     story += section_header("12. Test Suite", styles, 1)
     story.append(P(
-        "CivicRecords AI ships 423 backend tests across 45 pytest modules and 5 frontend "
+        "CivicRecords AI ships 617 backend tests across 45+ pytest modules and 36 frontend "
         "component tests. Tests are a first-class artifact — every key engineering decision "
         "is enforced by a named test function.",
         styles["body"]
