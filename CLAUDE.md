@@ -112,6 +112,12 @@ If you catch yourself doing any of these — stop. Run the commands. Open the fi
 
 ---
 
+## Hard Rule 10 — SUBAGENT OBLIGATION (Hard Rule 10, global)
+
+For any task with 2+ non-overlapping scopes of work, dispatch parallel subagents via the Agent tool — do not work serial-inline. Non-overlapping = disjoint files / remote objects / URLs / test suites with no sequential data dependency. PreToolUse hook at `~/.claude/hooks/subagents-gate.py` blocks the 3rd distinct inline Edit/Write per turn with exit 2. Override phrase (user-only): `override rule 10` arms a 60-second one-shot bypass. See the global CLAUDE.md Hard Rule 10 for the full rule text. Supersedes `feedback_no_subagents.md` 2026-04-22 permission entry.
+
+---
+
 ## Project
 
 Open-source, locally-hosted AI system for municipal open records request processing.
