@@ -1,5 +1,11 @@
 # GitHub Discussions — Seed Content for CivicRecords AI
-# v1.1+ · April 2026
+# v1.2.0 · April 23, 2026
+#
+# NOTE (2026-04-23): The live Discussions threads on github.com have been updated
+# out-of-band to reflect v1.2.0 truth (Tier 5 complete, Tier 6 / ENG-001 closed,
+# 617 backend + 36 frontend tests, T5D minimal public portal, T5E unsigned
+# Windows installer). This seed file has been synchronized to match so any fresh
+# seeding run produces the same v1.2.0 content that's currently live.
 #
 # Instructions for seeding:
 #   gh discussion create --repo scottconverse/civicrecords-ai --category "Announcements" --title "..." --body "..."
@@ -14,7 +20,7 @@
 ## Category: Announcements
 ## Action: PIN THIS POST after creating it
 
-### Title: Welcome to CivicRecords AI — v1.1+ is here
+### Title: Welcome to CivicRecords AI — v1.2.0 is here
 
 ---
 
@@ -22,18 +28,28 @@ Hello, and welcome to the CivicRecords AI community.
 
 CivicRecords AI is an open-source, locally-hosted AI system built for American cities responding to public records requests — FOIA, CORA, and their state equivalents. Everything runs on a single machine inside your network. No cloud. No vendor lock-in. Resident data never leaves the building.
 
-**What v1.1 delivers:**
+**New in v1.2.0 (released 2026-04-23, building on v1.1.0 + v1.0.x):**
+
+- **At-rest encryption for connector credentials (Tier 6 / ENG-001 closed)** — `data_sources.connection_config` is now stored as a Fernet envelope (AES-128-CBC + HMAC-SHA256). `pg_dump` output, restored backups, and DB-superuser sessions see ciphertext only. Runtime callers still see a plain dict — zero API/admin-UI change. Operator breaking change: set `ENCRYPTION_KEY` in `.env` before restart (installer auto-generates on fresh installs).
+- **Install-time portal mode switch (T5D)** — new `PORTAL_MODE` env var (`private` default, `public` opt-in). Public mode exposes exactly three surfaces: landing page, resident-registration, and authenticated records-request submission for `UserRole.PUBLIC`. Broader portal expansion remains planned, not in v1.2.0.
+- **Windows double-click installer (T5E, unsigned by design)** — real `CivicRecordsAI-1.2.0-Setup.exe` + matching `.sha256` on the [v1.2.0 release page](https://github.com/scottconverse/civicrecords-ai/releases/tag/v1.2.0). SmartScreen will show "Windows protected your PC — Unknown publisher" on first run; click **More info → Run anyway**, confirm UAC. macOS/Linux continue on the guided `install.sh` script.
+- **4-model Gemma 4 installer picker (T5C)** — default `gemma4:e4b`. Fake tags `gemma4:12b` and `gemma4:27b` purged repo-wide; `gemma4:26b` / `gemma4:31b` remain selectable but gated behind an explicit "stronger hardware required" acknowledgement against the locked 32 GB baseline.
+- **First-boot baseline seeding (T5B)** — `app/main.lifespan` auto-seeds 175 state-scoped exemption rules across 51 jurisdictions, 5 compliance templates, and 12 notification templates on first boot. Idempotent via skip-if-exists; admin customizations survive re-seeds.
+- **Onboarding interview persistence (T5A)** — the single-phase LLM-powered interview now actually persists each answer onto `CityProfile` and transitions `onboarding_status` through `not_started → in_progress → complete`.
+- **617 backend pytest + 36 frontend vitest**, all CI-verified (run [24867623183](https://github.com/scottconverse/civicrecords-ai/actions/runs/24867623183) on `f4c159a`).
+
+**Carried forward from v1.1.0 + v1.0.x (unchanged):**
 
 - **AI-powered hybrid search** — natural language queries across all ingested city documents (semantic + keyword, pgvector + PostgreSQL full-text, normalized scores, optional LLM summary)
 - **Records request lifecycle** — 10-status workflow from intake to fulfillment with deadline tracking, messaging, fee management, and AI-drafted response letters
-- **Exemption detection** — PII patterns (SSN, phone, email, credit card) + statutory keyword matching across all 50 states and DC (180 rules). Every flag requires human confirmation — no auto-redaction
-- **Universal connector framework** — File system, REST API (API key / Bearer / OAuth2 / Basic auth; page/offset/cursor pagination), and ODBC (SQL databases via pyodbc) connectors with per-source cron scheduling
+- **Exemption detection** — PII patterns (SSN, phone, email, credit card) + statutory keyword matching across all 50 states and DC (175 state-scoped rules + 5 universal PII). Every flag requires human confirmation — no auto-redaction
+- **Universal connector framework** — File system, manual-drop, REST API (API key / Bearer / OAuth2 / Basic auth; page/offset/cursor pagination), and ODBC (SQL databases via pyodbc) connectors with per-source cron scheduling
 - **Sync failure tracking & circuit breaker** — per-record failure tracking, two-layer retry, automatic circuit breaker after 5 consecutive full-run failures, live health status on every source card
 - **Department access controls** — staff scoped to their department; admins see all
 - **Compliance by design** — hash-chained audit logs, human-in-the-loop enforcement at every transition, 5 compliance templates (AI Use Disclosure, CAIA Impact Assessment, AI Governance Policy, Response Letter Disclosure, Data Residency Attestation)
 - **Guided onboarding** — 3-phase wizard gets a new city to production in under an hour
 
-**Current status:** Active development. All core workflows are production-ready. The public-facing requester portal is on the v1.2 roadmap.
+**Current status:** v1.2.0 is released. The minimal public-facing surface shipped in T5D (landing + resident-registration + authenticated submission). Broader public-portal features — full resident dashboard, published-records search, track-my-request — remain planned and unscheduled.
 
 **Quick links:**
 - [README](../README.md) — quick start and feature overview
@@ -180,23 +196,34 @@ Unassigned sources and requests are visible to admins only. If you have sources 
 ## ── IDEAS / FEATURE REQUESTS ─────────────────────────────────────────────────
 ## Category: Ideas
 
-### Title: Public-facing requester portal — what would you need?
+### Title: Public-facing requester portal — what would you need beyond the minimal T5D surface?
 
-The current system is internal staff-only. Staff receive requests through whatever channel the city uses (email, phone, paper counter) and enter them manually.
+**Update 2026-04-23:** v1.2.0 ships a *minimal* public portal (T5D) behind an install-time `PORTAL_MODE=public` switch. The three surfaces it exposes, and only these three:
 
-A logical next step is a public portal where residents and journalists can:
-- Submit requests without calling or emailing
-- Get an acknowledgment with a reference number and expected timeline
-- Check the status of their request without having to contact staff
+- Public landing page
+- Resident-registration path (`UserRole.PUBLIC` self-signup)
+- Authenticated records-request submission form (`POST /public/requests`)
 
-This is on the v1.2 roadmap. Before we design it, I'd like to understand what cities actually need:
+Anonymous walk-up submission is intentionally not supported — every public submission has a logged-in resident as `created_by`. Staff roles get 403 on the public submit endpoint and continue to use the existing `/requests/` workflow.
 
-- Would you use a public portal, or does your city prefer the current channel model?
-- What information should requesters be able to see? Just status, or more detail?
-- Should requesters receive automated email notifications when status changes?
-- Any concerns about exposing a public endpoint given the air-gapped design goal?
+**Explicitly NOT shipped in v1.2.0 (and still unscheduled):**
 
-If you're currently running CivicRecords AI or evaluating it, your input here would directly shape what gets built.
+- Full resident dashboard
+- Published-records search
+- Track-my-request suite
+- Automated status-change email notifications to residents
+- Rate limiting / CAPTCHA / bot protection on the public submit endpoint
+- State-specific requester-identity verification hooks
+
+Before the next expansion slice, I'd like to understand what cities actually need:
+
+- Is the minimal T5D surface (landing + registration + submit) enough for your city, or do you need more before rolling it out publicly?
+- What information should requesters be able to see? Just status, or more detail (assigned clerk, messages, deadline)?
+- Should requesters receive automated email notifications when status changes? On every change, or only key milestones (received / in-progress / fulfilled)?
+- Any concerns about exposing a public endpoint given the air-gapped design goal? (Reminder: the public surface still runs on the same single-machine Docker stack — no new cloud dependency.)
+- Rate-limiting / CAPTCHA: which approach does your city's network policy allow? (Some cities can't use cloud-hosted CAPTCHA.)
+
+If you're currently running CivicRecords AI or evaluating it, your input here would directly shape what gets built next.
 
 ---
 
@@ -287,7 +314,7 @@ For bugs, please open an [Issue](../../issues) with:
 
 Pull requests are welcome. The [CONTRIBUTING.md](../../blob/master/CONTRIBUTING.md) file covers:
 - Development environment setup (Python 3.12 venv + Node 20)
-- Running the test suite (423 backend tests, 5 frontend tests)
+- Running the test suite (617 backend tests, 36 frontend tests, as of v1.2.0)
 - Code standards (typed Python, strict TypeScript, conventional commits)
 - How to write a good PR description
 
