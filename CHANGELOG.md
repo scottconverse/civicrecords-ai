@@ -13,6 +13,7 @@ Changes since v1.3.0.
 
 ### Changed
 - Build/CI: ruff is now a required CI check (`.github/workflows/ci.yml` job `ruff (lint)`); 82 pre-existing violations cleaned up (70 auto-fixed, 6 manually fixed including 4 E402 import-order fixes and 1 F841 unused-variable removal, 4 retained as inline `# noqa: E402` with rule-ID + justification). `scripts/verify-release.sh` gains a step 4 that runs `ruff check` against the api container. Closes #33.
+- Docs: regenerated all binary doc artifacts (`README.{docx,pdf}`, `README-FULL.pdf`, `USER-MANUAL.{docx,pdf}`, `README.txt`, `docs/civicrecords-ai-manual.{docx,pdf}`, `docs/UNIFIED-SPEC.docx`, `docs/CivicRecordsAI-UnifiedSpec-v3.1.docx`) to match the v1.3.0 source state. Both Python (`docs/generate_pdfs.py`, `docs/generate_docx.py`) and Node (`docs/generate-deliverables.js`, `docs/generate-manual-{pdf,docx}.js`, `docs/generate-unified-spec-docx.js`) generator chains were re-run; binaries updated only — no generator-source or markdown-source changes. Closes #31. Hard Rule 0 four-format sync restored.
 
 ### Deprecated
 
