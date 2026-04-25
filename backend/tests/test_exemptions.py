@@ -1,4 +1,3 @@
-import uuid
 import pytest
 from httpx import AsyncClient
 from app.exemptions.engine import scan_chunk_builtin, scan_text_with_regex, scan_text_with_keywords

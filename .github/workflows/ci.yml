@@ -328,3 +328,29 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+  # -------------------------------------------------------------------------
+  # ruff (lint) — added 2026-04-25 per issue #33. Gates Python lint on every
+  # PR and push to master. No live DB needed; --no-deps keeps it fast.
+  # Mirror the docker-compose-via-image pattern used by the bootstrap-failure
+  # job so CI lint and local lint produce the same result.
+  #
+  # NOTE: making this a REQUIRED check on master needs a separate
+  # branch-protection setting (Settings -> Branches -> master ->
+  # Require status checks -> add `ruff (lint)`). The workflow change here
+  # makes the job RUN; the protection setting makes it BLOCK merges.
+  # -------------------------------------------------------------------------
+  ruff:
+    name: ruff (lint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build api image
+        run: docker compose build api
+
+      - name: ruff check
+        run: docker compose run --rm --no-deps api ruff check .

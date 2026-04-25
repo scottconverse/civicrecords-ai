@@ -87,7 +87,6 @@ def cleanup_audit_logs():
     """Archive and then delete audit log entries older than the configured retention period."""
     import asyncio
     import json
-    import os
     from datetime import datetime, timezone, timedelta
     from pathlib import Path
     from sqlalchemy import delete, select

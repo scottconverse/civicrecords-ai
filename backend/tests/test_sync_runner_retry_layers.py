@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy import text
 
-from app.models.document import DataSource, SourceType
+from app.models.document import SourceType
 from tests.conftest import build_data_source
 
 
@@ -84,7 +84,6 @@ async def test_retrying_rows_processed_before_discover(db_session):
 async def test_retrying_row_resolved_on_success(db_session):
     """A retrying row that fetches successfully → status=resolved, resolved_at set."""
     from app.models.sync_failure import SyncFailure
-    from sqlalchemy import select
 
     source_id = uuid.uuid4()
     await _seed_source(db_session, source_id, "resolve-test")

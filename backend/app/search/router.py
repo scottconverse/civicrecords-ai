@@ -8,7 +8,7 @@ from app.audit.logger import write_audit_log
 from app.auth.dependencies import require_role, require_department_filter
 from app.database import get_async_session
 from app.models.departments import Department
-from app.models.document import DataSource, Document, DocumentChunk
+from app.models.document import DataSource, Document
 from app.models.search import SearchQuery, SearchResult, SearchSession
 from app.models.user import User, UserRole
 from app.schemas.search import (

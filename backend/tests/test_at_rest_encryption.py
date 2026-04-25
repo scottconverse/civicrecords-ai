@@ -25,7 +25,6 @@ from pydantic import ValidationError
 from sqlalchemy import text
 
 from app.config import Settings
-from app.models.document import SourceType
 from app.security.at_rest import (
     AtRestDecryptionError,
     decrypt_json,

@@ -1,8 +1,6 @@
 """Tests for SMTP notification delivery."""
 
-import uuid
 from unittest.mock import patch, MagicMock
-from datetime import datetime, timezone
 
 import pytest
 from httpx import AsyncClient

@@ -2,7 +2,6 @@
 """P7 partial-failure cursor advance tests — real end-to-end calls asserting DB state."""
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timezone
 import pytest
 from sqlalchemy import text
 

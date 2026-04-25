@@ -57,7 +57,7 @@ async def test_write_audit_log_direct(client: AsyncClient):
     """Verify audit log entries can be written and read back."""
     from tests.conftest import test_session_maker
     from app.audit.logger import write_audit_log
-    from sqlalchemy import select, func
+    from sqlalchemy import select
     from app.models.audit import AuditLog
 
     async with test_session_maker() as session:

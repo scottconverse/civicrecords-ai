@@ -8,6 +8,9 @@ from pydantic import BaseModel, Field
 from app.audit import AuditMiddleware, audit_router
 from app.auth import auth_router, register_router, users_router
 from app.config import APP_VERSION, settings
+from app.database import engine
+from app.models.user import User, UserRole
+from app.schemas.user import AdminUserCreate
 
 
 class PortalModeResponse(BaseModel):
@@ -28,9 +31,6 @@ class PortalModeResponse(BaseModel):
             "self-registration."
         ),
     )
-from app.database import engine
-from app.models.user import User, UserRole
-from app.schemas.user import AdminUserCreate
 
 
 @asynccontextmanager

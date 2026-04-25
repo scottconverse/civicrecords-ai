@@ -62,7 +62,7 @@ _BOOTSTRAP_SNIPPET = "from app.config import Settings; Settings()"
 # Generate a real Fernet key once per test module so every _minimal_env()
 # call gets a valid key by default; tests that specifically want to
 # verify the encryption-key validator can override it.
-from cryptography.fernet import Fernet as _Fernet
+from cryptography.fernet import Fernet as _Fernet  # noqa: E402  late import — comment block above documents T6/ENG-001 test override pattern requiring this be tied to module-level constants
 
 _VALID_ENCRYPTION_KEY = _Fernet.generate_key().decode()
 

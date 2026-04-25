@@ -28,7 +28,7 @@ async def test_ingest_file_txt(client, admin_token):
     """Integration test: ingest a text file through the full pipeline."""
     from tests.conftest import test_session_maker
     from app.ingestion.pipeline import ingest_file
-    from app.models.document import DataSource, Document, IngestionStatus, SourceType
+    from app.models.document import DataSource, IngestionStatus, SourceType
     from app.models.user import User
     from sqlalchemy import select
 

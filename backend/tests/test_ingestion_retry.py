@@ -9,7 +9,8 @@ async def test_re_ingest_requires_failed_status(client: AsyncClient, admin_token
     """POST /datasources/documents/{id}/re-ingest rejects non-failed docs."""
     import uuid
     # Upload a file to create a document (will be in pending/completed state)
-    import tempfile, os
+    import tempfile
+    import os
     with tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w") as f:
         f.write("Test content for retry test")
         tmp_path = f.name

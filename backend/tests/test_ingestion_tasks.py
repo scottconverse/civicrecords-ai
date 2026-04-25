@@ -133,7 +133,6 @@ async def test_close_called_on_discover_failure(db_session):
 @pytest.mark.asyncio
 async def test_cursor_written_on_full_success(db_session):
     """last_sync_cursor and last_sync_at are set after a clean run."""
-    from app.models.document import DataSource
     source_id = uuid.uuid4()
     await _seed_source(db_session, source_id, "cursor-success")
 

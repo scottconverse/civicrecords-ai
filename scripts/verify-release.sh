@@ -96,6 +96,31 @@ for f in README.md CHANGELOG.md CONTRIBUTING.md LICENSE .gitignore docs/index.ht
     fi
 done
 
+# --- 4. ruff lint ------------------------------------------------------------
+# Host-side ruff (operators: `pip install --user ruff`). Falls back to
+# `python -m ruff` if the binary isn't on PATH. Container ruff would scan
+# image-baked source (potentially stale relative to current working tree),
+# which would give false positives/negatives; host ruff scans on-disk files.
+# CI uses container ruff via .github/workflows/ci.yml because CI always
+# builds a fresh api image first.
+info "4. ruff lint"
+if command -v ruff >/dev/null 2>&1; then
+    RUFF_CMD="ruff"
+elif python -m ruff --version >/dev/null 2>&1; then
+    RUFF_CMD="python -m ruff"
+else
+    RUFF_CMD=""
+    fail "ruff: not installed locally — install with: pip install --user ruff"
+fi
+
+if [ -n "$RUFF_CMD" ]; then
+    if (cd backend && $RUFF_CMD check .) > /tmp/ruff-verify-release.out 2>&1; then
+        pass "ruff: 0 violations"
+    else
+        fail "ruff: violations present (see /tmp/ruff-verify-release.out for details)"
+    fi
+fi
+
 # --- summary -----------------------------------------------------------------
 echo ""
 if [ "$FAILED" -eq 0 ]; then

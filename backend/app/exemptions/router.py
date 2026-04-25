@@ -1,7 +1,9 @@
+import re
 import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,14 +11,12 @@ from app.audit.logger import write_audit_log
 from app.auth.dependencies import require_role, require_department_or_404, has_department_access
 from app.database import get_async_session
 from app.exemptions.engine import scan_request_documents
-from app.models.request import RecordsRequest
+from app.models.city_profile import CityProfile
 from app.models.exemption import (
     DisclosureTemplate, ExemptionFlag, ExemptionRule, FlagStatus, RuleType,
 )
+from app.models.request import RecordsRequest
 from app.models.user import User, UserRole
-import re
-
-from app.models.city_profile import CityProfile
 from app.schemas.exemption import (
     DisclosureTemplateCreate, DisclosureTemplateRead, DisclosureTemplateRendered,
     DisclosureTemplateUpdate, ExemptionAccuracyReport, ExemptionDashboard,
@@ -138,9 +138,6 @@ async def get_rule_history(
         }
         for log in logs
     ]
-
-
-from pydantic import BaseModel
 
 
 class RuleTestRequest(BaseModel):

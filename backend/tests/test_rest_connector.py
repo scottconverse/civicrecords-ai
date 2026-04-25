@@ -494,7 +494,7 @@ class TestRestApiConnectorP6a:
 # P7 adversarial — Retry-After header edge cases
 # ---------------------------------------------------------------------------
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch  # noqa: E402  section-local import for "P7 adversarial — Retry-After header edge cases" test class below
 
 
 class TestRetryAfterAdversarial:

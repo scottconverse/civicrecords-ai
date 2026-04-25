@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 import pytest
 from sqlalchemy import text
 
-from app.models.document import DataSource, SourceType
+from app.models.document import SourceType
 from tests.conftest import build_data_source
 
 

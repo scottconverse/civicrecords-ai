@@ -3,7 +3,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import text
 
-from app.models.document import DataSource, SourceType
+from app.models.document import SourceType
 from tests.conftest import build_data_source
 
 @pytest.mark.asyncio

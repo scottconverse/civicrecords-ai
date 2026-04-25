@@ -3,9 +3,8 @@
 import json
 import uuid
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.document import DataSource, SourceType
+from app.models.document import SourceType
 from tests.conftest import build_data_source
 
 
@@ -328,7 +327,9 @@ class TestConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_binary_insert_race(self, db_session, db_session_factory):
         """Two workers insert same (source_id, file_hash) simultaneously → 1 document row."""
-        import asyncio, os, tempfile
+        import asyncio
+        import os
+        import tempfile
         from pathlib import Path
         from unittest.mock import patch, AsyncMock
         from sqlalchemy.exc import IntegrityError

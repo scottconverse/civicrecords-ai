@@ -1,5 +1,4 @@
 import uuid
-import pytest
 from app.search.engine import reciprocal_rank_fusion, SearchHit
 
 

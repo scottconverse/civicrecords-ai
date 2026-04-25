@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy import text
 
-from app.models.document import DataSource, SourceType
+from app.models.document import SourceType
 from tests.conftest import build_data_source
 
 

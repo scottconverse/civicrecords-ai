@@ -73,7 +73,7 @@ async def _seed_exemption_flag_on_request(
         doc = Document(
             source_id=source.id,
             source_path=f"/seed/flag-doc-{uuid.uuid4().hex[:6]}.pdf",
-            filename=f"flag-doc.pdf",
+            filename="flag-doc.pdf",
             file_type="pdf",
             file_hash=uuid.uuid4().hex,
             file_size=128,

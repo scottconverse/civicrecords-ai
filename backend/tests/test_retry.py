@@ -1,4 +1,3 @@
-import asyncio
 import pytest
 import httpx
 from unittest.mock import AsyncMock, patch

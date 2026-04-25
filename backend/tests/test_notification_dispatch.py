@@ -140,7 +140,7 @@ async def test_all_templates_render_with_router_context_keys(client, admin_token
             )
 
     assert render_failures == [], (
-        f"Templates reference variables not provided by the router:\n"
+        "Templates reference variables not provided by the router:\n"
         + "\n".join(render_failures)
     )
 
