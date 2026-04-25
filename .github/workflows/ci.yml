@@ -349,7 +349,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Synthesize minimal .env (compose env_file: directive requires it to exist)
+      - name: "Synthesize minimal .env (compose env_file: directive requires it to exist)"
         # ruff check doesn't need any of these values, but docker-compose.yml's
         # service-level `env_file: .env` directive requires the file to exist
         # or `docker compose run` errors out before the container even starts.
