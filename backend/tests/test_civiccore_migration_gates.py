@@ -464,13 +464,36 @@ def test_gate2_upgrade_from_v1_3(v1_3_0_real_schema_db: str) -> None:
             f"{sorted(missing_shared)}"
         )
 
-        # Schema-diff fidelity — every shared table's column set must be unchanged.
+        # Schema-diff fidelity — every shared table's column set must be unchanged
+        # EXCEPT prompt_templates, which civiccore_0002_llm intentionally evolves
+        # (rename name→template_name, add consumer_app, add is_override).
         # If an idempotency guard misfired and re-created a table, we'd see drift here.
+        PHASE2_PROMPT_TEMPLATES_DELTA = {
+            "added": {"consumer_app", "is_override", "template_name"},
+            "removed": {"name"},
+        }
         for tbl in sorted(SHARED_TABLES):
             post_cols = _column_set(post, tbl)
-            assert post_cols == pre_columns[tbl], (
+            pre_cols = pre_columns[tbl]
+            if tbl == "prompt_templates":
+                # Phase 2 expected delta: +consumer_app, +is_override, +template_name, -name.
+                # All other prompt_templates columns must be identical pre/post.
+                actual_added = post_cols - pre_cols
+                actual_removed = pre_cols - post_cols
+                assert actual_added == PHASE2_PROMPT_TEMPLATES_DELTA["added"], (
+                    f"Gate 2: prompt_templates added unexpected columns. "
+                    f"expected_added={sorted(PHASE2_PROMPT_TEMPLATES_DELTA['added'])} "
+                    f"actual_added={sorted(actual_added)}"
+                )
+                assert actual_removed == PHASE2_PROMPT_TEMPLATES_DELTA["removed"], (
+                    f"Gate 2: prompt_templates removed unexpected columns. "
+                    f"expected_removed={sorted(PHASE2_PROMPT_TEMPLATES_DELTA['removed'])} "
+                    f"actual_removed={sorted(actual_removed)}"
+                )
+                continue
+            assert post_cols == pre_cols, (
                 f"Gate 2: column set for shared table {tbl!r} drifted during "
-                f"upgrade. pre={sorted(pre_columns[tbl])} post={sorted(post_cols)}"
+                f"upgrade. pre={sorted(pre_cols)} post={sorted(post_cols)}"
             )
     finally:
         post.dispose()
