@@ -43,7 +43,6 @@ async def extract_text_from_image(image_path: Path, prefer_multimodal: bool = Tr
 
 async def extract_text_from_scanned_pdf(pdf_path: Path, prefer_multimodal: bool = True, model: str | None = None) -> list[dict]:
     model = model or settings.vision_model
-    from PIL import Image
     import io
     try:
         import pdfplumber

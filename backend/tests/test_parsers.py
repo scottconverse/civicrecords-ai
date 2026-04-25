@@ -1,7 +1,6 @@
 import tempfile
 import zipfile
 from pathlib import Path
-import pytest
 from app.ingestion.parsers import detect_parser, is_image_file
 from app.ingestion.parsers.text import TextParser
 from app.ingestion.parsers.csv_parser import CsvParser

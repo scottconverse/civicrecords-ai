@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import UserRole, require_role
 from app.database import get_async_session
-from app.models.request import RecordsRequest, RequestStatus
+from app.models.request import RecordsRequest
 from app.schemas.analytics import OperationalMetrics
 
 router = APIRouter(tags=["analytics"])
@@ -53,7 +53,7 @@ async def get_operational_metrics(
     total_open = sum(v for k, v in by_status.items() if k not in closed_statuses)
 
     # Overdue — use text cast to avoid PostgreSQL enum mismatch
-    from sqlalchemy import cast, String, text
+    from sqlalchemy import cast, String
     overdue_stmt = select(func.count()).where(
         RecordsRequest.statutory_deadline < now,
         cast(RecordsRequest.status, String).notin_(["fulfilled", "closed"]),

@@ -328,3 +328,48 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+  # -------------------------------------------------------------------------
+  # ruff (lint) — added 2026-04-25 per issue #33. Gates Python lint on every
+  # PR and push to master. No live DB needed; --no-deps keeps it fast.
+  # Mirror the docker-compose-via-image pattern used by the bootstrap-failure
+  # job so CI lint and local lint produce the same result.
+  #
+  # NOTE: making this a REQUIRED check on master needs a separate
+  # branch-protection setting (Settings -> Branches -> master ->
+  # Require status checks -> add `ruff (lint)`). The workflow change here
+  # makes the job RUN; the protection setting makes it BLOCK merges.
+  # -------------------------------------------------------------------------
+  ruff:
+    name: ruff (lint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: "Synthesize minimal .env (compose env_file: directive requires it to exist)"
+        # ruff check doesn't need any of these values, but docker-compose.yml's
+        # service-level `env_file: .env` directive requires the file to exist
+        # or `docker compose run` errors out before the container even starts.
+        # Match the per-job .env synthesis pattern used by `backend` and
+        # `bootstrap-failure`. Values are placeholders; ruff never reads them.
+        run: |
+          umask 077
+          cat > .env <<EOF
+          DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords_test
+          JWT_SECRET=$(openssl rand -hex 32)
+          FIRST_ADMIN_EMAIL=admin@ci.local
+          FIRST_ADMIN_PASSWORD=$(openssl rand -hex 16)
+          OLLAMA_BASE_URL=http://ollama:11434
+          REDIS_URL=redis://redis:6379/0
+          AUDIT_RETENTION_DAYS=1095
+          TESTING=1
+          EOF
+
+      - name: Build api image
+        run: docker compose build api
+
+      - name: ruff check
+        run: docker compose run --rm --no-deps api ruff check .

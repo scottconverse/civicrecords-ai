@@ -1,13 +1,13 @@
 # backend/tests/test_scheduler.py
 """P6b scheduler tests — TDD order. Tests must fail before implementation."""
 import uuid
-from datetime import datetime, timezone, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import datetime, timezone
+from unittest.mock import patch
 
 import pytest
 from croniter import croniter
 
-from app.models.document import DataSource, SourceType
+from app.models.document import SourceType
 from tests.conftest import build_data_source
 
 

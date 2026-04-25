@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from fastapi_users import schemas
-from pydantic import BaseModel, model_validator
+from pydantic import model_validator
 
 from app.models.user import UserRole
 

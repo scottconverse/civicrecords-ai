@@ -5,7 +5,6 @@ migrations applied). Instead they verify the SQL shape the migration would produ
 inspecting the model and checking that the upgrade/downgrade functions contain the expected
 operations. Run against the integration test DB after applying the migration.
 """
-import pytest
 
 
 def test_migration_014_revision_metadata():
@@ -41,7 +40,7 @@ def test_updated_at_column_on_document_model():
 
 def test_migration_014_has_partial_index_for_structured():
     """Migration 014 upgrade() creates the structured partial UNIQUE index."""
-    import ast, pathlib
+    import pathlib
     src = pathlib.Path("alembic/versions/014_p6a_idempotency.py").read_text()
     assert "uq_documents_structured_path" in src
     assert "connector_type IN" in src

@@ -1,4 +1,5 @@
 import pytest
+from app.connectors import get_connector
 from app.connectors.base import BaseConnector, DiscoveredRecord, FetchedDocument, HealthCheckResult, HealthStatus
 
 
@@ -24,9 +25,6 @@ def test_base_connector_close_is_noop():
     """close() must exist and be callable without error on the base class."""
     c = _MinimalConnector(config={})
     c.close()  # must not raise AttributeError or any other error
-
-
-from app.connectors import get_connector
 
 
 def test_factory_rest_api():

@@ -5,7 +5,7 @@ from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
-    Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer,
+    Boolean, DateTime, Enum, ForeignKey, Index, Integer,
     String, Text, TypeDecorator, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID

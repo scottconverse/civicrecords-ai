@@ -7,7 +7,6 @@ Create Date: 2026-04-12
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 from civiccore.migrations.guards import (
     idempotent_create_index,

@@ -6,7 +6,6 @@ from pathlib import Path
 
 from app.connectors.manual_drop import (
     ManualDropConnector,
-    ACCEPTED_EXTENSIONS,
     MAX_FILE_BYTES,
 )
 
@@ -248,7 +247,7 @@ async def test_non_recursive_skips_subdirs(drop_dir):
 
 # ── Pipeline Dispatch Tests ───────────────────────────────────────────────────
 
-from app.connectors import manual_drop as _drop_mod
+from app.connectors import manual_drop as _drop_mod  # noqa: E402  section-local import for "Pipeline Dispatch Tests" group below
 
 
 @pytest.mark.asyncio

@@ -14,8 +14,6 @@ import email.policy
 import imaplib
 import logging
 import time
-from datetime import datetime, timezone
-from email.message import EmailMessage
 
 from app.connectors.base import (
     BaseConnector,

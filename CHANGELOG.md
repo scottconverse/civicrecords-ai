@@ -7,11 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No commits beyond v1.3.0 yet.
+Changes since v1.3.0.
 
 ### Added
 
 ### Changed
+- Build/CI: ruff is now a required CI check (`.github/workflows/ci.yml` job `ruff (lint)`); 82 pre-existing violations cleaned up (70 auto-fixed, 6 manually fixed including 4 E402 import-order fixes and 1 F841 unused-variable removal, 4 retained as inline `# noqa: E402` with rule-ID + justification). `scripts/verify-release.sh` gains a step 4 that runs `ruff check` against the api container. Closes #33.
 
 ### Deprecated
 

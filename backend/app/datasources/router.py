@@ -150,7 +150,6 @@ async def trigger_ingestion(source_id: uuid.UUID, session: AsyncSession = Depend
 
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...), session: AsyncSession = Depends(get_async_session), user: User = Depends(require_role(UserRole.STAFF))):
-    import tempfile
     from pathlib import Path, PurePosixPath
     upload_dir = Path("/tmp/civicrecords-uploads")
     upload_dir.mkdir(parents=True, exist_ok=True)

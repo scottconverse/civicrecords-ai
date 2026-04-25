@@ -4,19 +4,16 @@ Generates README-FULL.pdf in the project root using ReportLab Platypus.
 """
 
 import os
-import sys
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
     PageBreak, HRFlowable, KeepTogether
 )
 from reportlab.platypus.flowables import Flowable
-from reportlab.graphics.shapes import Drawing, Rect, String, Line, Group
-from reportlab.graphics import renderPDF
 
 # ── Output path ──────────────────────────────────────────────────────────────
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -218,7 +215,6 @@ class ArchDiagram(Flowable):
                   fill=BLUE, text_color=WHITE)
 
         # Horizontal connectors from FastAPI to side services
-        cx = api_x + (bw + 10) / 2
 
         # Left services: PostgreSQL, pgvector
         pg_x = 30

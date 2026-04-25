@@ -9,8 +9,6 @@ from email import encoders
 from app.connectors.imap_email import (
     ImapEmailConnector,
     is_attachment_safe,
-    ALLOWED_MIME_TYPES,
-    BLOCKED_EXTENSIONS,
     MAX_ATTACHMENT_BYTES,
 )
 

@@ -1,6 +1,5 @@
 """Seed exemption rules for all 50 states + DC."""
 import asyncio
-import uuid
 from app.database import async_session_maker
 from app.models.exemption import ExemptionRule, RuleType
 from app.models.user import User

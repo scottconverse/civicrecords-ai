@@ -13,7 +13,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-from app.connectors.base import (
+from app.connectors.base import (  # noqa: E402  module-level logger configured above must be ready before base imports trigger their own logging
     BaseConnector,
     DiscoveredRecord,
     FetchedDocument,

@@ -32,7 +32,7 @@ import app.database
 from app.config import settings
 from app.database import get_async_session
 from app.main import create_app
-from app.models.user import Base, User, UserRole
+from app.models.user import User, UserRole
 from app.models.departments import Department
 from app.models.sync_failure import SyncFailure, SyncRunLog  # noqa: F401 — registers with Base.metadata
 

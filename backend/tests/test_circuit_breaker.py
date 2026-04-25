@@ -1,7 +1,7 @@
 # backend/tests/test_circuit_breaker.py
 """P7 circuit breaker tests — real end-to-end calls asserting DB state."""
 import uuid
-from datetime import datetime, timezone
+from datetime import timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -165,7 +165,7 @@ async def test_success_resets_consecutive_failure_count(db_session):
 @pytest.mark.asyncio
 async def test_zero_records_discovered_does_not_increment_counter(db_session):
     """discover() returns 0 five times → counter=0, no circuit open (M8)."""
-    from unittest.mock import AsyncMock, patch
+    from unittest.mock import AsyncMock
     import uuid
 
     source_id = uuid.uuid4()

@@ -102,7 +102,6 @@ async def test_list_sync_failures_requires_auth(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_unpause_source(client: AsyncClient, admin_token: str, db_session):
     """POST /datasources/{id}/unpause resets paused state."""
-    from app.models.document import DataSource
 
     source_id = uuid.uuid4()
     await _seed_source(
