@@ -2,62 +2,42 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in CivicRecords AI, please report it
-responsibly so we can address it before public disclosure.
+If you discover a security vulnerability in CivicRecords AI, please report it by opening a [GitHub issue](https://github.com/scottconverse/civicrecords-ai/issues) marked with the **security** label. Do not include sensitive details in the title — keep exploit specifics in the issue body. We aim to respond within 72 hours.
 
-**Please do NOT open a public GitHub issue for security vulnerabilities.**
+For sensitive disclosures that should not be public, you may also use [GitHub's private vulnerability reporting](https://github.com/scottconverse/civicrecords-ai/security/advisories/new) (Security tab → Report a vulnerability).
 
-### How to Report
-
-Email: **security@scottconverse.dev**
-
-Include in your report:
-
-- A description of the vulnerability and its potential impact
-- Steps to reproduce (proof-of-concept code if applicable)
-- The affected version(s) and component(s)
-- Any suggested mitigation or fix, if known
-- Your name and contact info for follow-up (optional — anonymous reports accepted)
-
-### What to Expect
-
-- **Acknowledgement:** within 3 business days of your report.
-- **Initial assessment:** within 7 business days, including severity triage and
-  whether we accept the report as a valid vulnerability.
-- **Fix timeline:** depends on severity. Critical issues are prioritized for
-  the next patch release. We will keep you informed of progress.
-- **Credit:** with your permission, we credit reporters in the release notes
-  and CHANGELOG. Anonymous reports remain anonymous.
-- **Coordinated disclosure:** we ask reporters to give us a reasonable window
-  (typically 90 days) to ship a fix before public disclosure. We will work
-  with you on timing.
+---
 
 ## Supported Versions
 
-Security fixes are backported to the latest minor release line only. Older
-minor versions do not receive security patches — please upgrade.
+Only the latest minor release line receives security patches. Older minor releases are not back-patched.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.3.x   | :white_check_mark: |
-| 1.2.x   | :x:                |
-| < 1.2   | :x:                |
+| Version | Supported |
+|---------|-----------|
+| latest minor (current `main`) | ✅ |
+| previous minors | ❌ |
+
+---
 
 ## Scope
 
-In scope:
+CivicRecords AI is open-source municipal FOIA management software. In-scope vulnerabilities include:
 
-- The CivicRecords AI backend (FastAPI, SQLAlchemy, worker pipelines)
-- The CivicRecords AI frontend (React app)
-- Official Docker images and install scripts shipped from this repo
-- Configuration defaults that ship with the project
+- Authentication / authorization bypass (UserRole.PUBLIC, ADMIN, STAFF role boundaries)
+- SQL injection, XSS, CSRF, SSRF in the FastAPI backend or React frontend
+- Tenant isolation failures (cross-tenant data leakage)
+- Encryption-at-rest weaknesses (`EncryptedJSONB`, Fernet envelope on `data_sources.connection_config`)
+- Secret exposure (API keys, credentials, internal URLs in client bundles or commits)
+- Dependency vulnerabilities with a viable exploitation path against this codebase
 
 Out of scope:
 
-- Third-party dependencies (please report upstream — we will track CVEs)
-- Self-hosted operator misconfigurations (e.g., exposing the DB to the public
-  internet without a firewall)
-- Issues requiring physical access to a deployed instance
-- Social-engineering attacks against operators or end users
+- Vulnerabilities in third-party dependencies that have no exploitation path in CivicRecords AI's deployment model
+- Self-hosted operator misconfiguration (weak admin passwords, unencrypted backups, public ENCRYPTION_KEY rotation)
+- Issues only reproducible against unsupported, modified, or forked builds
 
-Thank you for helping keep CivicRecords AI and its operators secure.
+---
+
+## Acknowledgement Policy
+
+Reporters who follow responsible disclosure are credited in the release notes for the patched version unless they request anonymity.
