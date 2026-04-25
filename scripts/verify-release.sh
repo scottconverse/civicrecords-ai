@@ -97,20 +97,27 @@ for f in README.md CHANGELOG.md CONTRIBUTING.md LICENSE .gitignore docs/index.ht
 done
 
 # --- 4. ruff lint ------------------------------------------------------------
-# Host-side ruff (operators: `pip install --user ruff`). Falls back to
-# `python -m ruff` if the binary isn't on PATH. Container ruff would scan
-# image-baked source (potentially stale relative to current working tree),
-# which would give false positives/negatives; host ruff scans on-disk files.
-# CI uses container ruff via .github/workflows/ci.yml because CI always
-# builds a fresh api image first.
+# Host-side ruff (operators: `pip install --user ruff`). Detection order:
+#   (1) `ruff` binary on PATH
+#   (2) `python -m ruff` (Linux/macOS, real Python on PATH)
+#   (3) `py -3 -m ruff` (Windows: `python` may resolve to Microsoft Store
+#        stub or to git-bash's bundled python that lacks user-site packages.
+#        `py -3` uses the Windows Python launcher which finds the real
+#        install. Per audit REL-001, 2026-04-25.)
+# Container ruff would scan image-baked source (potentially stale relative
+# to current working tree); host ruff scans on-disk files. CI uses
+# container ruff via .github/workflows/ci.yml because CI always builds
+# a fresh api image first.
 info "4. ruff lint"
 if command -v ruff >/dev/null 2>&1; then
     RUFF_CMD="ruff"
 elif python -m ruff --version >/dev/null 2>&1; then
     RUFF_CMD="python -m ruff"
+elif command -v py >/dev/null 2>&1 && py -3 -m ruff --version >/dev/null 2>&1; then
+    RUFF_CMD="py -3 -m ruff"
 else
     RUFF_CMD=""
-    fail "ruff: not installed locally — install with: pip install --user ruff"
+    fail "ruff: not installed locally — install with: pip install --user ruff (Windows: py -3 -m pip install --user ruff)"
 fi
 
 if [ -n "$RUFF_CMD" ]; then

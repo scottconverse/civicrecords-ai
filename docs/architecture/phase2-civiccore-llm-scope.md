@@ -266,33 +266,38 @@ Civiccore total goes from 16 → 18. The two added tables:
 
 ### 4.2 `prompt_templates` (currently records-ai-owned, moves to civiccore)
 
+> **Schema reconciled to match ADR-0004 (post-audit ARCH-001 fix, 2026-04-25):**
+> - `name` column → renamed to `template_name`
+> - `parent_template_id` column → REMOVED (not needed by resolver; "diff against default" tooling deferred to a future release if/when needed)
+> - UNIQUE constraint → changed from `(name, consumer_app, is_active)` partial to `UNIQUE(consumer_app, template_name, version)`
+>
+> ADR-0004 is the canonical schema source. This scope doc previously diverged on these three points; auditor flagged ARCH-001 with recommendation "ADR wins unless Scott explicitly wants `parent_template_id`" — Scott did not request it.
+
 | column | type | nullable | default | notes |
 | --- | --- | --- | --- | --- |
 | `id` | UUID | NO | `uuid4()` | PK |
-| `name` | VARCHAR(200) | NO | — | logical name; **was `unique` in records-ai — drop the unique constraint** because override rows share the name with the default |
-| `consumer_app` | VARCHAR(100) | NO | `'civiccore'` | **NEW — override-resolution column.** Values: `'civiccore'`, `'civicrecords-ai'`, `'civicclerk'`, etc. |
-| `is_override` | BOOLEAN | NO | `false` | **NEW — convenience flag.** True when `consumer_app != 'civiccore'`. Redundant with `consumer_app != 'civiccore'` but cheap to filter by. |
-| `parent_template_id` | UUID | YES | NULL | **NEW — optional FK to the civiccore default this overrides.** ON DELETE SET NULL. Used for "diff against default" tooling later; not used by `resolve_template` itself (resolver uses `name + consumer_app` only). |
+| `template_name` | VARCHAR(200) | NO | — | logical name (e.g. `"exemption_scan"`); part of the override-resolution UNIQUE composite. Renamed from `name` per ADR-0004. |
+| `consumer_app` | VARCHAR(100) | NO | `'civiccore'` | override-resolution column. Values: `'civiccore'`, `'civicrecords-ai'`, `'civicclerk'`, etc. |
+| `is_override` | BOOLEAN | NO | `false` | convenience flag. True when `consumer_app != 'civiccore'`. Redundant with `consumer_app != 'civiccore'` but cheap to filter by. |
 | `purpose` | VARCHAR(50) | NO | — | e.g. `"exemption_scan"`, `"response_generation"` |
 | `system_prompt` | TEXT | NO | — | |
 | `user_prompt_template` | TEXT | NO | — | `string.Template` syntax (`$var`) |
 | `token_budget` | JSONB | YES | `{}` | optional `TokenBudget` overrides |
 | `model_id` | INTEGER | YES | NULL | FK → `model_registry(id)` ON DELETE SET NULL |
-| `version` | INTEGER | NO | `1` | bumped on edit; old versions retained for audit |
+| `version` | INTEGER | NO | `1` | bumped on edit; old versions retained for audit; part of UNIQUE composite |
 | `is_active` | BOOLEAN | NO | `true` | only `is_active=true` rows are eligible for resolution |
 | `created_by` | UUID | YES | NULL | FK → `users(id)` ON DELETE SET NULL |
 | `created_at` | TIMESTAMPTZ | NO | `now()` | |
 
 - **Indexes:**
-  - `(name, consumer_app, is_active)` — composite covering the resolver's hot lookup. Unique partial index where `is_active=true` to prevent two active rows for the same `(name, consumer_app)` pair.
+  - `UNIQUE(consumer_app, template_name, version)` — primary resolver lookup composite (matches ADR-0004). Replaces the previous scope-doc proposal of `(name, consumer_app, is_active)` partial unique.
   - `(consumer_app)` — supports admin UI filter.
 - **FK constraints:**
   - `model_id` → `model_registry(id)` ON DELETE SET NULL.
   - `created_by` → `users(id)` ON DELETE SET NULL.
-  - `parent_template_id` → `prompt_templates(id)` ON DELETE SET NULL.
 - **Records-ai migrations historically touching this table:**
   - `787207afc66a_phase2_extensions_12_new_tables_and_.py` — initial create (Phase 2 extension batch that added 12 tables in one revision).
-- **Idempotency for ADR-0004:** civiccore creates `prompt_templates` via `idempotent_create_table`. The records-ai 787207afc66a migration must be patched (or guarded) so its `prompt_templates` create becomes a no-op when civiccore has created it first. ADR-0004 specifies the patch surgery — likely either (a) split the existing batch migration to gate the prompt_templates create behind an existence check, or (b) add a follow-up migration that drops + civiccore-recreates with the new override columns. Decision deferred to Step 2.
+- **Idempotency for ADR-0004:** civiccore creates `prompt_templates` via `idempotent_create_table`. The records-ai 787207afc66a migration must be patched (or guarded) so its `prompt_templates` create becomes a no-op when civiccore has created it first. ADR-0004 specifies the patch surgery — likely either (a) split the existing batch migration to gate the prompt_templates create behind an existence check, or (b) add a follow-up migration that drops + civiccore-recreates with the new override columns. Decision deferred to Step 3 implementer.
 
 ---
 
