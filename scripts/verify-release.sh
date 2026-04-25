@@ -97,10 +97,18 @@ for f in README.md CHANGELOG.md CONTRIBUTING.md LICENSE .gitignore docs/index.ht
 done
 
 # --- 4. ruff lint ------------------------------------------------------------
-# Host-side ruff (operators: `pip install --user ruff`). Falls back to
-# `python -m ruff` if the binary isn't on PATH. Container ruff would scan
-# image-baked source (potentially stale relative to current working tree),
-# which would give false positives/negatives; host ruff scans on-disk files.
+# Host-side ruff. Detection order (each fallback covers a distinct
+# Windows / POSIX shell environment):
+#   (1) `ruff` binary on PATH                     — POSIX or Windows w/ Scripts on PATH
+#   (2) `python -m ruff`                          — POSIX or Windows w/ python on PATH
+#   (3) `python3 -m ruff`                         — Git Bash on Windows (uses MSYS python3)
+#   (4) `py -3 -m ruff`                           — PowerShell on Windows (Python launcher)
+#   (5) `/c/Windows/py.exe -3 -m ruff`            — Git Bash on Windows (Python launcher
+#                                                   reached via direct Windows path; `py`
+#                                                   isn't on Git Bash's PATH but the .exe
+#                                                   typically lives at this absolute path)
+# Per audit REL-001 (2026-04-25 + Critical follow-up): Git Bash on Windows
+# can't reach `python`/`py` on PATH; needs python3 OR direct Windows path.
 # CI uses container ruff via .github/workflows/ci.yml because CI always
 # builds a fresh api image first.
 info "4. ruff lint"
@@ -108,9 +116,18 @@ if command -v ruff >/dev/null 2>&1; then
     RUFF_CMD="ruff"
 elif python -m ruff --version >/dev/null 2>&1; then
     RUFF_CMD="python -m ruff"
+elif python3 -m ruff --version >/dev/null 2>&1; then
+    RUFF_CMD="python3 -m ruff"
+elif command -v py >/dev/null 2>&1 && py -3 -m ruff --version >/dev/null 2>&1; then
+    RUFF_CMD="py -3 -m ruff"
+elif [ -x /c/Windows/py.exe ] && /c/Windows/py.exe -3 -m ruff --version >/dev/null 2>&1; then
+    RUFF_CMD="/c/Windows/py.exe -3 -m ruff"
 else
     RUFF_CMD=""
-    fail "ruff: not installed locally — install with: pip install --user ruff"
+    fail "ruff: not installed locally — install with one of (pick the python your shell can reach):
+        pip install --user ruff              (POSIX, or Windows PowerShell w/ python on PATH)
+        python3 -m pip install --user ruff   (Git Bash on Windows w/ MSYS python3)
+        py -3 -m pip install --user ruff     (PowerShell on Windows w/ Python launcher)"
 fi
 
 if [ -n "$RUFF_CMD" ]; then
