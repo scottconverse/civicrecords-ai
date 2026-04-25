@@ -228,9 +228,9 @@ When records-ai code calls `resolve_template(template_name, *, consumer_app="civ
 1. **Caller invokes** `resolve_template(template_name, consumer_app=...)`. The `consumer_app` arg defaults to whatever the caller's package is (records-ai sets it to `"civicrecords-ai"` at the call site or via a shared constant). `template_name` is the logical name (e.g., `"exemption_review.system"`).
 
 2. **Lookup order** (first hit wins, no silent fallback):
-   - **(a) records-ai instance overrides** — DB row in `prompt_templates` where `name = template_name` AND `consumer_app = "civicrecords-ai"` AND `is_active = true`. These are operator-customized prompts created via the records-ai admin UI.
+   - **(a) records-ai instance overrides** — DB row in `prompt_templates` where `prompt_templates.template_name = <requested template_name>` AND `consumer_app = "civicrecords-ai"` AND `is_active = true`. These are operator-customized prompts created via the records-ai admin UI.
    - **(b) records-ai code-level overrides** — Python-registered overrides via `civiccore.llm.templates.register_code_override("civicrecords-ai", template_name, PromptTemplate(...))`. These are records-ai shipped defaults that supersede civiccore's, baked into the records-ai codebase.
-   - **(c) civiccore defaults** — DB row where `name = template_name` AND (`consumer_app = "civiccore"` OR `consumer_app IS NULL`) AND `is_active = true`. These are civiccore's shipped defaults.
+   - **(c) civiccore defaults** — DB row where `prompt_templates.template_name = <requested template_name>` AND `consumer_app = "civiccore"` AND `is_active = true`. (Per ADR-0004, `consumer_app` is `NOT NULL DEFAULT 'civiccore'`, so the `IS NULL` clause from earlier drafts no longer applies.) These are civiccore's shipped defaults.
 
 3. **No silent fallback.** If none of (a), (b), (c) match, raise `TemplateNotFound(template_name, consumer_app)` with both fields in the exception message. **Never** return a stub default, never substitute an empty prompt, never log-and-continue. A missing template is a configuration error and must surface immediately.
 
