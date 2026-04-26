@@ -21,6 +21,49 @@ from docx.oxml import OxmlElement
 REPO_ROOT    = Path(__file__).parent.parent
 DOCS_DIR     = Path(__file__).parent
 USER_MANUAL  = REPO_ROOT / "USER-MANUAL.md"
+README_MD    = REPO_ROOT / "README.md"
+
+# Markdown image-ref pattern: ![alt](path)
+IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
+
+
+def _resolve_png(md_dir: Path, ref_path: str) -> Path:
+    """Resolve a markdown image ref to a PNG on disk.
+
+    python-docx cannot embed SVG, so prefer the .png sibling when the ref is .svg.
+    Path is resolved relative to the .md file's directory.
+    """
+    p = (md_dir / ref_path).resolve()
+    if p.suffix.lower() == ".svg":
+        p = p.with_suffix(".png")
+    return p
+
+
+def embed_markdown_image(doc, md_dir: Path, alt: str, ref_path: str, width_inches: float = 6.0):
+    """Embed an image referenced by markdown ![alt](path) into a python-docx document.
+
+    Skips with a logged warning if the resolved PNG is missing (does not crash).
+    Adds an italic centered caption below the image when alt text is present.
+    """
+    png = _resolve_png(md_dir, ref_path)
+    if not png.exists():
+        print(f"  WARNING: image not found, skipping: {png} (ref: {ref_path})")
+        return
+    try:
+        para = doc.add_paragraph()
+        para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = para.add_run()
+        run.add_picture(str(png), width=Inches(width_inches))
+        if alt:
+            cap = doc.add_paragraph()
+            cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            crun = cap.add_run(alt)
+            crun.font.name = "Calibri"
+            crun.font.size = Pt(9)
+            crun.font.italic = True
+            crun.font.color.rgb = GRAY_TEXT
+    except Exception as e:
+        print(f"  WARNING: failed to embed image {png}: {e}")
 
 # ---------------------------------------------------------------------------
 # Brand colours  (RGB tuples)
@@ -172,7 +215,7 @@ def add_header_footer(section, header_text, include_page_num=True):
         fp = footer.add_paragraph()
     fp.clear()
     fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    fp.add_run("Apache License 2.0  —  github.com/scottconverse/civicrecords-ai").font.size = Pt(8)
+    fp.add_run("Apache License 2.0  —  github.com/CivicSuite/civicrecords-ai").font.size = Pt(8)
     if include_page_num:
         fp.add_run("     Page ").font.size = Pt(8)
         add_page_number(fp)
@@ -500,7 +543,7 @@ def build_readme_docx(out_path):
     h2 = doc.add_heading("Install (Windows)", level=2)
     apply_h2_style(h2)
     for line in [
-        "git clone https://github.com/scottconverse/civicrecords-ai.git",
+        "git clone https://github.com/CivicSuite/civicrecords-ai.git",
         "cd civicrecords-ai",
         ".\\install.ps1",
     ]:
@@ -509,7 +552,7 @@ def build_readme_docx(out_path):
     h2 = doc.add_heading("Install (macOS / Linux)", level=2)
     apply_h2_style(h2)
     for line in [
-        "git clone https://github.com/scottconverse/civicrecords-ai.git",
+        "git clone https://github.com/CivicSuite/civicrecords-ai.git",
         "cd civicrecords-ai",
         "bash install.sh",
     ]:
@@ -556,6 +599,20 @@ def build_readme_docx(out_path):
         "Alembic, Celery, pgvector, nomic-embed-text, Gemma 4.",
         italic=True
     )
+
+    # Embed architecture diagrams referenced in README.md
+    for alt, ref in [
+        ("Deployment stack — entire system runs inside Docker Compose on the city's network. "
+         "No cloud, no outbound by default.",
+         "docs/diagrams/deployment-stack.svg"),
+        ("LLM call flow: records-ai routes through civiccore.llm to a local Ollama provider; "
+         "cloud providers are opt-in only.",
+         "docs/diagrams/llm-flow.svg"),
+        ("Sovereignty boundary: all runtime components live inside the city's on-prem network. "
+         "Connector credentials encrypted at rest with Fernet.",
+         "docs/diagrams/sovereignty.svg"),
+    ]:
+        embed_markdown_image(doc, REPO_ROOT, alt, ref)
 
     # --- Technology Stack ---
     h = doc.add_heading("Technology Stack", level=1)
@@ -638,7 +695,7 @@ def build_readme_docx(out_path):
     doc.add_paragraph()
     footer_para = doc.add_paragraph()
     footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = footer_para.add_run("github.com/scottconverse/civicrecords-ai")
+    run = footer_para.add_run("github.com/CivicSuite/civicrecords-ai")
     run.font.name = "Calibri"
     run.font.size = Pt(11)
     run.font.color.rgb = CIVIC_MID
@@ -835,6 +892,13 @@ def build_user_manual_docx(out_path):
 
         # --- Blank line ---
         if not line.strip():
+            i += 1
+            continue
+
+        # --- Markdown image: ![alt](path) ---
+        img_m = IMAGE_RE.match(line)
+        if img_m:
+            embed_markdown_image(doc, USER_MANUAL.parent, img_m.group(1), img_m.group(2))
             i += 1
             continue
 

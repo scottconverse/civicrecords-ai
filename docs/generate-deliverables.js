@@ -14,11 +14,42 @@ const path = require('path');
 
 // Resolve node_modules relative to this script so it works from any cwd
 const NM   = path.join(__dirname, 'node_modules');
-const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require(path.join(NM, 'docx'));
+const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun } = require(path.join(NM, 'docx'));
 const puppeteer = require(path.join(NM, 'puppeteer'));
 
 // Repo root is one level up from docs/
 const ROOT = path.join(__dirname, '..');
+
+// ── Image embedding helper ───────────────────────────────────────────────────
+// Detect markdown image lines: ![alt](src)
+const IMAGE_RE = /^!\[(.*?)\]\((.+?)\)$/;
+
+/**
+ * Build an ImageRun from a markdown image src, resolving paths relative to
+ * the markdown file's directory. SVGs aren't natively rendered by the docx
+ * lib, so prefer a sibling .png variant when available.
+ */
+function buildImageParagraph(src, alt, baseDir) {
+  let resolved = path.resolve(baseDir, src);
+  if (resolved.toLowerCase().endsWith('.svg')) {
+    const pngVariant = resolved.replace(/\.svg$/i, '.png');
+    if (fs.existsSync(pngVariant)) resolved = pngVariant;
+  }
+  if (!fs.existsSync(resolved)) {
+    console.warn(`[skip] missing image: ${resolved}`);
+    return new Paragraph({ children: [new TextRun({ text: `[Image: ${alt || src}]`, italics: true })] });
+  }
+  const data = fs.readFileSync(resolved);
+  const ext = path.extname(resolved).slice(1).toLowerCase();
+  const type = (ext === 'jpg' ? 'jpeg' : ext); // png, jpeg, gif, bmp
+  return new Paragraph({
+    children: [new ImageRun({
+      data,
+      transformation: { width: 600, height: 400 },
+      type,
+    })],
+  });
+}
 
 // ── Plain text (copy as-is — markdown is readable plain text) ────────────────
 function generateTxt(src, dest) {
@@ -34,9 +65,17 @@ function generateTxt(src, dest) {
  * Bold (**text**) and inline code (`text`) stripped to plain text —
  * the docx is a structural deliverable, not a pixel-perfect render.
  */
-function mdToDocxParagraphs(md) {
+function mdToDocxParagraphs(md, baseDir) {
   const paragraphs = [];
   for (const raw of md.split('\n')) {
+    // Image lines must be detected BEFORE the link-stripping regex, otherwise
+    // ![alt](src) collapses to "alt" and the embed is lost.
+    const imgMatch = raw.trim().match(IMAGE_RE);
+    if (imgMatch) {
+      paragraphs.push(buildImageParagraph(imgMatch[2], imgMatch[1], baseDir));
+      continue;
+    }
+
     const line = raw
       .replace(/\*\*(.+?)\*\*/g, '$1')        // strip bold markers
       .replace(/`([^`]+)`/g, '$1')             // strip inline code markers
@@ -73,10 +112,11 @@ function mdToDocxParagraphs(md) {
 
 async function generateDocx(src, dest) {
   const md  = fs.readFileSync(src, 'utf8');
+  const baseDir = path.dirname(src);
   const doc = new Document({
     creator: 'CivicRecords AI',
     title:   path.basename(src, '.md'),
-    sections: [{ children: mdToDocxParagraphs(md) }],
+    sections: [{ children: mdToDocxParagraphs(md, baseDir) }],
   });
   const buf = await Packer.toBuffer(doc);
   fs.writeFileSync(dest, buf);
@@ -93,6 +133,20 @@ function mdToHtml(md, title) {
     .replace(/>/g, '&gt;');
 
   const body = escaped
+    // Markdown image refs: !\[alt\]\(path\) -> <img>. Resolve relative paths to
+    // absolute file:// URLs so puppeteer can fetch them when HTML is injected
+    // via setContent (no base URL by default). PNG variants of SVG paths used
+    // when the .png sidecar exists (some markdown sources point at SVG which
+    // puppeteer renders fine, but PNG is the safe fallback).
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => {
+      let resolved = src.startsWith('http') ? src : path.resolve(ROOT, src);
+      if (resolved.endsWith('.svg')) {
+        const png = resolved.replace(/\.svg$/, '.png');
+        if (fs.existsSync(png)) resolved = png;
+      }
+      const url = resolved.startsWith('http') ? resolved : 'file:///' + resolved.replace(/\\/g, '/');
+      return `<img src="${url}" alt="${alt}" style="max-width: 100%; height: auto; display: block; margin: 16px auto;">`;
+    })
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')

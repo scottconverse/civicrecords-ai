@@ -1,10 +1,47 @@
 const fs = require("fs");
+const path = require("path");
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   Header, Footer, AlignmentType, LevelFormat, HeadingLevel,
   BorderStyle, WidthType, ShadingType, PageNumber, PageBreak,
-  TableOfContents
+  TableOfContents, ImageRun
 } = require("docx");
+
+// ── Image embedding helper ──────────────────────────────────────────────────
+// Resolve markdown-style image src relative to the docs/ directory and embed
+// as an ImageRun paragraph. Prefer .png variants of .svg sources because the
+// docx lib does not natively render SVG.
+function imageParagraph(src, alt) {
+  let resolved = path.resolve(__dirname, src);
+  if (resolved.toLowerCase().endsWith(".svg")) {
+    const pngVariant = resolved.replace(/\.svg$/i, ".png");
+    if (fs.existsSync(pngVariant)) resolved = pngVariant;
+  }
+  if (!fs.existsSync(resolved)) {
+    console.warn("[skip] missing image: " + resolved);
+    return new Paragraph({ children: [new TextRun({ text: "[Image: " + (alt || src) + "]", italics: true })] });
+  }
+  const data = fs.readFileSync(resolved);
+  const ext = path.extname(resolved).slice(1).toLowerCase();
+  const type = (ext === "jpg" ? "jpeg" : ext);
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 120, after: 120 },
+    children: [new ImageRun({
+      data,
+      transformation: { width: 600, height: 400 },
+      type,
+    })],
+  });
+}
+
+function imageCaption(text) {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 200 },
+    children: [new TextRun({ text, size: 10 * 2, font: "Arial", italics: true, color: "5B6975" })],
+  });
+}
 
 // Design tokens
 const colors = {
@@ -459,6 +496,13 @@ const doc = new Document({
         spacer(),
         p("See docs/architecture/system-architecture.html for interactive architecture diagrams.", { italics: true, color: colors.muted }),
         spacer(),
+        imageParagraph("diagrams/deployment-stack.svg", "Deployment stack"),
+        imageCaption("Deployment stack — entire system runs inside Docker Compose on the city's network. No cloud, no outbound by default."),
+        imageParagraph("diagrams/llm-flow.svg", "LLM call flow"),
+        imageCaption("LLM call flow — records-ai routes through civiccore.llm (context assembly, template resolution, model registry, provider factory) to a local Ollama provider."),
+        imageParagraph("diagrams/sovereignty.svg", "Sovereignty boundary"),
+        imageCaption("Sovereignty boundary — all runtime components (FastAPI, Celery, Postgres+pgvector, Ollama, local volumes) live inside the city's on-prem network."),
+        spacer(),
 
         // --- 13. Hardware Requirements ---
         h2("13. Hardware Requirements"),
@@ -483,11 +527,11 @@ const doc = new Document({
         // --- 14. Installation ---
         h2("14. Installation"),
         h3("Windows"),
-        codeBlock("git clone https://github.com/scottconverse/civicrecords-ai.git"),
+        codeBlock("git clone https://github.com/CivicSuite/civicrecords-ai.git"),
         codeBlock("cd civicrecords-ai"),
         codeBlock(".\\install.ps1"),
         h3("Linux / macOS"),
-        codeBlock("git clone https://github.com/scottconverse/civicrecords-ai.git"),
+        codeBlock("git clone https://github.com/CivicSuite/civicrecords-ai.git"),
         codeBlock("cd civicrecords-ai"),
         codeBlock("bash install.sh"),
         h3("What the Installer Does"),
