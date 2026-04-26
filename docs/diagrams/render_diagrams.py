@@ -10,10 +10,9 @@ import os
 import traceback
 
 from reportlab.graphics.shapes import (
-    Drawing, Rect, String, Line, Group, Path, Polygon
+    Drawing, Rect, String, Line, Group, Polygon
 )
 from reportlab.graphics import renderSVG
-from reportlab.lib import colors
 from reportlab.lib.colors import HexColor, white, black
 
 # ---------------------------------------------------------------------------
@@ -190,7 +189,6 @@ def make_component():
     ITEM_H = 28
     ITEM_PAD = 8
     LAYER_GAP = 12
-    ARROW_MARGIN = 8
 
     # compute heights per layer
     def layer_height(items):
@@ -198,7 +196,7 @@ def make_component():
         rows = -(-len(items) // per_row)
         return HDR + rows * (ITEM_H + 4) + 12
 
-    total_content = sum(layer_height(l[1]) for l in layers) + LAYER_GAP * len(layers)
+    total_content = sum(layer_height(layer[1]) for layer in layers) + LAYER_GAP * len(layers)
     y_start = H - 48 - total_content
 
     layer_boxes = []  # (x, y, w, h) for arrows
@@ -246,31 +244,20 @@ def make_component():
         (2, 4, "Embed/OCR"),
         (5, 1, "Ingest"),
     ]
-    arrow_x_offsets = [60, 120, 180, 240, 300]
     for idx, (src, dst, lbl) in enumerate(arrow_pairs):
         sx, sy, sw, sh = layer_boxes[src]
         dx, dy, dw, dh = layer_boxes[dst]
-        ax = LX + LW + 20 + idx * 0  # draw on right side staggered
         # simple vertical arrow from bottom of src to top of dst
-        ax = LX + 40 + idx * 30
-        top_src = layer_boxes[src][1] + layer_boxes[src][3] / 2
         # use bottom of upper box to top of lower box
         if src < dst:
-            y1 = layer_boxes[src][1]  # bottom of src box
-            y2 = layer_boxes[dst][1] + layer_boxes[dst][3]  # top of dst box
+            _y1 = layer_boxes[src][1]  # bottom of src box
+            _y2 = layer_boxes[dst][1] + layer_boxes[dst][3]  # top of dst box
         else:
-            y1 = layer_boxes[src][1] + layer_boxes[src][3]
-            y2 = layer_boxes[dst][1]
+            _y1 = layer_boxes[src][1] + layer_boxes[src][3]
+            _y2 = layer_boxes[dst][1]
         # skip drawing internal arrows for clean look; just annotate
     # Draw clean side annotations
-    annots = [
-        ("Browser → API", LX + LW + 6, layer_boxes[0][1] + layer_boxes[0][3]/2 - 10),
-        ("API → Data",    LX + LW + 6, layer_boxes[1][1] + layer_boxes[1][3]/2 - 10),
-        ("Workers → Data/AI", LX + LW + 6, layer_boxes[2][1] + 10),
-        ("Sources → API", LX + LW + 6, layer_boxes[5][1] + layer_boxes[5][3]/2 - 10),
-    ]
     # draw arrows on right margin
-    right_x = LX + LW + 4
     arrow_defs = [
         (layer_boxes[0], layer_boxes[1], "HTTP/REST", MID),
         (layer_boxes[1], layer_boxes[3], "SQL / Cache", PURPLE),
@@ -278,8 +265,6 @@ def make_component():
         (layer_boxes[2], layer_boxes[4], "Embed / OCR", TEAL),
         (layer_boxes[5], layer_boxes[1], "Ingest", GREEN),
     ]
-    ax_positions = [right_x + 4, right_x + 44, right_x + 84,
-                    right_x + 124, right_x + 164]
     # Use left side for source→dest arrows
     for i, (sb, db, lbl_text, col) in enumerate(arrow_defs):
         ax_pos = LX - 16 - i * 0  # stack on left
@@ -682,10 +667,14 @@ def make_deployment():
 
     def svc_edge(name, side="right"):
         cx, cy, sx, sy, sw, sh = svc_centers[name]
-        if side == "right": return sx + sw, cy
-        if side == "left":  return sx, cy
-        if side == "top":   return cx, sy + sh
-        if side == "bottom": return cx, sy
+        if side == "right":
+            return sx + sw, cy
+        if side == "left":
+            return sx, cy
+        if side == "top":
+            return cx, sy + sh
+        if side == "bottom":
+            return cx, sy
 
     # Connections
     conn_defs = [
@@ -699,11 +688,9 @@ def make_deployment():
         ("api\n(:8000)",      "bottom","redis\n(:6379)",    "top",   "Cache",RED),
     ]
 
-    drawn_lines = set()
     for src, src_side, dst, dst_side, lbl_text, col in conn_defs:
         x1, y1 = svc_edge(src, src_side)
         x2, y2 = svc_edge(dst, dst_side)
-        key = tuple(sorted([src, dst]))
         # Draw orthogonal lines
         mid_x = (x1 + x2) / 2
         mid_y = (y1 + y2) / 2
@@ -715,7 +702,6 @@ def make_deployment():
     # Browser → frontend arrow
     bfx = bx + bw
     bfy = by + bh/2
-    fe_cx = svc_centers["frontend\n(:8080)"][2]  # left x
     fe_cy = svc_centers["frontend\n(:8080)"][1]  # cy
     # need to go through the box border
     fe_lx = svc_centers["frontend\n(:8080)"][2]  # sx
@@ -855,10 +841,14 @@ def make_sync_failure():
     def state_edge(name, side):
         x, y, hc, bg = states[name]
         cx, cy = x + STATE_W/2, y + STATE_H/2
-        if side == "top":    return cx, y + STATE_H
-        if side == "bottom": return cx, y
-        if side == "left":   return x, cy
-        if side == "right":  return x + STATE_W, cy
+        if side == "top":
+            return cx, y + STATE_H
+        if side == "bottom":
+            return cx, y
+        if side == "left":
+            return x, cy
+        if side == "right":
+            return x + STATE_W, cy
 
     # Draw states
     for sname, (sx, sy, hc, bg) in states.items():

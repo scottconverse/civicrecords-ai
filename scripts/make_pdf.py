@@ -1,7 +1,6 @@
 """Convert README.md to README-FULL.pdf using reportlab + markdown-it-py."""
 
 import re
-import sys
 from pathlib import Path
 from markdown_it import MarkdownIt
 from reportlab.lib.pagesizes import letter
@@ -12,7 +11,6 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Preformatted,
     Table, TableStyle, HRFlowable
 )
-from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 # ── paths ────────────────────────────────────────────────────────────────────
 ROOT = Path(__file__).parent.parent

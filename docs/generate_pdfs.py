@@ -10,16 +10,13 @@ from datetime import date
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib import colors
 from reportlab.platypus import (
     BaseDocTemplate, PageTemplate, Frame,
     Paragraph, Spacer, Table, TableStyle, PageBreak,
     KeepTogether, HRFlowable, Flowable,
 )
-from reportlab.graphics.shapes import Drawing, Rect, String, Line, Group, Circle
-from reportlab.graphics import renderPDF
-from reportlab.pdfgen import canvas as pdfcanvas
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -44,7 +41,7 @@ BLACK        = colors.black
 # Styles
 # ---------------------------------------------------------------------------
 def make_styles():
-    base = getSampleStyleSheet()
+    getSampleStyleSheet()
     styles = {}
 
     styles["title"] = ParagraphStyle(
@@ -226,7 +223,7 @@ def make_page_callback(doc_title, show_header=True):
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(colors.HexColor("#6b7280"))
         canvas.drawString(margin, 0.38 * inch, "Apache License 2.0 — github.com/scottconverse/civicrecords-ai")
-        canvas.drawRightString(w - margin, 0.38 * inch, f"© 2026 CivicRecords AI")
+        canvas.drawRightString(w - margin, 0.38 * inch, "© 2026 CivicRecords AI")
 
         canvas.restoreState()
     return on_page
@@ -247,8 +244,6 @@ class SystemArchDiagram(Flowable):
 
     def draw(self):
         c = self.canv
-        w = self.diagram_width
-        h = self.diagram_height
 
         def box(x, y, bw, bh, fill, label, sublabel=None, font_size=8):
             c.setFillColor(fill)
@@ -290,7 +285,6 @@ class SystemArchDiagram(Flowable):
         # Dimensions
         bw = 1.1 * inch   # box width
         bh = 0.48 * inch  # box height
-        gap = 0.12 * inch
 
         # Row y positions (bottom-up)
         row1_y = 0.1 * inch                     # bottom: infrastructure layer
@@ -450,7 +444,6 @@ class CircuitBreakerDiagram(Flowable):
 
     def draw(self):
         c = self.canv
-        w = self.diagram_width
 
         def state(cx, cy, r, fill, label):
             c.setFillColor(fill)
@@ -501,9 +494,15 @@ class CircuitBreakerDiagram(Flowable):
 # ---------------------------------------------------------------------------
 # Content helpers
 # ---------------------------------------------------------------------------
-P   = Paragraph
-sp  = lambda n=6: Spacer(1, n)
-HR  = lambda: HRFlowable(width="100%", thickness=0.5, color=CIVIC_ACCENT, spaceAfter=6, spaceBefore=6)
+P = Paragraph
+
+
+def sp(n=6):
+    return Spacer(1, n)
+
+
+def HR():
+    return HRFlowable(width="100%", thickness=0.5, color=CIVIC_ACCENT, spaceAfter=6, spaceBefore=6)
 
 
 def section_header(text, styles, level=1):
@@ -753,7 +752,7 @@ def build_readme_full(out_path):
         "Runs entirely on local hardware — no cloud, no telemetry, no vendor lock-in",
     ], styles)
     story.append(P(
-        "Current release: <b>v1.3.0</b> (April 24, 2026). 29 database tables, ~30 API endpoints, "
+        "Current release: <b>v1.4.0</b> (April 25, 2026). 29 database tables, ~30 API endpoints, "
         "617 backend + 36 frontend automated tests. Tier 5 and Tier 6 complete — ENG-001 "
         "(at-rest encryption for <tt>data_sources.connection_config</tt> via Fernet envelope) "
         "is closed. Tier 5 shipped the minimal public portal (T5D) and unsigned Windows "

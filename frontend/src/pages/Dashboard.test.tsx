@@ -14,7 +14,7 @@ import Dashboard from "./Dashboard";
  */
 
 const HEALTHY_STATUS = {
-  version: "1.3.0",
+  version: "1.4.0",
   database: "connected",
   ollama: "connected",
   redis: "connected",
