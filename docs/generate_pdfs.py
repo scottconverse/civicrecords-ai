@@ -15,8 +15,12 @@ from reportlab.lib import colors
 from reportlab.platypus import (
     BaseDocTemplate, PageTemplate, Frame,
     Paragraph, Spacer, Table, TableStyle, PageBreak,
-    KeepTogether, HRFlowable, Flowable,
+    KeepTogether, HRFlowable, Flowable, Image as RLImage,
 )
+import re
+
+# Markdown image-ref pattern: ![alt](path)
+IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -497,6 +501,53 @@ class CircuitBreakerDiagram(Flowable):
 P = Paragraph
 
 
+def _resolve_png(md_dir: Path, ref_path: str) -> Path:
+    """Resolve a markdown image ref to a PNG on disk (path is relative to md_dir).
+
+    Reportlab handles PNG well; SVG refs are mapped to .png siblings.
+    """
+    p = (md_dir / ref_path).resolve()
+    if p.suffix.lower() == ".svg":
+        p = p.with_suffix(".png")
+    return p
+
+
+def embed_markdown_image_flowables(md_dir: Path, alt: str, ref_path: str,
+                                   styles, width_inches: float = 6.0):
+    """Return a list of reportlab flowables embedding the resolved PNG.
+
+    Skips with a logged warning if the resolved PNG is missing (does not crash).
+    Calculates proportional height via PIL when available; falls back to
+    reportlab.lib.utils.ImageReader otherwise.
+    """
+    png = _resolve_png(md_dir, ref_path)
+    if not png.exists():
+        print(f"  WARNING: image not found, skipping: {png} (ref: {ref_path})")
+        return []
+    try:
+        try:
+            from PIL import Image as PILImage
+            with PILImage.open(str(png)) as im:
+                iw, ih = im.size
+        except Exception:
+            from reportlab.lib.utils import ImageReader
+            iw, ih = ImageReader(str(png)).getSize()
+        target_w = width_inches * inch
+        target_h = target_w * (ih / iw) if iw else target_w * 0.5
+        out = [
+            Spacer(1, 4),
+            RLImage(str(png), width=target_w, height=target_h),
+        ]
+        if alt:
+            out.append(P(alt.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"),
+                         styles["caption"]))
+        out.append(Spacer(1, 6))
+        return out
+    except Exception as e:
+        print(f"  WARNING: failed to embed image {png}: {e}")
+        return []
+
+
 def sp(n=6):
     return Spacer(1, n)
 
@@ -797,6 +848,20 @@ def build_readme_full(out_path):
         "AMD GPU/NPU hardware auto-detection is included (ROCm on Linux, DirectML on Windows).",
         styles["body"]
     ))
+
+    # Embed architecture diagrams referenced by README.md
+    for alt, ref in [
+        ("Deployment stack — entire system runs inside Docker Compose on the city's network. "
+         "No cloud, no outbound by default.",
+         "docs/diagrams/deployment-stack.svg"),
+        ("LLM call flow: records-ai routes through civiccore.llm to a local Ollama provider; "
+         "cloud providers are opt-in only.",
+         "docs/diagrams/llm-flow.svg"),
+        ("Sovereignty boundary: all runtime components live inside the city's on-prem network. "
+         "Connector credentials encrypted at rest with Fernet.",
+         "docs/diagrams/sovereignty.svg"),
+    ]:
+        story.extend(embed_markdown_image_flowables(REPO_ROOT, alt, ref, styles))
 
     story.append(PageBreak())
 
@@ -1233,6 +1298,20 @@ def build_readme_short(out_path):
         "Tailwind CSS, Alembic, Celery, pgvector, nomic-embed-text, Gemma 4.",
         styles["body"]
     ))
+
+    # Embed architecture diagrams referenced by README.md
+    for alt, ref in [
+        ("Deployment stack — entire system runs inside Docker Compose on the city's network. "
+         "No cloud, no outbound by default.",
+         "docs/diagrams/deployment-stack.svg"),
+        ("LLM call flow: records-ai routes through civiccore.llm to a local Ollama provider; "
+         "cloud providers are opt-in only.",
+         "docs/diagrams/llm-flow.svg"),
+        ("Sovereignty boundary: all runtime components live inside the city's on-prem network. "
+         "Connector credentials encrypted at rest with Fernet.",
+         "docs/diagrams/sovereignty.svg"),
+    ]:
+        story.extend(embed_markdown_image_flowables(REPO_ROOT, alt, ref, styles))
 
     story.append(PageBreak())
 
