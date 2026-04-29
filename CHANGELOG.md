@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hybrid search now consumes `civiccore.search.reciprocal_rank_fusion()` so
   records-ai and other CivicSuite consumers share one weighted fusion contract
   instead of carrying private copies of the same helper.
+- Onboarding interview orchestration now consumes the shared
+  `civiccore.onboarding` field-order, answer-normalization, completion-state,
+  and skip-aware next-question helpers instead of carrying a private copy of
+  that contract inside the records-ai router.
 
 ### Fixed
 - Installer hardening: `install.ps1` now stops immediately when hardware detection fails, so under-spec hosts get a clear prerequisite failure instead of continuing deeper into Docker/bootstrap work. The hardware-detection output also avoids the stale mojibake strings in operator-facing warnings.
@@ -18,8 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - The development-line `backend/pyproject.toml` dependency now targets the
-  published `civiccore` v0.7.0 wheel so the shared search helper is consumed
-  from the shared platform package instead of a records-ai-local helper copy.
+  published `civiccore` v0.10.0 wheel so the shared search and onboarding
+  helpers are consumed from the shared platform package instead of
+  records-ai-local helper copies.
 
 ## [1.4.1] - 2026-04-28
 

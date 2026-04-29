@@ -1378,17 +1378,7 @@ export interface paths {
         put?: never;
         /**
          * Get Next Question
-         * @description Generate the next onboarding interview question and persist the last answer.
-         *
-         *     Persistence semantics (T5A):
-         *       - If ``last_answer`` + ``last_field`` are supplied AND ``last_field`` is
-         *         a real tracked CityProfile field: parse the answer (yes/no → bool for
-         *         ``has_dedicated_it``), upsert the singleton row, and transition
-         *         ``onboarding_status``.
-         *       - If parsing yields ``None`` (empty or unparseable): the interview
-         *         re-asks the same field rather than storing a bad value.
-         *       - Returns the next question for the first remaining empty field, along
-         *         with the computed ``onboarding_status``.
+         * @description Generate the next onboarding question and persist the last answer.
          */
         post: operations["get_next_question_onboarding_interview_post"];
         delete?: never;
