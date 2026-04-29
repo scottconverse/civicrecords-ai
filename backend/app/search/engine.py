@@ -1,6 +1,7 @@
 import uuid
 from dataclasses import dataclass
 
+from civiccore.search import reciprocal_rank_fusion
 from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -91,27 +92,6 @@ async def keyword_search(
 
     result = await session.execute(sql, params)
     return [(row[0], float(row[1])) for row in result.fetchall()]
-
-
-def reciprocal_rank_fusion(
-    semantic_results: list[tuple[uuid.UUID, float]],
-    keyword_results: list[tuple[uuid.UUID, float]],
-    k: int = 60,
-    semantic_weight: float = 0.7,
-    keyword_weight: float = 0.3,
-) -> list[tuple[uuid.UUID, float]]:
-    """Combine semantic and keyword results using RRF."""
-    scores: dict[uuid.UUID, float] = {}
-
-    for rank, (chunk_id, _) in enumerate(semantic_results):
-        scores[chunk_id] = scores.get(chunk_id, 0) + semantic_weight / (k + rank + 1)
-
-    for rank, (chunk_id, _) in enumerate(keyword_results):
-        scores[chunk_id] = scores.get(chunk_id, 0) + keyword_weight / (k + rank + 1)
-
-    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    return ranked
-
 
 async def hybrid_search(
     session: AsyncSession,
