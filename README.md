@@ -145,7 +145,7 @@ CivicRecords AI is designed for environments where resident data must never leav
 - Runs entirely on local hardware — no cloud dependencies
 - No telemetry, analytics, or crash reporting
 - All LLM inference runs locally via Ollama
-- Verification script confirms no outbound connections: `bash scripts/verify-sovereignty.sh`
+- Live verification script confirms the running Compose stack is local-only: start the stack with `docker compose up -d`, then run `bash scripts/verify-sovereignty.sh`
 
 ## License
 
