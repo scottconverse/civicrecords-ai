@@ -66,7 +66,7 @@ Operational analytics and dashboard with coverage gap indicators
 Guided onboarding — two modes operators can switch between: a 3-phase form wizard (City Profile → Systems → Gap Map), and a single-phase LLM-powered adaptive interview that persists each answer to the CityProfile singleton and transitions `onboarding_status` (not_started → in_progress → complete) as the walk progresses
 Municipal systems catalog (12 domains, 25+ vendors)
 Connector framework (4 shipped: file_system, manual_drop, rest_api, odbc; imap_email class exists as roadmap groundwork, not registered)
-Central LLM client with context manager, token budgeting, and prompt injection sanitization (Phase 2 LLM integration introduced via civiccore v0.2.0 in v1.4.0; dependency aligned to civiccore v0.3.0 in v1.4.1)
+Central LLM client with context manager, token budgeting, and prompt injection sanitization (Phase 2 LLM integration introduced via civiccore v0.2.0 in v1.4.0; latest published release aligned to civiccore v0.3.0 in v1.4.1; current development line now targets civiccore v0.10.0 for shared search + onboarding helpers)
 Compliance templates (5 documents) and model registry
 Hash-chained audit logging with CSV/JSON export
 ~620 automated backend tests + ~30 frontend tests (all passing)

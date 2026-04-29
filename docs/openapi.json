@@ -5023,7 +5023,7 @@
           "onboarding"
         ],
         "summary": "Get Next Question",
-        "description": "Generate the next onboarding interview question and persist the last answer.\n\nPersistence semantics (T5A):\n  - If ``last_answer`` + ``last_field`` are supplied AND ``last_field`` is\n    a real tracked CityProfile field: parse the answer (yes/no \u2192 bool for\n    ``has_dedicated_it``), upsert the singleton row, and transition\n    ``onboarding_status``.\n  - If parsing yields ``None`` (empty or unparseable): the interview\n    re-asks the same field rather than storing a bad value.\n  - Returns the next question for the first remaining empty field, along\n    with the computed ``onboarding_status``.",
+        "description": "Generate the next onboarding question and persist the last answer.",
         "operationId": "get_next_question_onboarding_interview_post",
         "requestBody": {
           "content": {
