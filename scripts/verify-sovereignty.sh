@@ -2,13 +2,14 @@
 set -euo pipefail
 
 echo "============================================"
-echo "  CivicRecords AI — Data Sovereignty Check"
+echo "  CivicRecords AI - Data Sovereignty Check"
 echo "============================================"
 echo ""
 
 PASS=0
 FAIL=0
 WARN=0
+API_RUNNING=0
 
 check() {
     local desc="$1"
@@ -25,21 +26,36 @@ check() {
     fi
 }
 
+is_service_running() {
+    docker compose ps --services --status running 2>/dev/null | grep -qx "$1"
+}
+
 echo "1. Checking Docker network isolation..."
-API_PORTS=$(docker compose port api 8000 2>/dev/null || echo "")
-if [ -n "$API_PORTS" ]; then
-    check "API bound to local port" "PASS"
+if is_service_running api; then
+    API_RUNNING=1
+    check "API service is running" "PASS"
+    API_PORTS=$(docker compose port api 8000 2>/dev/null || echo "")
+    if [ -n "$API_PORTS" ]; then
+        check "API bound to local port" "PASS"
+    else
+        check "API bound to local port (start stack with: docker compose up -d)" "FAIL"
+    fi
 else
-    check "API bound to local port" "FAIL"
+    check "API service is running (start stack with: docker compose up -d)" "FAIL"
+    check "API bound to local port (start stack with: docker compose up -d)" "FAIL"
 fi
 
 echo ""
 echo "2. Checking for outbound connections..."
-OUTBOUND=$(docker compose exec api ss -tunp 2>/dev/null | grep -v "127.0.0.1\|172\.\|10\.\|192\.168\." | grep "ESTAB" || true)
-if [ -z "$OUTBOUND" ]; then
-    check "No unexpected outbound connections from API" "PASS"
+if [ "$API_RUNNING" -eq 1 ]; then
+    OUTBOUND=$(docker compose exec api ss -tunp 2>/dev/null | grep -v "127.0.0.1\|172\.\|10\.\|192\.168\." | grep "ESTAB" || true)
+    if [ -z "$OUTBOUND" ]; then
+        check "No unexpected outbound connections from API" "PASS"
+    else
+        check "No unexpected outbound connections from API - found: $OUTBOUND" "FAIL"
+    fi
 else
-    check "No unexpected outbound connections from API — found: $OUTBOUND" "FAIL"
+    check "No unexpected outbound connections from API (requires running stack)" "FAIL"
 fi
 
 echo ""
@@ -70,7 +86,7 @@ if [ -f .env ]; then
     if [ -z "$CLOUD_KEYS" ]; then
         check "No cloud API keys in .env" "PASS"
     else
-        check "Cloud API keys found in .env — data may leave the network" "WARN"
+        check "Cloud API keys found in .env - data may leave the network" "WARN"
     fi
 else
     check ".env file exists" "FAIL"
@@ -82,7 +98,7 @@ echo "  Results: $PASS passed, $WARN warnings, $FAIL failed"
 echo "============================================"
 
 if [ "$FAIL" -gt 0 ]; then
-    echo "  DATA SOVEREIGNTY: FAILED — review issues above"
+    echo "  DATA SOVEREIGNTY: FAILED - review issues above"
     exit 1
 elif [ "$WARN" -gt 0 ]; then
     echo "  DATA SOVEREIGNTY: PASSED WITH WARNINGS"
