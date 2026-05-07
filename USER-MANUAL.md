@@ -2,6 +2,8 @@
 
 **Version 1.1+ · April 2026**
 
+> **Release recovery notice (2026-05-07).** The public `v1.4.10` tag is provisional and do-not-promote. Use this manual as operator guidance for the current source tree, not as a product release-readiness claim, until `docs/release-recovery-status.md` gates pass.
+
 ---
 
 > This manual serves three audiences. Jump to your section:

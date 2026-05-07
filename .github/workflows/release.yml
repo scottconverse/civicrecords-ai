@@ -67,6 +67,25 @@ jobs:
         shell: bash
         run: python -m pip install "git+https://github.com/CivicSuite/civiccore.git@main"
 
+      - name: Synthesize hermetic .env for release verification
+        shell: bash
+        run: |
+          JWT_SECRET="$(openssl rand -hex 32)"
+          ADMIN_PW="$(openssl rand -hex 16)"
+          ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+          umask 077
+          cat > .env <<EOF
+          DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords
+          JWT_SECRET=${JWT_SECRET}
+          ENCRYPTION_KEY=${ENCRYPTION_KEY}
+          FIRST_ADMIN_EMAIL=admin@ci.local
+          FIRST_ADMIN_PASSWORD=${ADMIN_PW}
+          OLLAMA_BASE_URL=http://ollama:11434
+          REDIS_URL=redis://redis:6379/0
+          AUDIT_RETENTION_DAYS=1095
+          PORTAL_MODE=private
+          EOF
+
       - name: Run release verification
         shell: bash
         run: bash scripts/verify-release.sh

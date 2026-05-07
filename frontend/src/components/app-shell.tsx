@@ -82,7 +82,7 @@ export function AppShell({ children, onSignOut, userEmail, userRole }: AppShellP
     <div className="flex h-screen overflow-hidden bg-background">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-14 focus:left-2 md:focus:top-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md"
       >
         Skip to main content
       </a>
