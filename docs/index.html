@@ -429,8 +429,8 @@
 
 <!-- HERO -->
 <header class="hero">
-  <div class="hero-badge">v1.4.10 &nbsp;·&nbsp; Apache 2.0 &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; Security Hardened</div>
-  <p style="max-width: 860px; margin: 1rem auto 0; color: #bfdbfe;">Release provenance note: GitHub release pages can show a target commit as Verified even when the release tag itself is lightweight or unsigned. CivicRecords AI now uses CivicCore's <code>civiccore.release_provenance</code> preflight gate. Post-baseline releases are verified by a Sigstore-signed <code>release-attestation.json</code> plus bundle. The current public <code>v1.4.10</code> artifact is historical pre-gate and must not be promoted as an attested baseline; see <code>docs/ops/tier1-retrofit-ledger.md</code>.</p>
+  <div class="hero-badge">v1.4.10 provisional &nbsp;·&nbsp; Apache 2.0 &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; Recovery Gate Active</div>
+  <p style="max-width: 860px; margin: 1rem auto 0; color: #bfdbfe;">Release recovery note: the current public <code>v1.4.10</code> artifact is historical pre-gate and do-not-promote. It must not be treated as an attested release baseline until the recovery gates in <code>docs/release-recovery-status.md</code> pass locally and in CI.</p>
   <h1>Civic<span>Records AI</span></h1>
   <p class="hero-tagline">Open-source AI for municipal open records</p>
 
@@ -706,7 +706,7 @@
       <div class="card">
         <div class="card-icon">&#128640;</div>
         <h3>Guided Onboarding</h3>
-        <p>Step-by-step setup wizard walks administrators through initial configuration — LLM model selection, department setup, user creation, and first document ingestion — so the system is production-ready in under an hour.</p>
+        <p>Step-by-step setup wizard walks administrators through initial configuration — LLM model selection, department setup, user creation, and first document ingestion — so operators have a guided local bootstrap path.</p>
       </div>
 
       <div class="card">

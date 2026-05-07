@@ -1,17 +1,5 @@
 #!/usr/bin/env bash
-# civicrecords-ai/scripts/verify-release.sh — Phase 1 release gate.
-#
-# Read-only verification. Checks:
-#   1. Data sovereignty — delegates to scripts/verify-sovereignty.sh
-#   2. Version lockstep across 4 surfaces:
-#      - backend/pyproject.toml     (version = "X")
-#      - frontend/package.json      ("version": "X")
-#      - CHANGELOG.md               (top "## [X]" heading)
-#      - docs/UNIFIED-SPEC.md       ("Current release | vX" table row)
-#   3. Required Rule 9 doc artifacts present on disk
-#
-# Exit 0 when every check passes; exit 1 on any failure. Never writes.
-# Does NOT modify scripts/verify-sovereignty.sh or its .ps1 twin.
+# civicrecords-ai/scripts/verify-release.sh - recovery release gate.
 
 set -euo pipefail
 
@@ -23,25 +11,60 @@ pass() { printf '  \033[0;32m[PASS]\033[0m %s\n' "$*"; }
 fail() { printf '  \033[0;31m[FAIL]\033[0m %s\n' "$*" >&2; FAILED=1; }
 info() { printf '\n\033[1;34m%s\033[0m\n' "$*"; }
 
-# --- 1. sovereignty guard ----------------------------------------------------
-info "1. data sovereignty"
-if [ ! -x scripts/verify-sovereignty.sh ] && [ ! -f scripts/verify-sovereignty.sh ]; then
-    fail "scripts/verify-sovereignty.sh missing"
+PYTHON_CMD=""
+if command -v python3 >/dev/null 2>&1; then
+    PYTHON_CMD="python3"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_CMD="python"
+elif command -v py >/dev/null 2>&1; then
+    PYTHON_CMD="py -3"
+fi
+
+if [ -z "$PYTHON_CMD" ]; then
+    fail "python: no python3/python/py executable found on PATH"
+fi
+
+info "1. recovery gates"
+if [ -n "$PYTHON_CMD" ] && $PYTHON_CMD scripts/verify-recovery-gates.py; then
+    pass "recovery gates passed"
 else
+    fail "recovery gates failed"
+fi
+
+info "2. tracked-file secret scan"
+if [ -n "$PYTHON_CMD" ] && $PYTHON_CMD scripts/verify-secret-scan.py; then
+    pass "secret scan passed"
+else
+    fail "secret scan failed"
+fi
+
+info "3. provision local Compose runtime and verify sovereignty"
+if ! command -v docker >/dev/null 2>&1; then
+    fail "docker: not installed or not on PATH"
+elif [ ! -f .env ]; then
+    fail ".env missing; create a local runtime .env from .env.example with real secrets before release verification"
+else
+    if docker compose up -d --wait postgres redis ollama api; then
+        pass "compose runtime provisioned"
+    else
+        fail "compose runtime failed to become healthy"
+    fi
+fi
+
+if [ -f scripts/verify-sovereignty.sh ]; then
     if bash scripts/verify-sovereignty.sh; then
         pass "sovereignty guard passed"
     else
         fail "sovereignty guard failed"
     fi
+else
+    fail "scripts/verify-sovereignty.sh missing"
 fi
 
-# --- 2. version lockstep (4 surfaces) ----------------------------------------
-info "2. version lockstep"
-
+info "4. version lockstep"
 declare -a SURFACES=()
 declare -a VALUES=()
 
-# extract <label> <file> <grep-ere> <sed-ere>
 extract() {
     local label="$1" file="$2" gregex="$3" sedexpr="$4"
     if [ ! -f "$file" ]; then
@@ -61,15 +84,12 @@ extract() {
 extract "backend/pyproject.toml" "backend/pyproject.toml" \
     '^version[[:space:]]*=[[:space:]]*"[^"]+"' \
     's/^version[[:space:]]*=[[:space:]]*"([^"]+)"/\1/'
-
 extract "frontend/package.json" "frontend/package.json" \
     '"version"[[:space:]]*:[[:space:]]*"[^"]+"' \
     's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/'
-
 extract "CHANGELOG.md" "CHANGELOG.md" \
     '^##[[:space:]]*\[[0-9]+\.[0-9]+\.[0-9]+\]' \
     's/^##[[:space:]]*\[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/'
-
 extract "docs/UNIFIED-SPEC.md (Current release)" "docs/UNIFIED-SPEC.md" \
     'Current release[[:space:]]*\|[[:space:]]*v[0-9]+\.[0-9]+\.[0-9]+' \
     's/.*v([0-9]+\.[0-9]+\.[0-9]+).*/\1/'
@@ -86,9 +106,8 @@ else
     fail "version drift: $UNIQ unique values across ${#SURFACES[@]} surface(s)"
 fi
 
-# --- 3. required docs --------------------------------------------------------
-info "3. required docs present"
-for f in README.md CHANGELOG.md CONTRIBUTING.md LICENSE .gitignore docs/index.html; do
+info "5. required docs present"
+for f in README.md README.txt CHANGELOG.md CONTRIBUTING.md LICENSE .gitignore docs/index.html USER-MANUAL.md USER-MANUAL.txt; do
     if [ -f "$f" ]; then
         pass "$f"
     else
@@ -96,60 +115,73 @@ for f in README.md CHANGELOG.md CONTRIBUTING.md LICENSE .gitignore docs/index.ht
     fi
 done
 
-# --- 4. ruff lint ------------------------------------------------------------
-# Host-side ruff. Detection order (each fallback covers a distinct
-# Windows / POSIX shell environment):
-#   (1) `ruff` binary on PATH                     — POSIX or Windows w/ Scripts on PATH
-#                                                   (incl. scoop shims dir on user PATH)
-#   (2) `ruff.exe` on PATH                        — WSL-style Bash where /mnt/c/... shims
-#                                                   are visible but `command -v ruff` doesn't
-#                                                   auto-resolve the .exe extension
-#   (3) `python -m ruff`                          — POSIX or Windows w/ python on PATH
-#   (4) `python3 -m ruff`                         — Git Bash on Windows (uses MSYS python3)
-#   (5) `py -3 -m ruff`                           — PowerShell on Windows (Python launcher)
-#   (6) `/c/Windows/py.exe -3 -m ruff`            — Git Bash on Windows (Python launcher
-#                                                   reached via direct Windows path; `py`
-#                                                   isn't on Git Bash's PATH but the .exe
-#                                                   may live at this absolute path)
-# Per audit REL-001 (2026-04-25 + multiple follow-ups): the binary-on-PATH
-# install (scoop / brew / apt / equivalent) is the most durable; per-python
-# user-site installs are fragile across the multiple shell environments
-# this repo gets touched from (PowerShell, Git Bash, WSL Bash).
-# CI uses container ruff via .github/workflows/ci.yml because CI always
-# builds a fresh api image first.
-info "4. ruff lint"
+info "6. ruff lint"
 if command -v ruff >/dev/null 2>&1; then
     RUFF_CMD="ruff"
-elif command -v ruff.exe >/dev/null 2>&1; then
-    RUFF_CMD="ruff.exe"
+elif [ -n "$PYTHON_CMD" ] && $PYTHON_CMD -m ruff --version >/dev/null 2>&1; then
+    RUFF_CMD="$PYTHON_CMD -m ruff"
 elif python -m ruff --version >/dev/null 2>&1; then
     RUFF_CMD="python -m ruff"
 elif python3 -m ruff --version >/dev/null 2>&1; then
     RUFF_CMD="python3 -m ruff"
-elif command -v py >/dev/null 2>&1 && py -3 -m ruff --version >/dev/null 2>&1; then
-    RUFF_CMD="py -3 -m ruff"
-elif [ -x /c/Windows/py.exe ] && /c/Windows/py.exe -3 -m ruff --version >/dev/null 2>&1; then
-    RUFF_CMD="/c/Windows/py.exe -3 -m ruff"
 else
     RUFF_CMD=""
-    fail "ruff: not installed locally — preferred install is the binary on PATH (durable across shells):
-        scoop install ruff                   (Windows; binary lands in ~/scoop/shims, visible to all shells)
-        brew install ruff                    (macOS)
-        Per-python install fallbacks (fragile across shells; pick the python your shell can reach):
-        pip install --user ruff              (POSIX, or Windows PowerShell w/ python on PATH)
-        python3 -m pip install --user ruff   (Git Bash on Windows w/ MSYS python3)
-        py -3 -m pip install --user ruff     (PowerShell on Windows w/ Python launcher)"
 fi
 
 if [ -n "$RUFF_CMD" ]; then
-    if (cd backend && $RUFF_CMD check .) > /tmp/ruff-verify-release.out 2>&1; then
+    if (cd backend && $RUFF_CMD check .) > /tmp/civicrecords-ruff.out 2>&1; then
         pass "ruff: 0 violations"
     else
-        fail "ruff: violations present (see /tmp/ruff-verify-release.out for details)"
+        fail "ruff: violations present (see /tmp/civicrecords-ruff.out)"
+    fi
+elif command -v docker >/dev/null 2>&1; then
+    if docker compose run --rm --no-deps api python -m ruff check . > /tmp/civicrecords-ruff.out 2>&1; then
+        pass "ruff via api container: 0 violations"
+    else
+        fail "container ruff: violations present or ruff unavailable (see /tmp/civicrecords-ruff.out)"
     fi
 fi
 
-# --- summary -----------------------------------------------------------------
+info "7. backend tests"
+if command -v docker >/dev/null 2>&1; then
+    collected=""
+    passed=""
+    if docker compose run --rm --no-deps api python -m pytest tests --collect-only -q > /tmp/civicrecords-pytest-collect.out 2>&1; then
+        collected=$(grep -oE '[0-9]+ tests? collected' /tmp/civicrecords-pytest-collect.out | tail -1 | grep -oE '[0-9]+' || true)
+        pass "pytest collect-only: ${collected:-unknown} test(s)"
+    else
+        fail "pytest collect-only failed (see /tmp/civicrecords-pytest-collect.out)"
+    fi
+    if docker compose run --rm --no-deps api python -m pytest tests -q > /tmp/civicrecords-pytest-run.out 2>&1; then
+        passed=$(grep -oE '[0-9]+ passed' /tmp/civicrecords-pytest-run.out | tail -1 | grep -oE '[0-9]+' || true)
+        if [ -n "$collected" ] && [ -n "$passed" ] && [ "$collected" != "$passed" ]; then
+            fail "pytest collected/pass mismatch: collected=$collected passed=$passed"
+        else
+            pass "pytest full suite: ${passed:-unknown} passed"
+        fi
+    else
+        fail "pytest full suite failed (see /tmp/civicrecords-pytest-run.out)"
+    fi
+fi
+
+info "8. frontend checks"
+if command -v npm >/dev/null 2>&1; then
+    if (cd frontend && npm ci); then pass "npm ci"; else fail "npm ci failed"; fi
+    if (cd frontend && npm audit --audit-level=moderate); then pass "npm audit --audit-level=moderate"; else fail "npm audit --audit-level=moderate failed"; fi
+    if (cd frontend && npm test); then pass "frontend vitest"; else fail "frontend vitest failed"; fi
+    if (cd frontend && npm run build); then pass "frontend production build"; else fail "frontend production build failed"; fi
+    if (cd frontend && npx playwright install chromium && npm run test:e2e); then pass "Playwright user-flow tests"; else fail "Playwright user-flow tests failed"; fi
+else
+    fail "npm: not installed or not on PATH"
+fi
+
+info "9. runtime install proof"
+if [ -n "$PYTHON_CMD" ] && $PYTHON_CMD scripts/verify-runtime-install.py; then
+    pass "runtime install proof"
+else
+    fail "runtime install proof failed"
+fi
+
 echo ""
 if [ "$FAILED" -eq 0 ]; then
     printf '\033[0;32mVERIFY-RELEASE: PASSED\033[0m\n'

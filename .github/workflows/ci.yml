@@ -310,6 +310,9 @@ jobs:
       - name: Install dependencies (frozen lockfile)
         run: npm ci
 
+      - name: Dependency security audit
+        run: npm audit --audit-level=moderate
+
       - name: Verify src/generated/api.ts not stale (T3D)
         # Re-run openapi-typescript against the committed docs/openapi.json and
         # check that the committed src/generated/api.ts matches. Fails if the
@@ -328,6 +331,32 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      - name: Playwright user-flow tests
+        run: npm run test:e2e
+
+  recovery-gates:
+    name: Release recovery gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Recovery claim/source gates
+        run: python scripts/verify-recovery-gates.py
+
+      - name: Tracked-file secret scan
+        run: python scripts/verify-secret-scan.py
 
   # -------------------------------------------------------------------------
   # ruff (lint) — added 2026-04-25 per issue #33. Gates Python lint on every

@@ -2,6 +2,8 @@
 
 **Open-source, locally-hosted AI that helps American cities respond to open records requests.**
 
+> **Release recovery notice (2026-05-07).** The public `v1.4.10` tag is provisional and do-not-promote. It remains available as historical source, but no current public label should be read as product release readiness until the recovery gates in `docs/release-recovery-status.md` pass locally and in CI.
+
 CivicRecords AI runs entirely on a single machine inside your city's network — no cloud subscriptions, no vendor lock-in, no resident data leaving the building. It ingests your city's documents, makes them searchable with AI-powered natural language queries, detects potential exemptions, and manages the full request lifecycle from intake to response.
 
 ## Why This Exists
@@ -88,7 +90,7 @@ trust artifact for post-baseline releases is the Sigstore-signed
 `release-attestation.json` plus bundle documented in
 [docs/ops/release-signing.md](docs/ops/release-signing.md).
 
-The current public `v1.4.10` release is a historical pre-gate artifact because
+The current public `v1.4.10` release is a historical pre-gate, provisional artifact because
 its tag predates the attestation model and its public release assets do not
 include `release-attestation.json` or `release-attestation.json.bundle`. CO-4
 records the decision in
