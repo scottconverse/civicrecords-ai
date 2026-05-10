@@ -4,9 +4,9 @@ Date: 2026-05-07
 
 ## Public Claim Freeze
 
-CivicRecords AI `v1.4.10` is a historical, provisional, do-not-promote release. It must not be described as product-ready, production-ready, or fully complete until a new release earns that status through the recovery gates below.
+CivicRecords AI `v1.5.0` is the recovery release that aligns the product with CivicCore v1.0.1 and closes ENG-002. The older `v1.4.10` tag remains historical, provisional, and do-not-promote.
 
-Existing tags remain part of the public record, but release status is provisional until revalidated.
+Existing tags remain part of the public record. Do not republish or promote `v1.4.10`; use `v1.5.0` or later for the CivicCore v1.0.1 aligned line.
 
 ## Gates Required To Re-Earn Release Status
 

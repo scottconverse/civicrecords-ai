@@ -64,8 +64,23 @@ def main() -> int:
             fail(f"missing claim surface: {rel}", failures)
             continue
         text = read_text(rel)
-        if "provisional" not in text.lower() and "do-not-promote" not in text.lower():
-            fail(f"{rel}: missing provisional/do-not-promote release labeling", failures)
+        lower = text.lower()
+        has_do_not_promote_warning = (
+            "do-not-promote" in lower
+            or "must not be promoted" in lower
+            or "do not republish or promote" in lower
+        )
+        has_legacy_warning = (
+            "v1.4.10" in lower
+            and ("provisional" in lower or "pre-gate" in lower)
+            and has_do_not_promote_warning
+        )
+        has_current_recovery_label = "v1.5.0" in lower and "civiccore v1.0.1" in lower
+        if not (has_legacy_warning and has_current_recovery_label):
+            fail(
+                f"{rel}: missing v1.5.0 recovery label or v1.4.10 do-not-promote warning",
+                failures,
+            )
         for pattern in OVERCLAIM_PATTERNS:
             if pattern.search(text):
                 fail(f"{rel}: blocked public overclaim pattern {pattern.pattern}", failures)

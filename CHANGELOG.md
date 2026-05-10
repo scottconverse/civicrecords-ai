@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-05-10
+
+### Changed
+- Migrated the CivicCore dependency from v0.22.1 to v1.0.1 so CivicRecords AI
+  shares the same platform baseline as the rest of the active CivicSuite
+  product repos.
+- No source API migrations were required; every CivicCore symbol imported by
+  CivicRecords AI remains public in v1.0.1 with a compatible import surface.
+
+### Security
+- Inherits CivicCore v1.0.1 auth-error-payload hardening: auth error responses
+  no longer expose `token_roles`, `principal`, `principal_roles`,
+  `client_host`, or `trusted_proxy_cidrs`.
+- Closes audit finding ENG-002 from `audit-civicsuite-2026-05-09`.
+
 ### Added
 - Added the CO-4 Tier 1 retrofit ledger for `v1.4.10`, marking the release as
   historical pre-gate/no-attestation/do-not-promote without changing public

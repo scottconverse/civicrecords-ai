@@ -2,7 +2,7 @@
 
 **Version 1.1+ · April 2026**
 
-> **Release recovery notice (2026-05-07).** The public `v1.4.10` tag is provisional and do-not-promote. Use this manual as operator guidance for the current source tree, not as a product release-readiness claim, until `docs/release-recovery-status.md` gates pass.
+> **Release recovery notice (2026-05-07).** CivicRecords AI v1.5.0 is the recovery release that aligns this product with CivicCore v1.0.1. The older `v1.4.10` tag remains available as historical pre-gate, provisional source only and must not be promoted as an attested baseline.
 
 ---
 
