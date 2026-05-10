@@ -22,7 +22,7 @@ async function mockApi(page: Page, role: "admin" | "public" = "admin") {
   await page.route("**/api/admin/status", route =>
     route.fulfill({
       json: {
-        version: "1.4.10-provisional",
+        version: "1.5.0-recovery",
         database: "connected",
         redis: "connected",
         ollama: "connected",
@@ -83,7 +83,7 @@ test.describe("CivicRecords AI user flows (mock-labeled)", () => {
     await page.goto("/");
 
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-    await expect(page.getByText("CivicRecords AI v1.4.10-provisional")).toBeVisible();
+    await expect(page.getByText("CivicRecords AI v1.5.0-recovery")).toBeVisible();
     await expect(page.getByText("Database (PostgreSQL)")).toBeVisible();
 
     await page.keyboard.press("Tab");

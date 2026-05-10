@@ -1,6 +1,6 @@
 [project]
 name = "civicrecords-ai"
-version = "1.4.10"
+version = "1.5.0"
 description = "Open-source AI-powered open records support for American cities"
 requires-python = ">=3.12"
 license = "Apache-2.0"
@@ -17,7 +17,7 @@ dependencies = [
     "python-jose[cryptography]>=3.5.0",
     "passlib[bcrypt]>=1.7.4",
     "celery>=5.6.0",
-    "civiccore @ https://github.com/CivicSuite/civiccore/releases/download/v0.22.1/civiccore-0.22.1-py3-none-any.whl",
+    "civiccore @ https://github.com/CivicSuite/civiccore/releases/download/v1.0.1/civiccore-1.0.1-py3-none-any.whl#sha256=561d7a8f73260d50de79351d330876d2cb3488c0e046a2888e82fe09d1e03969",
     "redis>=5.0.0,<8.0.0",
     "httpx>=0.28.0",
     "pdfplumber>=0.11.0",
