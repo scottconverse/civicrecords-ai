@@ -24,7 +24,11 @@ bash install.sh          # Linux/macOS
 
 # Option B: Manual setup
 cp .env.example .env
-# Edit .env — set JWT_SECRET (generate with: openssl rand -hex 32)
+mkdir -p data/secrets
+openssl rand -hex 32 > data/secrets/jwt_secret
+openssl rand -hex 16 > data/secrets/first_admin_password
+chmod 0400 data/secrets/jwt_secret data/secrets/first_admin_password
+# Edit .env only for non-secret settings; JWT/admin password are file-backed.
 docker compose up -d
 docker compose exec ollama ollama pull nomic-embed-text
 curl http://localhost:8000/health

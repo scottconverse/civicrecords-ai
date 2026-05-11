@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Annotated, Literal
 
 from civiccore.security import (
@@ -12,7 +13,7 @@ from civiccore.security import (
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode
 
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.6.0"
 
 _INSECURE_SECRETS = DEFAULT_INSECURE_SECRET_VALUES
 _INSECURE_ENCRYPTION_KEYS = DEFAULT_INSECURE_FERNET_KEY_VALUES
@@ -23,9 +24,11 @@ _MIN_PASSWORD_LEN = 12
 class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords"
     jwt_secret: str = "CHANGE-ME"
+    jwt_secret_file: str = ""
     jwt_lifetime_seconds: int = 3600
     first_admin_email: str = "admin@example.gov"
     first_admin_password: str = "CHANGE-ME"
+    first_admin_password_file: str = ""
     ollama_base_url: str = "http://ollama:11434"
     redis_url: str = "redis://redis:6379/0"
     audit_retention_days: int = 1095
@@ -55,6 +58,38 @@ class Settings(BaseSettings):
     testing: bool = False
 
     model_config = {"env_file": ".env", "extra": "ignore"}
+
+    @staticmethod
+    def _read_required_secret_file(path_value: str, *, setting_name: str) -> str:
+        if not path_value:
+            raise ValueError(
+                f"{setting_name}_FILE must point to a mounted secret file. "
+                f"Re-run install.sh/install.ps1 or create a 0400 secret file and set {setting_name}_FILE."
+            )
+        path = Path(path_value)
+        try:
+            value = path.read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise ValueError(
+                f"{setting_name}_FILE points to an unreadable secret file: {path}"
+            ) from exc
+        if not value:
+            raise ValueError(f"{setting_name}_FILE points to an empty secret file: {path}")
+        return value
+
+    @model_validator(mode="after")
+    def load_secret_files(self):
+        if self.testing:
+            return self
+        self.jwt_secret = self._read_required_secret_file(
+            self.jwt_secret_file,
+            setting_name="JWT_SECRET",
+        )
+        self.first_admin_password = self._read_required_secret_file(
+            self.first_admin_password_file,
+            setting_name="FIRST_ADMIN_PASSWORD",
+        )
+        return self
 
     @model_validator(mode="after")
     def check_jwt_secret(self):

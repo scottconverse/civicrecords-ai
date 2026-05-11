@@ -2,7 +2,7 @@
 
 **Open-source, locally-hosted AI that helps American cities respond to open records requests.**
 
-> **Release recovery notice (2026-05-07).** CivicRecords AI v1.5.0 is the recovery release that aligns this product with CivicCore v1.0.1. The older `v1.4.10` tag remains available as historical source only and must not be promoted as an attested baseline.
+> **Release recovery notice (2026-05-11).** CivicRecords AI v1.6.0 is the Docker secret-file extraction release that closes QA-002 on top of the v1.5.0 CivicCore v1.0.1 recovery alignment. The older `v1.4.10` tag remains available as historical source only and must not be promoted as an attested baseline.
 
 CivicRecords AI runs entirely on a single machine inside your city's network — no cloud subscriptions, no vendor lock-in, no resident data leaving the building. It ingests your city's documents, makes them searchable with AI-powered natural language queries, detects potential exemptions, and manages the full request lifecycle from intake to response.
 
@@ -136,18 +136,42 @@ republish, mirror, or promote `v1.4.10` as an attested provenance baseline.
 
 ## Configuration
 
-All configuration is via environment variables in `.env`:
+Most configuration is via environment variables in `.env`. Secret material for
+JWT signing and the initial admin password is file-backed in v1.6.0 and is not
+placed in the container environment:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords` |
-| `JWT_SECRET` | Secret key for JWT tokens | (must be set) |
+| `JWT_SECRET_FILE` | Mounted secret file for JWT tokens | `/run/secrets/jwt_secret` |
 | `FIRST_ADMIN_EMAIL` | Initial admin account email | `admin@example.gov` |
-| `FIRST_ADMIN_PASSWORD` | Initial admin account password | (must be set — min 12 chars; installer generates automatically; `.env.example` placeholder and common defaults rejected at startup) |
+| `FIRST_ADMIN_PASSWORD_FILE` | Mounted secret file for the initial admin password | `/run/secrets/first_admin_password` |
+| `CIVICRECORDS_SECRET_DIR` | Host directory containing file-backed secrets for Docker Compose | `./data/secrets` |
 | `OLLAMA_BASE_URL` | Ollama API endpoint | `http://ollama:11434` |
 | `REDIS_URL` | Redis connection string | `redis://redis:6379/0` |
 | `AUDIT_RETENTION_DAYS` | Audit log retention period | `1095` (3 years) |
 | `CONNECTOR_HOST_ALLOWLIST` | Comma-separated hostnames/IPs exempt from SSRF block (on-prem use) | (empty — RFC1918, loopback, and cloud IMDS ranges blocked by default) |
+
+### Operations / Secrets
+
+As of v1.6.0, `JWT_SECRET` and `FIRST_ADMIN_PASSWORD` are no longer runtime
+container environment variables. The install scripts generate the same strong
+random values as earlier releases, write them to `./data/secrets/jwt_secret`
+and `./data/secrets/first_admin_password`, and configure Docker Compose to mount
+those files at `/run/secrets/...`. A release rehearsal must prove:
+
+```bash
+docker exec <records-api-container> env | grep -E "JWT_SECRET|FIRST_ADMIN_PASSWORD"
+```
+
+returns zero lines.
+
+**Upgrade note from v1.5.x:** existing installs that still have
+`JWT_SECRET=...` or `FIRST_ADMIN_PASSWORD=...` in `.env` must re-run
+`install.sh` or `install.ps1` so the secret files are created and `.env` points
+to `JWT_SECRET_FILE` / `FIRST_ADMIN_PASSWORD_FILE`. Direct secret env vars are
+not a supported Docker runtime path in v1.6.0 because they are recoverable with
+`docker exec env`.
 
 ## Supported Platforms
 
@@ -219,6 +243,8 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 ## Status
 
 **v1.5.0 (May 10, 2026)** — CivicCore recovery alignment release. Records-AI now consumes civiccore v1.0.1, matching the active CivicSuite platform baseline and closing ENG-002. The imported CivicCore symbols remained compatible, so this release changes the dependency baseline and release evidence without changing API URL paths, roles, permissions, or records-side database migrations.
+
+**v1.6.0 (May 11, 2026)** — Docker secret-file extraction release. `JWT_SECRET` and `FIRST_ADMIN_PASSWORD` move out of container env vars and into Docker-mounted secret files, closing QA-002. Existing v1.5.x installs must re-run `install.sh` or `install.ps1` so `./data/secrets/*` is created and `.env` points at `*_FILE` paths.
 
 **v1.4.10 (May 3, 2026)** — Documentation-only release alignment patch. The v1.4.9 CivicCore source-status projection code is unchanged; this tag publishes the audit-corrected 631-backend-test evidence in the release source snapshot and installer/download docs.
 
@@ -294,4 +320,4 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 | **Phase 3** | Public portal | Public homepage, search, guided request wizard, request tracker, help pages | Partial — T5D minimal surface shipped (landing + resident-registration + authenticated submission); published-records search, resident dashboard, and track-my-request remain Planned |
 | **Phase 4** | Transparency layer | Open records library, reporting dashboards, public archive, federation | Planned (v2.0) |
 
-*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.5.0) includes backend work from Phases 0-2 and partial Phase 3 (T5D minimal public portal surface), but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*
+*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.6.0) includes backend work from Phases 0-2 and partial Phase 3 (T5D minimal public portal surface), but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*

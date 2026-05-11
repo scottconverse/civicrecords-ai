@@ -2,7 +2,7 @@
 
 **Version 1.1+ · April 2026**
 
-> **Release recovery notice (2026-05-07).** CivicRecords AI v1.5.0 is the recovery release that aligns this product with CivicCore v1.0.1. The older `v1.4.10` tag remains available as historical pre-gate, provisional source only and must not be promoted as an attested baseline.
+> **Release recovery notice (2026-05-11).** CivicRecords AI v1.6.0 is the Docker secret-file extraction release that closes QA-002 on top of the v1.5.0 CivicCore v1.0.1 recovery alignment. The older `v1.4.10` tag remains available as historical pre-gate, provisional source only and must not be promoted as an attested baseline.
 
 ---
 
@@ -321,9 +321,10 @@ All configuration lives in `.env` in the repo root. Never commit this file.
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string (asyncpg format) |
-| `JWT_SECRET` | Yes | — | Random string ≥ 32 chars for JWT signing |
+| `JWT_SECRET_FILE` | Yes | `/run/secrets/jwt_secret` | Mounted secret file for JWT signing |
 | `FIRST_ADMIN_EMAIL` | Yes | — | Initial admin account email |
-| `FIRST_ADMIN_PASSWORD` | Yes | — | Initial admin account password |
+| `FIRST_ADMIN_PASSWORD_FILE` | Yes | `/run/secrets/first_admin_password` | Mounted secret file for the initial admin account password |
+| `CIVICRECORDS_SECRET_DIR` | Yes | `./data/secrets` | Host directory used by Docker Compose for file-backed secrets |
 | `OLLAMA_BASE_URL` | No | `http://ollama:11434` | Ollama API endpoint |
 | `REDIS_URL` | No | `redis://redis:6379/0` | Redis connection string |
 | `SMTP_HOST` | No | — | SMTP server for email notifications |
@@ -331,12 +332,44 @@ All configuration lives in `.env` in the repo root. Never commit this file.
 | `SMTP_USERNAME` | No | — | SMTP auth username |
 | `SMTP_PASSWORD` | No | — | SMTP auth password |
 | `AUDIT_RETENTION_DAYS` | No | `1095` | Audit log retention (3 years default) |
-| `PORTAL_MODE` | No | `private` | `private` (staff-only, default) or `public` (adds the minimal resident surface described in B.3.1) |
-| `ENCRYPTION_KEY` | Yes | — | Fernet key used to encrypt `data_sources.connection_config` at rest. Installer auto-generates on fresh installs; **back it up separately from the database** (see B.3.2) |
+| `PORTAL_MODE` | No | `private` | `private` (staff-only, default) or `public` (adds the minimal resident surface described in B.3.2) |
+| `ENCRYPTION_KEY` | Yes | — | Fernet key used to encrypt `data_sources.connection_config` at rest. Installer auto-generates on fresh installs; **back it up separately from the database** (see B.3.3) |
 
 ---
 
-## B.3.1 Portal Mode (Private vs. Public)
+### B.3.1 Secrets Handling
+
+CivicRecords AI v1.6.0 stores the JWT signing secret and first-admin password
+in files instead of container environment variables. On Linux and macOS,
+`install.sh` writes `./data/secrets/jwt_secret` and
+`./data/secrets/first_admin_password` with `0400` permissions. Docker Compose
+mounts those files at `/run/secrets/jwt_secret` and
+`/run/secrets/first_admin_password`; `.env` contains only the `*_FILE` pointers.
+
+To verify the secret material is not exposed in a running API container:
+
+```bash
+docker exec <records-api-container> env | grep -E "JWT_SECRET|FIRST_ADMIN_PASSWORD"
+```
+
+The command should return no lines.
+
+**Upgrade from v1.5.x:** if your `.env` still contains `JWT_SECRET=` or
+`FIRST_ADMIN_PASSWORD=`, re-run `install.sh` or `install.ps1`. The runtime no
+longer treats those env vars as the Docker deployment path because any operator
+with container access can recover them with `docker exec env`.
+
+#### Secrets handling on Windows
+
+`install.ps1` writes the same two secret files under `.\data\secrets\` and uses
+`icacls` to remove inherited ACLs, granting read access only to SYSTEM,
+Administrators, and the current Windows account that runs Docker Desktop. This
+is the Windows equivalent of the Linux/macOS `0400` file mode for local Docker
+Desktop deployments.
+
+---
+
+## B.3.2 Portal Mode (Private vs. Public)
 
 CivicRecords AI can run in one of two modes. You pick the mode when you install, and you can change it later by editing `.env` and restarting the stack. **If you do nothing, the system runs in private mode** — the same behavior CivicRecords AI has always had.
 
@@ -409,7 +442,7 @@ If the site does not come up the way you expect, the most common cause is a typo
 
 ---
 
-## B.3.2 Encryption Key for Connector Credentials (ENG-001 / Tier 6)
+## B.3.3 Encryption Key for Connector Credentials (ENG-001 / Tier 6)
 
 CivicRecords AI encrypts the credentials you enter for each connected data source — API keys, bearer tokens, OAuth2 client secrets, Basic-auth passwords, and database connection strings — before writing them to PostgreSQL. The encryption is driven by a single environment variable, `ENCRYPTION_KEY`.
 

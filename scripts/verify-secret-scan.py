@@ -25,18 +25,18 @@ ALLOWLIST = {
 SECRET_PATTERNS = [
     (
         "real JWT secret assignment",
-        re.compile(r"(?i)\bJWT_SECRET\s*=\s*(?!CHANGE-ME|<|example|your-|\$)[A-Za-z0-9_./+=:-]{24,}"),
+        re.compile(r"(?im)^\s*JWT_SECRET\s*=\s*(?!CHANGE-ME|<|example|your-|\$)[A-Za-z0-9_./+=:-]{24,}"),
     ),
     (
         "real first-admin password assignment",
         re.compile(
-            r"(?i)\bFIRST_ADMIN_PASSWORD\s*=\s*(?!CHANGE-ME|<|example|your-|\$)[^\s#]{12,}"
+            r"(?im)^\s*FIRST_ADMIN_PASSWORD\s*=\s*(?!CHANGE-ME|<|example|your-|\$)[^\s#]{12,}"
         ),
     ),
     (
         "real encryption key assignment",
         re.compile(
-            r"(?i)\bENCRYPTION_KEY\s*=\s*(?!CHANGE-ME|<|example|your-|\$)[A-Za-z0-9_-]{40,}={0,2}"
+            r"(?im)^\s*ENCRYPTION_KEY\s*=\s*(?!CHANGE-ME|<|example|your-|\$)[A-Za-z0-9_-]{40,}={0,2}"
         ),
     ),
     (

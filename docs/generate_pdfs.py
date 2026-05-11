@@ -941,9 +941,10 @@ def build_readme_full(out_path):
     env_data = [
         ["Variable",              "Description",                              "Default"],
         ["DATABASE_URL",          "PostgreSQL connection string",             "postgres://civicrecords:..."],
-        ["JWT_SECRET",            "Secret key for JWT tokens",               "(must set)"],
+        ["JWT_SECRET_FILE",       "Mounted secret file for JWT tokens",       "/run/secrets/jwt_secret"],
         ["FIRST_ADMIN_EMAIL",     "Initial admin account email",             "admin@example.gov"],
-        ["FIRST_ADMIN_PASSWORD",  "Initial admin account password",          "(must set)"],
+        ["FIRST_ADMIN_PASSWORD_FILE", "Mounted first-admin password file",    "/run/secrets/first_admin_password"],
+        ["CIVICRECORDS_SECRET_DIR", "Host directory for Docker secret files", "./data/secrets"],
         ["OLLAMA_BASE_URL",       "Ollama API endpoint",                     "http://ollama:11434"],
         ["REDIS_URL",             "Redis connection string",                 "redis://redis:6379/0"],
         ["AUDIT_RETENTION_DAYS", "Audit log retention period",              "1095 (3 years)"],

@@ -75,10 +75,13 @@ def main() -> int:
             and ("provisional" in lower or "pre-gate" in lower)
             and has_do_not_promote_warning
         )
-        has_current_recovery_label = "v1.5.0" in lower and "civiccore v1.0.1" in lower
+        has_current_recovery_label = (
+            ("v1.5.0" in lower and "civiccore v1.0.1" in lower)
+            or ("v1.6.0" in lower and "qa-002" in lower)
+        )
         if not (has_legacy_warning and has_current_recovery_label):
             fail(
-                f"{rel}: missing v1.5.0 recovery label or v1.4.10 do-not-promote warning",
+                f"{rel}: missing current recovery label or v1.4.10 do-not-promote warning",
                 failures,
             )
         for pattern in OVERCLAIM_PATTERNS:

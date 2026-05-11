@@ -55,10 +55,18 @@ if (-not (Test-Path ".env")) {
     $rng.GetBytes($keyBytes)
     $rng.Dispose()
     $encryptionKey = ([Convert]::ToBase64String($keyBytes)) -replace '\+','-' -replace '/','_'
+    $secretDir = if ($env:CIVICRECORDS_SECRET_DIR) { $env:CIVICRECORDS_SECRET_DIR } else { ".\data\secrets" }
+    New-Item -ItemType Directory -Force -Path $secretDir | Out-Null
+    $jwtSecretPath = Join-Path $secretDir "jwt_secret"
+    $adminPasswordPath = Join-Path $secretDir "first_admin_password"
+    Set-Content -Path $jwtSecretPath -Value $jwtSecret -NoNewline
+    Set-Content -Path $adminPasswordPath -Value $adminPassword -NoNewline
+    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+    icacls $secretDir /inheritance:r /grant:r "SYSTEM:(OI)(CI)F" "Administrators:(OI)(CI)F" "${currentUser}:(OI)(CI)F" | Out-Null
+    icacls $jwtSecretPath /inheritance:r /grant:r "SYSTEM:R" "Administrators:R" "${currentUser}:R" | Out-Null
+    icacls $adminPasswordPath /inheritance:r /grant:r "SYSTEM:R" "Administrators:R" "${currentUser}:R" | Out-Null
     # Use String.Replace (literal) instead of -replace (regex) to avoid metachar issues.
     $envContent = (Get-Content ".env" -Raw)
-    $envContent = $envContent.Replace("CHANGE-ME-generate-with-openssl-rand-hex-32", $jwtSecret)
-    $envContent = $envContent.Replace("CHANGE-ME-on-first-login", $adminPassword)
     $envContent = $envContent.Replace("CHANGE-ME-generate-with-fernet-generate-key", $encryptionKey)
     Set-Content ".env" -Value $envContent -NoNewline
     Write-Host ""
@@ -68,7 +76,8 @@ if (-not (Test-Path ".env")) {
     Write-Host "  Email:    admin@example.gov  (edit .env to change)"
     Write-Host "  Password: $adminPassword" -ForegroundColor Cyan
     Write-Host "============================================" -ForegroundColor Yellow
-    Write-Host "  This password is stored in .env. Store it in your password manager."
+    Write-Host "  This password is stored in $adminPasswordPath with restricted ACLs."
+    Write-Host "  Store it in your password manager; it is not written to .env."
     Write-Host "  Press Enter when you have copied it."
     Write-Host ""
     Write-Host "============================================" -ForegroundColor Red
@@ -81,8 +90,8 @@ if (-not (Test-Path ".env")) {
     Write-Host "  *** BACK THIS UP SEPARATELY FROM YOUR DATABASE. ***" -ForegroundColor Yellow
     Write-Host "  Losing this key means every saved data-source"
     Write-Host "  connection configuration becomes unreadable. Store it"
-    Write-Host "  alongside your JWT_SECRET in a password manager or"
-    Write-Host "  secrets vault - NOT in the same location as DB backups."
+    Write-Host "  alongside your JWT secret from $jwtSecretPath in a"
+    Write-Host "  password manager or secrets vault - NOT in the same location as DB backups."
     Write-Host ""
     Read-Host "Press Enter to continue, or Ctrl+C to edit .env first"
 
@@ -130,6 +139,47 @@ if (-not (Test-Path ".env")) {
 }
 
 # Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Hardware Detection Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# B2 / QA-002: migrate existing .env files from recoverable container env
+# secrets to Docker-mounted secret files. Fresh .env.example files already have
+# these keys; older v1.5.x installs are rewritten in place.
+$envLines = Get-Content ".env" -ErrorAction SilentlyContinue
+$secretDirLine = $envLines | Where-Object { $_ -match '^CIVICRECORDS_SECRET_DIR=' } | Select-Object -Last 1
+$secretDir = if ($secretDirLine) { ($secretDirLine -split '=', 2)[1] } elseif ($env:CIVICRECORDS_SECRET_DIR) { $env:CIVICRECORDS_SECRET_DIR } else { ".\data\secrets" }
+New-Item -ItemType Directory -Force -Path $secretDir | Out-Null
+$jwtSecretPath = Join-Path $secretDir "jwt_secret"
+$adminPasswordPath = Join-Path $secretDir "first_admin_password"
+$legacyJwtLine = $envLines | Where-Object { $_ -match '^JWT_SECRET=' } | Select-Object -Last 1
+$legacyPasswordLine = $envLines | Where-Object { $_ -match '^FIRST_ADMIN_PASSWORD=' } | Select-Object -Last 1
+$legacyJwt = if ($legacyJwtLine) { ($legacyJwtLine -split '=', 2)[1] } else { "" }
+$legacyPassword = if ($legacyPasswordLine) { ($legacyPasswordLine -split '=', 2)[1] } else { "" }
+if ($legacyJwt -and $legacyJwt -ne "CHANGE-ME-generate-with-openssl-rand-hex-32") {
+    Set-Content -Path $jwtSecretPath -Value $legacyJwt -NoNewline
+} elseif (-not (Test-Path $jwtSecretPath)) {
+    $newJwt = -join ((1..64) | ForEach-Object { '{0:x}' -f (Get-Random -Max 16) })
+    Set-Content -Path $jwtSecretPath -Value $newJwt -NoNewline
+}
+if ($legacyPassword -and $legacyPassword -ne "CHANGE-ME-on-first-login") {
+    Set-Content -Path $adminPasswordPath -Value $legacyPassword -NoNewline
+} elseif (-not (Test-Path $adminPasswordPath)) {
+    $newPassword = -join ((1..32) | ForEach-Object { '{0:x}' -f (Get-Random -Max 16) })
+    Set-Content -Path $adminPasswordPath -Value $newPassword -NoNewline
+}
+$currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+icacls $secretDir /inheritance:r /grant:r "SYSTEM:(OI)(CI)F" "Administrators:(OI)(CI)F" "${currentUser}:(OI)(CI)F" | Out-Null
+icacls $jwtSecretPath /inheritance:r /grant:r "SYSTEM:R" "Administrators:R" "${currentUser}:R" | Out-Null
+icacls $adminPasswordPath /inheritance:r /grant:r "SYSTEM:R" "Administrators:R" "${currentUser}:R" | Out-Null
+$filteredEnv = $envLines | Where-Object {
+    $_ -notmatch '^JWT_SECRET=' -and
+    $_ -notmatch '^FIRST_ADMIN_PASSWORD=' -and
+    $_ -notmatch '^JWT_SECRET_FILE=' -and
+    $_ -notmatch '^FIRST_ADMIN_PASSWORD_FILE=' -and
+    $_ -notmatch '^CIVICRECORDS_SECRET_DIR='
+}
+$filteredEnv += "JWT_SECRET_FILE=/run/secrets/jwt_secret"
+$filteredEnv += "FIRST_ADMIN_PASSWORD_FILE=/run/secrets/first_admin_password"
+$filteredEnv += "CIVICRECORDS_SECRET_DIR=$secretDir"
+Set-Content ".env" -Value ($filteredEnv -join "`n") -NoNewline
+
 Write-Host ""
 Write-Host "Detecting hardware capabilities..." -ForegroundColor Cyan
 & "$PSScriptRoot\scripts\detect_hardware.ps1"

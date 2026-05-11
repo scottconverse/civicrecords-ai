@@ -2,7 +2,7 @@
 /**
  * docs/generate-deliverables.js
  * Generates Rule 9 deliverables from README.md and USER-MANUAL.md.
- * Outputs: README.txt, README.docx, README.pdf, USER-MANUAL.docx, USER-MANUAL.pdf
+ * Outputs: README.txt, README.docx, README.pdf, USER-MANUAL.txt, USER-MANUAL.docx, USER-MANUAL.pdf
  * Requires: docs/node_modules (docx@9.6.1, puppeteer) — already installed.
  *
  * Usage (from repo root):  node docs/generate-deliverables.js
@@ -224,6 +224,10 @@ async function main() {
   );
 
   // USER-MANUAL derivatives
+  generateTxt(
+    path.join(ROOT, 'USER-MANUAL.md'),
+    path.join(ROOT, 'USER-MANUAL.txt')
+  );
   await generateDocx(
     path.join(ROOT, 'USER-MANUAL.md'),
     path.join(ROOT, 'USER-MANUAL.docx')
@@ -234,7 +238,7 @@ async function main() {
   );
 
   console.log('\nDone. Run gate dry-run to verify:');
-  console.log('  node -e "const f=require(\'fs\');[\'README.txt\',\'README.docx\',\'README.pdf\',\'USER-MANUAL.docx\',\'USER-MANUAL.pdf\'].forEach(n=>console.log(n,f.existsSync(n)?\'OK\':\'MISSING\'))"');
+  console.log('  node -e "const f=require(\'fs\');[\'README.txt\',\'README.docx\',\'README.pdf\',\'USER-MANUAL.txt\',\'USER-MANUAL.docx\',\'USER-MANUAL.pdf\'].forEach(n=>console.log(n,f.existsSync(n)?\'OK\':\'MISSING\'))"');
 }
 
 main().catch(err => {
