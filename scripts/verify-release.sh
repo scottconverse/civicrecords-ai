@@ -47,7 +47,18 @@ else
     if grep -qE '^(JWT_SECRET|FIRST_ADMIN_PASSWORD)=' .env; then
         fail ".env exposes JWT_SECRET or FIRST_ADMIN_PASSWORD; run install.sh/install.ps1 to migrate B2 secrets into files"
     fi
-    if docker compose up -d --wait postgres redis ollama api; then
+    if docker compose up -d --wait postgres redis ollama; then
+        database_name=$(grep -E '^DATABASE_URL=' .env | head -1 | sed -E 's#^DATABASE_URL=[^:]+://[^/]+/([^?]+).*$#\1#' || true)
+        if [ -n "${database_name:-}" ] && [ "$database_name" != "DATABASE_URL" ]; then
+            docker compose exec -T postgres createdb -U civicrecords "$database_name" >/dev/null 2>&1 || true
+        fi
+        if ! docker compose up -d --wait api; then
+            fail "compose runtime failed to become healthy"
+        fi
+    else
+        fail "compose runtime failed to become healthy"
+    fi
+    if docker compose ps api --format '{{.State}}' 2>/dev/null | grep -q '^running$'; then
         pass "compose runtime provisioned"
         if docker compose exec -T api env | grep -E '^(JWT_SECRET|FIRST_ADMIN_PASSWORD)='; then
             fail "api container env exposes JWT_SECRET or FIRST_ADMIN_PASSWORD"
@@ -55,7 +66,6 @@ else
             pass "api container env hides JWT_SECRET and FIRST_ADMIN_PASSWORD"
         fi
     else
-        fail "compose runtime failed to become healthy"
         echo ""
         echo "============================================"
         echo "  Container logs (compose health-check failed)"
@@ -180,13 +190,19 @@ info "7. backend tests"
 if command -v docker >/dev/null 2>&1; then
     collected=""
     passed=""
-    if docker compose run --rm --no-deps api python -m pytest tests --collect-only -q > /tmp/civicrecords-pytest-collect.out 2>&1; then
+    if docker compose run --rm --no-deps \
+        -e CIVICRECORDS_REPO_ROOT=/repo \
+        -v "$PWD:/repo:ro" \
+        api python -m pytest tests --collect-only -q > /tmp/civicrecords-pytest-collect.out 2>&1; then
         collected=$(grep -oE '[0-9]+ tests? collected' /tmp/civicrecords-pytest-collect.out | tail -1 | grep -oE '[0-9]+' || true)
         pass "pytest collect-only: ${collected:-unknown} test(s)"
     else
         fail "pytest collect-only failed (see /tmp/civicrecords-pytest-collect.out)"
     fi
-    if docker compose run --rm --no-deps api python -m pytest tests -q > /tmp/civicrecords-pytest-run.out 2>&1; then
+    if docker compose run --rm --no-deps \
+        -e CIVICRECORDS_REPO_ROOT=/repo \
+        -v "$PWD:/repo:ro" \
+        api python -m pytest tests -q > /tmp/civicrecords-pytest-run.out 2>&1; then
         passed=$(grep -oE '[0-9]+ passed' /tmp/civicrecords-pytest-run.out | tail -1 | grep -oE '[0-9]+' || true)
         if [ -n "$collected" ] && [ -n "$passed" ] && [ "$collected" != "$passed" ]; then
             fail "pytest collected/pass mismatch: collected=$collected passed=$passed"
@@ -210,7 +226,7 @@ else
 fi
 
 info "9. runtime install proof"
-if [ -n "$PYTHON_CMD" ] && $PYTHON_CMD scripts/verify-runtime-install.py; then
+if [ -n "$PYTHON_CMD" ] && $PYTHON_CMD "$REPO_ROOT/scripts/verify-runtime-install.py"; then
     pass "runtime install proof"
 else
     fail "runtime install proof failed"

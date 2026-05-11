@@ -115,7 +115,10 @@ jobs:
         id: collect
         run: |
           set -o pipefail
-          docker compose run --rm --no-deps api \
+          docker compose run --rm --no-deps \
+            -e CIVICRECORDS_REPO_ROOT=/repo \
+            -v "$PWD:/repo:ro" \
+            api \
             python -m pytest tests --collect-only -q \
             2>&1 | tee collect.log
           collected=$(grep -oE '[0-9]+ tests? collected' collect.log \
@@ -131,7 +134,10 @@ jobs:
         id: run
         run: |
           set -o pipefail
-          docker compose run --rm --no-deps api \
+          docker compose run --rm --no-deps \
+            -e CIVICRECORDS_REPO_ROOT=/repo \
+            -v "$PWD:/repo:ro" \
+            api \
             python -m pytest tests -q \
             2>&1 | tee run.log
 

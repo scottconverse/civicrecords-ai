@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 
 def _repo_root() -> Path:
+    env_root = os.environ.get("CIVICRECORDS_REPO_ROOT")
+    if env_root:
+        root = Path(env_root)
+        if (root / "docker-compose.yml").is_file():
+            return root
+
     for candidate in Path(__file__).resolve().parents:
         if (candidate / "docker-compose.yml").is_file():
             return candidate
