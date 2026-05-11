@@ -48,6 +48,32 @@ else
         pass "compose runtime provisioned"
     else
         fail "compose runtime failed to become healthy"
+        echo ""
+        echo "============================================"
+        echo "  Container logs (compose health-check failed)"
+        echo "============================================"
+        echo ""
+        echo "## docker compose ps"
+        docker compose ps || true
+        echo ""
+        echo "## docker compose logs --no-color --tail 100 api"
+        docker compose logs --no-color --tail 100 api || true
+        echo ""
+        echo "## docker compose logs --no-color --tail 50 postgres"
+        docker compose logs --no-color --tail 50 postgres || true
+        echo ""
+        echo "## docker compose logs --no-color --tail 30 redis"
+        docker compose logs --no-color --tail 30 redis || true
+        echo ""
+        echo "## docker compose logs --no-color --tail 30 ollama"
+        docker compose logs --no-color --tail 30 ollama || true
+        echo ""
+        echo "## .env shape (secrets redacted)"
+        grep -v -E '^(JWT_SECRET|FIRST_ADMIN_PASSWORD|ENCRYPTION_KEY)=' .env || true
+        echo "## (secret vars elided)"
+        echo ""
+        echo "============================================"
+        echo ""
     fi
 fi
 
