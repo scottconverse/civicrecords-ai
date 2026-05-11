@@ -18,6 +18,7 @@ docs/playwright-report/
 # Environment
 .env
 *.local
+data/secrets/
 
 # IDE
 .vscode/

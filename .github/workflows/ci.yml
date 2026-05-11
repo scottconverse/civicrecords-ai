@@ -52,14 +52,17 @@ jobs:
         # Nothing here is secret across runs; the file is thrown away with the
         # runner and never committed.
         run: |
-          JWT_SECRET="$(openssl rand -hex 32)"
-          ADMIN_PW="$(openssl rand -hex 16)"
           umask 077
+          mkdir -p data/secrets
+          openssl rand -hex 32 > data/secrets/jwt_secret
+          openssl rand -hex 16 > data/secrets/first_admin_password
+          chmod 0400 data/secrets/jwt_secret data/secrets/first_admin_password
           cat > .env <<EOF
           DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords_test
-          JWT_SECRET=${JWT_SECRET}
-          FIRST_ADMIN_EMAIL=admin@ci.local
-          FIRST_ADMIN_PASSWORD=${ADMIN_PW}
+          FIRST_ADMIN_EMAIL=admin@example.org
+          JWT_SECRET_FILE=/run/secrets/jwt_secret
+          FIRST_ADMIN_PASSWORD_FILE=/run/secrets/first_admin_password
+          CIVICRECORDS_SECRET_DIR=./data/secrets
           OLLAMA_BASE_URL=http://ollama:11434
           REDIS_URL=redis://redis:6379/0
           AUDIT_RETENTION_DAYS=1095
@@ -199,15 +202,19 @@ jobs:
         # check would fire first and this job would fail for the wrong reason.
         # TESTING is intentionally NOT set; we want the validator to fire.
         run: |
-          JWT_SECRET="$(openssl rand -hex 32)"
           ENCRYPTION_KEY="$(python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')"
           umask 077
+          mkdir -p data/secrets
+          openssl rand -hex 32 > data/secrets/jwt_secret
+          printf '%s\n' 'CHANGE-ME-on-first-login' > data/secrets/first_admin_password
+          chmod 0400 data/secrets/jwt_secret data/secrets/first_admin_password
           cat > .env <<EOF
           DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords
-          JWT_SECRET=${JWT_SECRET}
           ENCRYPTION_KEY=${ENCRYPTION_KEY}
-          FIRST_ADMIN_EMAIL=admin@ci.local
-          FIRST_ADMIN_PASSWORD=CHANGE-ME-on-first-login
+          FIRST_ADMIN_EMAIL=admin@example.org
+          JWT_SECRET_FILE=/run/secrets/jwt_secret
+          FIRST_ADMIN_PASSWORD_FILE=/run/secrets/first_admin_password
+          CIVICRECORDS_SECRET_DIR=./data/secrets
           OLLAMA_BASE_URL=http://ollama:11434
           REDIS_URL=redis://redis:6379/0
           AUDIT_RETENTION_DAYS=1095
@@ -249,8 +256,7 @@ jobs:
         # control, a Python import error elsewhere would also "fail" and pass
         # the test for the wrong reason.
         run: |
-          STRONG_PW="$(openssl rand -hex 16)"
-          sed -i "s|FIRST_ADMIN_PASSWORD=.*|FIRST_ADMIN_PASSWORD=${STRONG_PW}|" .env
+          openssl rand -hex 16 > data/secrets/first_admin_password
           set +e
           docker compose run --rm --no-deps \
             api python -c "from app.config import Settings; Settings()" \
@@ -386,11 +392,16 @@ jobs:
         # `bootstrap-failure`. Values are placeholders; ruff never reads them.
         run: |
           umask 077
+          mkdir -p data/secrets
+          openssl rand -hex 32 > data/secrets/jwt_secret
+          openssl rand -hex 16 > data/secrets/first_admin_password
+          chmod 0400 data/secrets/jwt_secret data/secrets/first_admin_password
           cat > .env <<EOF
           DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords_test
-          JWT_SECRET=$(openssl rand -hex 32)
-          FIRST_ADMIN_EMAIL=admin@ci.local
-          FIRST_ADMIN_PASSWORD=$(openssl rand -hex 16)
+          FIRST_ADMIN_EMAIL=admin@example.org
+          JWT_SECRET_FILE=/run/secrets/jwt_secret
+          FIRST_ADMIN_PASSWORD_FILE=/run/secrets/first_admin_password
+          CIVICRECORDS_SECRET_DIR=./data/secrets
           OLLAMA_BASE_URL=http://ollama:11434
           REDIS_URL=redis://redis:6379/0
           AUDIT_RETENTION_DAYS=1095

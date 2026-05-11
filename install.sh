@@ -58,13 +58,15 @@ if [ ! -f .env ]; then
     # URL-safe base64 encoding 32 random bytes. `openssl rand -base64 32`
     # produces standard base64; swap `+`→`-` and `/`→`_` for URL-safe.
     ENCRYPTION_KEY=$(openssl rand -base64 32 | tr '+/' '-_')
+    SECRET_DIR="${CIVICRECORDS_SECRET_DIR:-./data/secrets}"
+    mkdir -p "$SECRET_DIR"
+    umask 077
+    printf '%s\n' "$JWT_SECRET" > "$SECRET_DIR/jwt_secret"
+    printf '%s\n' "$ADMIN_PASSWORD" > "$SECRET_DIR/first_admin_password"
+    chmod 0400 "$SECRET_DIR/jwt_secret" "$SECRET_DIR/first_admin_password"
     if [ "$OS" = "Darwin" ]; then
-        sed -i '' "s|CHANGE-ME-generate-with-openssl-rand-hex-32|$JWT_SECRET|" .env
-        sed -i '' "s|CHANGE-ME-on-first-login|$ADMIN_PASSWORD|" .env
         sed -i '' "s|CHANGE-ME-generate-with-fernet-generate-key|$ENCRYPTION_KEY|" .env
     else
-        sed -i "s|CHANGE-ME-generate-with-openssl-rand-hex-32|$JWT_SECRET|" .env
-        sed -i "s|CHANGE-ME-on-first-login|$ADMIN_PASSWORD|" .env
         sed -i "s|CHANGE-ME-generate-with-fernet-generate-key|$ENCRYPTION_KEY|" .env
     fi
     echo ""
@@ -74,7 +76,8 @@ if [ ! -f .env ]; then
     echo "  Email:    admin@example.gov  (edit .env to change)"
     echo "  Password: $ADMIN_PASSWORD"
     echo "============================================"
-    echo "  This password is stored in .env. Store it in your password manager."
+    echo "  This password is stored in $SECRET_DIR/first_admin_password (0400)."
+    echo "  Store it in your password manager; it is not written to .env."
     echo "  Press Enter when you have copied it."
     echo ""
     echo "============================================"
@@ -87,8 +90,8 @@ if [ ! -f .env ]; then
     echo "  *** BACK THIS UP SEPARATELY FROM YOUR DATABASE. ***"
     echo "  Losing this key means every saved data-source connection"
     echo "  configuration becomes unreadable. Store it alongside your"
-    echo "  JWT_SECRET in a password manager or secrets vault — NOT in"
-    echo "  the same location as DB backups."
+    echo "  JWT secret from $SECRET_DIR/jwt_secret in a password manager"
+    echo "  or secrets vault — NOT in the same location as DB backups."
     echo ""
     read -p "Press Enter to continue, or Ctrl+C to edit .env first..."
 
@@ -142,6 +145,47 @@ if [ ! -f .env ]; then
 fi
 
 # ─── Hardware Detection ───────────────────────────────────────────────────────
+# B2 / QA-002: migrate existing .env files from recoverable container env
+# secrets to Docker-mounted secret files. Fresh .env.example files already have
+# these keys; older v1.5.x installs are rewritten in place.
+SECRET_DIR=$(grep -E '^CIVICRECORDS_SECRET_DIR=' .env 2>/dev/null | tail -1 | cut -d= -f2-)
+SECRET_DIR="${SECRET_DIR:-./data/secrets}"
+mkdir -p "$SECRET_DIR"
+umask 077
+
+LEGACY_JWT=$(grep -E '^JWT_SECRET=' .env 2>/dev/null | tail -1 | cut -d= -f2- || true)
+LEGACY_ADMIN_PASSWORD=$(grep -E '^FIRST_ADMIN_PASSWORD=' .env 2>/dev/null | tail -1 | cut -d= -f2- || true)
+if [ -n "$LEGACY_JWT" ] && [ "$LEGACY_JWT" != "CHANGE-ME-generate-with-openssl-rand-hex-32" ]; then
+    printf '%s\n' "$LEGACY_JWT" > "$SECRET_DIR/jwt_secret"
+elif [ ! -s "$SECRET_DIR/jwt_secret" ]; then
+    openssl rand -hex 32 > "$SECRET_DIR/jwt_secret"
+fi
+if [ -n "$LEGACY_ADMIN_PASSWORD" ] && [ "$LEGACY_ADMIN_PASSWORD" != "CHANGE-ME-on-first-login" ]; then
+    printf '%s\n' "$LEGACY_ADMIN_PASSWORD" > "$SECRET_DIR/first_admin_password"
+elif [ ! -s "$SECRET_DIR/first_admin_password" ]; then
+    openssl rand -hex 16 > "$SECRET_DIR/first_admin_password"
+fi
+chmod 0400 "$SECRET_DIR/jwt_secret" "$SECRET_DIR/first_admin_password"
+
+if [ "$OS" = "Darwin" ]; then
+    sed -i '' '/^JWT_SECRET=/d' .env
+    sed -i '' '/^FIRST_ADMIN_PASSWORD=/d' .env
+    sed -i '' '/^JWT_SECRET_FILE=/d' .env
+    sed -i '' '/^FIRST_ADMIN_PASSWORD_FILE=/d' .env
+    sed -i '' '/^CIVICRECORDS_SECRET_DIR=/d' .env
+else
+    sed -i '/^JWT_SECRET=/d' .env
+    sed -i '/^FIRST_ADMIN_PASSWORD=/d' .env
+    sed -i '/^JWT_SECRET_FILE=/d' .env
+    sed -i '/^FIRST_ADMIN_PASSWORD_FILE=/d' .env
+    sed -i '/^CIVICRECORDS_SECRET_DIR=/d' .env
+fi
+cat >> .env <<EOF
+JWT_SECRET_FILE=/run/secrets/jwt_secret
+FIRST_ADMIN_PASSWORD_FILE=/run/secrets/first_admin_password
+CIVICRECORDS_SECRET_DIR=$SECRET_DIR
+EOF
+
 # T5C correction pass (2026-04-21): the detect_hardware.sh gate now exits 1
 # when RAM < 32 GB (Tier 5 target-profile baseline), matching the Windows
 # install.ps1 behavior (detect_hardware.ps1 L64: `exit 1` below 32 GB). We

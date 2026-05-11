@@ -69,16 +69,19 @@ jobs:
       - name: Synthesize hermetic .env for release verification
         shell: bash
         run: |
-          JWT_SECRET="$(openssl rand -hex 32)"
-          ADMIN_PW="$(openssl rand -hex 16)"
           ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
           umask 077
+          mkdir -p data/secrets
+          openssl rand -hex 32 > data/secrets/jwt_secret
+          openssl rand -hex 16 > data/secrets/first_admin_password
+          chmod 0400 data/secrets/jwt_secret data/secrets/first_admin_password
           cat > .env <<EOF
           DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords
-          JWT_SECRET=${JWT_SECRET}
           ENCRYPTION_KEY=${ENCRYPTION_KEY}
           FIRST_ADMIN_EMAIL=admin@example.org
-          FIRST_ADMIN_PASSWORD=${ADMIN_PW}
+          JWT_SECRET_FILE=/run/secrets/jwt_secret
+          FIRST_ADMIN_PASSWORD_FILE=/run/secrets/first_admin_password
+          CIVICRECORDS_SECRET_DIR=./data/secrets
           OLLAMA_BASE_URL=http://ollama:11434
           REDIS_URL=redis://redis:6379/0
           AUDIT_RETENTION_DAYS=1095

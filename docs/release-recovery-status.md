@@ -4,9 +4,9 @@ Date: 2026-05-07
 
 ## Public Claim Freeze
 
-CivicRecords AI `v1.5.0` is the recovery release that aligns the product with CivicCore v1.0.1 and closes ENG-002. The older `v1.4.10` tag remains historical, provisional, and do-not-promote.
+CivicRecords AI `v1.6.0` is the recovery release that moves JWT/admin bootstrap secrets into Docker-mounted secret files and closes QA-002, building on the v1.5.0 CivicCore v1.0.1 alignment. The older `v1.4.10` tag remains historical, provisional, and do-not-promote.
 
-Existing tags remain part of the public record. Do not republish or promote `v1.4.10`; use `v1.5.0` or later for the CivicCore v1.0.1 aligned line.
+Existing tags remain part of the public record. Do not republish or promote `v1.4.10`; use `v1.6.0` or later for the Docker secret-file line.
 
 ## Gates Required To Re-Earn Release Status
 

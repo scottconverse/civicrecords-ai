@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-05-11
+
+### Security
+- Moved `JWT_SECRET` and `FIRST_ADMIN_PASSWORD` out of Docker Compose
+  container environment variables. The runtime now reads
+  `JWT_SECRET_FILE` and `FIRST_ADMIN_PASSWORD_FILE` from mounted secret files,
+  and the release gate verifies `docker exec <api> env` does not expose either
+  value. Closes audit finding QA-002.
+
+### Changed
+- `install.sh` now writes `./data/secrets/jwt_secret` and
+  `./data/secrets/first_admin_password` with `0400` permissions.
+- `install.ps1` writes the same files under `.\data\secrets\` and restricts
+  access with `icacls` for SYSTEM, Administrators, and the current Docker
+  Desktop operator account.
+- Breaking upgrade note: existing v1.5.x installs that still store
+  `JWT_SECRET=` or `FIRST_ADMIN_PASSWORD=` in `.env` must re-run
+  `install.sh` or `install.ps1` so file-backed secrets are created and `.env`
+  points at the mounted `*_FILE` paths.
+
 ## [1.5.0] - 2026-05-10
 
 ### Changed

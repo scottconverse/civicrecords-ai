@@ -44,8 +44,16 @@ if ! command -v docker >/dev/null 2>&1; then
 elif [ ! -f .env ]; then
     fail ".env missing; create a local runtime .env from .env.example with real secrets before release verification"
 else
+    if grep -qE '^(JWT_SECRET|FIRST_ADMIN_PASSWORD)=' .env; then
+        fail ".env exposes JWT_SECRET or FIRST_ADMIN_PASSWORD; run install.sh/install.ps1 to migrate B2 secrets into files"
+    fi
     if docker compose up -d --wait postgres redis ollama api; then
         pass "compose runtime provisioned"
+        if docker compose exec -T api env | grep -E '^(JWT_SECRET|FIRST_ADMIN_PASSWORD)='; then
+            fail "api container env exposes JWT_SECRET or FIRST_ADMIN_PASSWORD"
+        else
+            pass "api container env hides JWT_SECRET and FIRST_ADMIN_PASSWORD"
+        fi
     else
         fail "compose runtime failed to become healthy"
         echo ""

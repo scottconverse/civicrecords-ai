@@ -93,6 +93,19 @@ def _minimal_env(**overrides: str) -> dict[str, str]:
     return env
 
 
+def _secret_file_env(tmp_path, *, jwt_secret: str = _VALID_JWT, first_admin_password: str = _VALID_PASSWORD) -> dict[str, str]:
+    secret_dir = tmp_path / "secrets"
+    secret_dir.mkdir(exist_ok=True)
+    jwt_path = secret_dir / "jwt_secret"
+    password_path = secret_dir / "first_admin_password"
+    jwt_path.write_text(jwt_secret, encoding="utf-8")
+    password_path.write_text(first_admin_password, encoding="utf-8")
+    return {
+        "JWT_SECRET_FILE": str(jwt_path),
+        "FIRST_ADMIN_PASSWORD_FILE": str(password_path),
+    }
+
+
 def _run_bootstrap(env: dict[str, str], cwd: str) -> subprocess.CompletedProcess:
     """Spawn a fresh Python that does what container startup does."""
     return subprocess.run(
@@ -114,8 +127,10 @@ def test_fresh_bootstrap_fails_with_env_example_placeholder(tmp_path):
     api-container import time and die for the same reason.
     """
     env = _minimal_env(
-        JWT_SECRET=_VALID_JWT,
-        FIRST_ADMIN_PASSWORD=_PLACEHOLDER_PASSWORD,
+        **_secret_file_env(
+            tmp_path,
+            first_admin_password=_PLACEHOLDER_PASSWORD,
+        ),
     )
     result = _run_bootstrap(env, cwd=str(tmp_path))
 
@@ -137,8 +152,7 @@ def test_fresh_bootstrap_passes_with_strong_password(tmp_path):
     machinery itself works.
     """
     env = _minimal_env(
-        JWT_SECRET=_VALID_JWT,
-        FIRST_ADMIN_PASSWORD=_VALID_PASSWORD,
+        **_secret_file_env(tmp_path),
     )
     result = _run_bootstrap(env, cwd=str(tmp_path))
 
@@ -151,8 +165,7 @@ def test_fresh_bootstrap_passes_with_strong_password(tmp_path):
 def test_fresh_bootstrap_fails_with_short_password(tmp_path):
     """The length-check branch fires in the same fresh-subprocess path."""
     env = _minimal_env(
-        JWT_SECRET=_VALID_JWT,
-        FIRST_ADMIN_PASSWORD="short",
+        **_secret_file_env(tmp_path, first_admin_password="short"),
     )
     result = _run_bootstrap(env, cwd=str(tmp_path))
 
@@ -166,8 +179,7 @@ def test_fresh_bootstrap_fails_with_short_password(tmp_path):
 def test_fresh_bootstrap_fails_with_blocklist_password(tmp_path):
     """A common blocklist value also fails the bootstrap path."""
     env = _minimal_env(
-        JWT_SECRET=_VALID_JWT,
-        FIRST_ADMIN_PASSWORD="admin123",
+        **_secret_file_env(tmp_path, first_admin_password="admin123"),
     )
     result = _run_bootstrap(env, cwd=str(tmp_path))
 
