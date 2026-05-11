@@ -256,7 +256,9 @@ jobs:
         # control, a Python import error elsewhere would also "fail" and pass
         # the test for the wrong reason.
         run: |
+          chmod u+w data/secrets/first_admin_password
           openssl rand -hex 16 > data/secrets/first_admin_password
+          chmod 0400 data/secrets/first_admin_password
           set +e
           docker compose run --rm --no-deps \
             api python -c "from app.config import Settings; Settings()" \

@@ -3,7 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+def _repo_root() -> Path:
+    for candidate in Path(__file__).resolve().parents:
+        if (candidate / "docker-compose.yml").is_file():
+            return candidate
+    raise AssertionError("Could not locate repository root with docker-compose.yml")
+
+
+REPO_ROOT = _repo_root()
 
 
 def test_compose_uses_secret_file_pointers_instead_of_secret_env_values():
