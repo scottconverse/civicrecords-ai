@@ -16,6 +16,8 @@ COPY backend/data ./data
 COPY backend/compliance_templates ./compliance_templates
 COPY backend/scripts ./scripts
 COPY backend/tests ./tests
+COPY .env.example docker-compose.yml ./
+COPY scripts/verify-release.sh ./scripts/verify-release.sh
 RUN mkdir -p docs/ops
 COPY docs/ops/tier1-retrofit-ledger.json ./docs/ops/tier1-retrofit-ledger.json
 COPY scripts/check-tier1-ledger.py ./scripts/check-tier1-ledger.py

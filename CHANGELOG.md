@@ -11,10 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 - Moved `JWT_SECRET` and `FIRST_ADMIN_PASSWORD` out of Docker Compose
-  container environment variables. The runtime now reads
-  `JWT_SECRET_FILE` and `FIRST_ADMIN_PASSWORD_FILE` from mounted secret files,
-  and the release gate verifies `docker exec <api> env` does not expose either
-  value. Closes audit finding QA-002.
+  container environment variables. The runtime now defaults to the Docker
+  secret mount paths at `/run/secrets/jwt_secret` and
+  `/run/secrets/first_admin_password`, and the release gate verifies
+  `docker exec <api> env` exposes no `JWT_SECRET*` or
+  `FIRST_ADMIN_PASSWORD*` names. Addresses audit finding QA-002.
 
 ### Changed
 - `install.sh` now writes `./data/secrets/jwt_secret` and
@@ -25,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Breaking upgrade note: existing v1.5.x installs that still store
   `JWT_SECRET=` or `FIRST_ADMIN_PASSWORD=` in `.env` must re-run
   `install.sh` or `install.ps1` so file-backed secrets are created and `.env`
-  points at the mounted `*_FILE` paths.
+  keeps only non-secret operator settings such as `CIVICRECORDS_SECRET_DIR`.
 
 ## [1.5.0] - 2026-05-10
 

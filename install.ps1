@@ -175,8 +175,6 @@ $filteredEnv = $envLines | Where-Object {
     $_ -notmatch '^FIRST_ADMIN_PASSWORD_FILE=' -and
     $_ -notmatch '^CIVICRECORDS_SECRET_DIR='
 }
-$filteredEnv += "JWT_SECRET_FILE=/run/secrets/jwt_secret"
-$filteredEnv += "FIRST_ADMIN_PASSWORD_FILE=/run/secrets/first_admin_password"
 $filteredEnv += "CIVICRECORDS_SECRET_DIR=$secretDir"
 Set-Content ".env" -Value ($filteredEnv -join "`n") -NoNewline
 

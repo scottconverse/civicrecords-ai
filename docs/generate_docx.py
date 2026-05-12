@@ -635,9 +635,8 @@ def build_readme_docx(out_path):
         ["Variable", "Description", "Default"],
         [
             ["DATABASE_URL",         "PostgreSQL connection string",     "postgresql+asyncpg://..."],
-            ["JWT_SECRET",           "Secret key for JWT tokens",        "(must be set)"],
             ["FIRST_ADMIN_EMAIL",    "Initial admin account email",      "admin@example.gov"],
-            ["FIRST_ADMIN_PASSWORD", "Initial admin account password",   "(must be set)"],
+            ["CIVICRECORDS_SECRET_DIR", "Host directory for Docker secret files", "./data/secrets"],
             ["OLLAMA_BASE_URL",      "Ollama API endpoint",              "http://ollama:11434"],
             ["REDIS_URL",            "Redis connection string",          "redis://redis:6379/0"],
             ["AUDIT_RETENTION_DAYS","Audit log retention period",       "1095 (3 years)"],

@@ -44,8 +44,8 @@ if ! command -v docker >/dev/null 2>&1; then
 elif [ ! -f .env ]; then
     fail ".env missing; create a local runtime .env from .env.example with real secrets before release verification"
 else
-    if grep -qE '^(JWT_SECRET|FIRST_ADMIN_PASSWORD)=' .env; then
-        fail ".env exposes JWT_SECRET or FIRST_ADMIN_PASSWORD; run install.sh/install.ps1 to migrate B2 secrets into files"
+    if grep -qE 'JWT_SECRET|FIRST_ADMIN_PASSWORD' .env; then
+        fail ".env exposes a JWT_SECRET* or FIRST_ADMIN_PASSWORD* name; run install.sh/install.ps1 to migrate B2 secrets into Docker secret files"
     fi
     if docker compose up -d --wait postgres redis ollama; then
         database_name=$(grep -E '^DATABASE_URL=' .env | head -1 | sed -E 's#^DATABASE_URL=[^:]+://[^/]+/([^?]+).*$#\1#' || true)
@@ -60,10 +60,10 @@ else
     fi
     if docker compose ps api --format '{{.State}}' 2>/dev/null | grep -q '^running$'; then
         pass "compose runtime provisioned"
-        if docker compose exec -T api env | grep -E '^(JWT_SECRET|FIRST_ADMIN_PASSWORD)='; then
-            fail "api container env exposes JWT_SECRET or FIRST_ADMIN_PASSWORD"
+        if docker compose exec -T api env | grep -E 'JWT_SECRET|FIRST_ADMIN_PASSWORD'; then
+            fail "api container env exposes a JWT_SECRET* or FIRST_ADMIN_PASSWORD* name (B2 literal directive grep)"
         else
-            pass "api container env hides JWT_SECRET and FIRST_ADMIN_PASSWORD"
+            pass "api container env hides JWT_SECRET and FIRST_ADMIN_PASSWORD (literal directive grep)"
         fi
     else
         echo ""
@@ -87,7 +87,7 @@ else
         docker compose logs --no-color --tail 30 ollama || true
         echo ""
         echo "## .env shape (secrets redacted)"
-        grep -v -E '^(JWT_SECRET|FIRST_ADMIN_PASSWORD|ENCRYPTION_KEY)=' .env || true
+        grep -v -E 'JWT_SECRET|FIRST_ADMIN_PASSWORD|ENCRYPTION_KEY' .env || true
         echo "## (secret vars elided)"
         echo ""
         echo "============================================"
