@@ -79,8 +79,6 @@ jobs:
           DATABASE_URL=postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords
           ENCRYPTION_KEY=${ENCRYPTION_KEY}
           FIRST_ADMIN_EMAIL=admin@example.org
-          JWT_SECRET_FILE=/run/secrets/jwt_secret
-          FIRST_ADMIN_PASSWORD_FILE=/run/secrets/first_admin_password
           CIVICRECORDS_SECRET_DIR=./data/secrets
           OLLAMA_BASE_URL=http://ollama:11434
           REDIS_URL=redis://redis:6379/0
