@@ -24,11 +24,15 @@ _MIN_PASSWORD_LEN = 12
 class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords"
     jwt_secret: str = "CHANGE-ME"
-    jwt_secret_file: str = ""
+    # Default to the Docker Compose secret mount path. Pydantic-settings will
+    # only override from env if a JWT_SECRET_FILE env var is set; the
+    # B2 contract is that the container env contains no such name, so this
+    # default IS the production read path.
+    jwt_secret_file: str = "/run/secrets/jwt_secret"
     jwt_lifetime_seconds: int = 3600
     first_admin_email: str = "admin@example.gov"
     first_admin_password: str = "CHANGE-ME"
-    first_admin_password_file: str = ""
+    first_admin_password_file: str = "/run/secrets/first_admin_password"
     ollama_base_url: str = "http://ollama:11434"
     redis_url: str = "redis://redis:6379/0"
     audit_retention_days: int = 1095

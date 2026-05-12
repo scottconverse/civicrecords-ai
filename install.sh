@@ -181,8 +181,6 @@ else
     sed -i '/^CIVICRECORDS_SECRET_DIR=/d' .env
 fi
 cat >> .env <<EOF
-JWT_SECRET_FILE=/run/secrets/jwt_secret
-FIRST_ADMIN_PASSWORD_FILE=/run/secrets/first_admin_password
 CIVICRECORDS_SECRET_DIR=$SECRET_DIR
 EOF
 

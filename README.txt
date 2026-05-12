@@ -143,9 +143,7 @@ placed in the container environment:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql+asyncpg://civicrecords:civicrecords@postgres:5432/civicrecords` |
-| `JWT_SECRET_FILE` | Mounted secret file for JWT tokens | `/run/secrets/jwt_secret` |
 | `FIRST_ADMIN_EMAIL` | Initial admin account email | `admin@example.gov` |
-| `FIRST_ADMIN_PASSWORD_FILE` | Mounted secret file for the initial admin password | `/run/secrets/first_admin_password` |
 | `CIVICRECORDS_SECRET_DIR` | Host directory containing file-backed secrets for Docker Compose | `./data/secrets` |
 | `OLLAMA_BASE_URL` | Ollama API endpoint | `http://ollama:11434` |
 | `REDIS_URL` | Redis connection string | `redis://redis:6379/0` |
@@ -158,7 +156,9 @@ As of v1.6.0, `JWT_SECRET` and `FIRST_ADMIN_PASSWORD` are no longer runtime
 container environment variables. The install scripts generate the same strong
 random values as earlier releases, write them to `./data/secrets/jwt_secret`
 and `./data/secrets/first_admin_password`, and configure Docker Compose to mount
-those files at `/run/secrets/...`. A release rehearsal must prove:
+those files at `/run/secrets/...`. The container environment intentionally does
+not include `JWT_SECRET`, `FIRST_ADMIN_PASSWORD`, or matching `_FILE` pointer
+names. A release rehearsal must prove:
 
 ```bash
 docker exec <records-api-container> env | grep -E "JWT_SECRET|FIRST_ADMIN_PASSWORD"
@@ -168,10 +168,10 @@ returns zero lines.
 
 **Upgrade note from v1.5.x:** existing installs that still have
 `JWT_SECRET=...` or `FIRST_ADMIN_PASSWORD=...` in `.env` must re-run
-`install.sh` or `install.ps1` so the secret files are created and `.env` points
-to `JWT_SECRET_FILE` / `FIRST_ADMIN_PASSWORD_FILE`. Direct secret env vars are
-not a supported Docker runtime path in v1.6.0 because they are recoverable with
-`docker exec env`.
+`install.sh` or `install.ps1` so the secret files are created and `.env` keeps
+only non-secret operator settings such as `CIVICRECORDS_SECRET_DIR`. Do not set
+`JWT_SECRET*`, `FIRST_ADMIN_PASSWORD*`, or matching `_FILE` pointer env vars in
+Docker deployments; those names are recoverable with `docker exec env`.
 
 ## Supported Platforms
 
@@ -244,7 +244,7 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 
 **v1.5.0 (May 10, 2026)** — CivicCore recovery alignment release. Records-AI now consumes civiccore v1.0.1, matching the active CivicSuite platform baseline and closing ENG-002. The imported CivicCore symbols remained compatible, so this release changes the dependency baseline and release evidence without changing API URL paths, roles, permissions, or records-side database migrations.
 
-**v1.6.0 (May 11, 2026)** — Docker secret-file extraction release. `JWT_SECRET` and `FIRST_ADMIN_PASSWORD` move out of container env vars and into Docker-mounted secret files, closing QA-002. Existing v1.5.x installs must re-run `install.sh` or `install.ps1` so `./data/secrets/*` is created and `.env` points at `*_FILE` paths.
+**v1.6.0 (May 11, 2026)** — Docker secret-file extraction release. `JWT_SECRET` and `FIRST_ADMIN_PASSWORD` move out of container env vars and into Docker-mounted secret files. Existing v1.5.x installs must re-run `install.sh` or `install.ps1` so `./data/secrets/*` is created and `.env` keeps only non-secret operator settings; `_FILE` pointer env names are intentionally absent from the container env.
 
 **v1.4.10 (May 3, 2026)** — Documentation-only release alignment patch. The v1.4.9 CivicCore source-status projection code is unchanged; this tag publishes the audit-corrected 631-backend-test evidence in the release source snapshot and installer/download docs.
 

@@ -321,9 +321,7 @@ All configuration lives in `.env` in the repo root. Never commit this file.
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string (asyncpg format) |
-| `JWT_SECRET_FILE` | Yes | `/run/secrets/jwt_secret` | Mounted secret file for JWT signing |
 | `FIRST_ADMIN_EMAIL` | Yes | — | Initial admin account email |
-| `FIRST_ADMIN_PASSWORD_FILE` | Yes | `/run/secrets/first_admin_password` | Mounted secret file for the initial admin account password |
 | `CIVICRECORDS_SECRET_DIR` | Yes | `./data/secrets` | Host directory used by Docker Compose for file-backed secrets |
 | `OLLAMA_BASE_URL` | No | `http://ollama:11434` | Ollama API endpoint |
 | `REDIS_URL` | No | `redis://redis:6379/0` | Redis connection string |
@@ -344,7 +342,8 @@ in files instead of container environment variables. On Linux and macOS,
 `install.sh` writes `./data/secrets/jwt_secret` and
 `./data/secrets/first_admin_password` with `0400` permissions. Docker Compose
 mounts those files at `/run/secrets/jwt_secret` and
-`/run/secrets/first_admin_password`; `.env` contains only the `*_FILE` pointers.
+`/run/secrets/first_admin_password`; `.env` contains no `JWT_SECRET*` or
+`FIRST_ADMIN_PASSWORD*` names.
 
 To verify the secret material is not exposed in a running API container:
 
@@ -356,8 +355,9 @@ The command should return no lines.
 
 **Upgrade from v1.5.x:** if your `.env` still contains `JWT_SECRET=` or
 `FIRST_ADMIN_PASSWORD=`, re-run `install.sh` or `install.ps1`. The runtime no
-longer treats those env vars as the Docker deployment path because any operator
-with container access can recover them with `docker exec env`.
+longer treats those env vars, or matching `_FILE` pointer env vars, as the
+Docker deployment path because any operator with container access can recover
+the names with `docker exec env`.
 
 #### Secrets handling on Windows
 
