@@ -256,8 +256,8 @@ This means the system lost connection to that data source after repeated failure
 | CPU | 8 cores | 16 cores |
 | RAM | 32 GB | 64 GB |
 | Disk | 50 GB free | 2+ TB NVMe |
-| OS | Windows 10/11, macOS 13+, Ubuntu 22.04+, Debian 12+ | Ubuntu 22.04 LTS |
-| Runtime | Docker Desktop (Windows/macOS) or Docker Engine (Linux) | Docker Engine 24+ |
+| OS | Windows 10/11 (lifecycle-certified). macOS 13+, Ubuntu 22.04+, Debian 12+ on script path (not lifecycle-certified) — Windows-only currently; macOS support pending lifecycle certification. | Ubuntu 22.04 LTS |
+| Runtime | Docker Desktop on Windows (lifecycle-certified) or macOS (not lifecycle-certified) or Docker Engine (Linux) | Docker Engine 24+ |
 
 **GPU (optional but recommended):**
 - NVIDIA (CUDA) — Windows and Linux
@@ -274,13 +274,13 @@ There are two supported install paths. Pick the one that matches your platform a
 > **Install paths currently shipped:**
 >
 > 1. **Windows double-click installer (T5E, UNSIGNED).** A real `.exe` installer built with Inno Setup 6.x is produced on every `v*` tag and published to GitHub Releases as `CivicRecordsAI-<version>-Setup.exe`. **It is unsigned by design for this release** (Scott-locked B3=α posture) — Windows SmartScreen will show "Windows protected your PC — Unknown publisher." on first run. Click **More info → Run anyway** to proceed. A SHA-256 checksum is published alongside each release asset for independent verification. The installer bundles the repo snapshot, runs a prerequisite check (Docker Desktop, WSL 2 + Virtual Machine Platform, 32 GB RAM floor, optional host Ollama), then runs `install.ps1` through `launch-install.ps1`. See [`installer/windows/README.md`](installer/windows/README.md) for the full SmartScreen walkthrough, the split Start/Install shortcut model, and checksum-verify steps.
-> 2. **Script-based install (macOS / Linux — and Windows if you prefer CLI).** The scripts below configure and launch the Docker Compose stack. They do **not** install Docker Desktop, Docker Engine, WSL, or any other system prerequisite — those must be present before the scripts run. If Docker is not installed, the scripts fail with a clear error and you must install Docker manually before retrying.
+> 2. **Script-based install (macOS / Linux — not lifecycle-certified — and Windows if you prefer CLI).** Windows-only currently; macOS support pending lifecycle certification. The scripts below configure and launch the Docker Compose stack on macOS and Linux as a non-certified path, and on Windows as a CLI alternative. They do **not** install Docker Desktop, Docker Engine, WSL, or any other system prerequisite — those must be present before the scripts run. If Docker is not installed, the scripts fail with a clear error and you must install Docker manually before retrying.
 >
-> **Cross-platform parity:** No native installer ships for macOS or Linux. That parity is explicit follow-on work and is not scheduled. macOS and Linux operators use the script path below.
+> **Cross-platform parity:** Windows-only currently; macOS support pending lifecycle certification. No native installer ships for macOS or Linux — that parity is explicit follow-on work and is not scheduled. macOS and Linux operators use the script path below, which is not lifecycle-certified.
 
 **Before you begin — prerequisites:**
 
-1. Install **Docker Desktop** (Windows 10/11 or macOS 13+): [docker.com/get-started](https://www.docker.com/get-started)
+1. Install **Docker Desktop** (Windows 10/11; macOS 13+ supported on the script path but Windows-only currently — macOS support pending lifecycle certification): [docker.com/get-started](https://www.docker.com/get-started)
    *Linux:* Install **Docker Engine** 24+ and Docker Compose v2.
 2. Ensure Docker is running (you should see the Docker icon in your taskbar/menu bar, or `docker info` returns without error).
 3. Confirm system requirements: 8+ CPU cores, 32 GB RAM, 50 GB free disk.
@@ -294,7 +294,7 @@ cd civicrecords-ai
 .\install.ps1
 ```
 
-**macOS / Linux:**
+**macOS / Linux** (script path; not lifecycle-certified — see B.1 System Requirements)**:**
 ```bash
 git clone https://github.com/CivicSuite/civicrecords-ai.git
 cd civicrecords-ai
