@@ -2,6 +2,7 @@
 set -euo pipefail
 
 echo "============================================"
+echo "  CivicSuite SERVER installation — clerks access via browser at http://<server>:8080"
 echo "  CivicRecords AI — Installation Script"
 echo "  Supports: Linux (Ubuntu/Debian), macOS"
 echo "============================================"
@@ -191,13 +192,24 @@ EOF
 # under-spec machine is not a "defaulting to CPU mode" scenario; it's a
 # below-support-floor scenario and the installer must stop.
 echo ""
+# Import MIN_RAM_GB from the canonical source — scripts/detect_hardware.sh —
+# so the RAM-floor literal lives in one file. The early-return guard
+# (HARDWARE_CONSTANTS_ONLY=1) means this just imports the constant; the
+# detector itself runs as a separate subshell call below.
+# shellcheck disable=SC1091
+HARDWARE_CONSTANTS_ONLY=1 source scripts/detect_hardware.sh
 echo "Detecting hardware capabilities..."
 if ! bash scripts/detect_hardware.sh; then
     echo ""
-    echo "[ERROR] Hardware gate failed. The machine does not meet the CivicRecords AI"
-    echo "        target-profile baseline (32 GB RAM minimum). Installation aborted."
-    echo "        Review the hardware-detection output above for the specific failure,"
-    echo "        or rerun scripts/detect_hardware.sh on its own to see the full probe."
+    echo "[ERROR] Hardware gate failed. This machine has less than ${MIN_RAM_GB} GB RAM, the"
+    echo "        CivicSuite SERVER floor (MIN_RAM_GB — see scripts/detect_hardware.sh)."
+    echo "        CivicSuite is a SERVER product: one server per city runs the full stack"
+    echo "        (postgres + redis + ollama + api + worker + beat + frontend) and clerks"
+    echo "        reach it via browser at http://<server>:8080 — this gate checks the"
+    echo "        server box, not a clerk workstation."
+    echo "        Installation aborted. Review the hardware-detection output above for the"
+    echo "        specific failure, or rerun scripts/detect_hardware.sh on its own to see"
+    echo "        the full probe."
     exit 1
 fi
 echo ""
@@ -412,8 +424,10 @@ fi
 
 echo ""
 echo "============================================"
+echo "  CivicSuite SERVER installation — clerks access via browser at http://${IP}:8080"
 echo "  Installation complete!"
 echo ""
+echo "  Clerk URL:    http://${IP}:8080   (any modern browser, zero client install)"
 echo "  Admin panel:  http://${IP}:8080"
 echo "  API:          http://${IP}:8000"
 echo "  API docs:     http://${IP}:8000/docs"
