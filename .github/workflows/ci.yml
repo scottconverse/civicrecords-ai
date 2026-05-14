@@ -35,7 +35,7 @@ jobs:
   # -------------------------------------------------------------------------
   backend:
     name: Backend (pytest via docker compose)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     timeout-minutes: 25
 
     steps:
@@ -194,7 +194,7 @@ jobs:
   # -------------------------------------------------------------------------
   bootstrap-failure:
     name: T2C bootstrap-failure smoke test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     timeout-minutes: 10
 
     steps:
@@ -303,7 +303,7 @@ jobs:
   # -------------------------------------------------------------------------
   frontend:
     name: Frontend (vitest + build)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     timeout-minutes: 10
     defaults:
       run:
@@ -354,7 +354,7 @@ jobs:
 
   recovery-gates:
     name: Release recovery gates
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     timeout-minutes: 5
 
     steps:
@@ -385,7 +385,7 @@ jobs:
   # -------------------------------------------------------------------------
   ruff:
     name: ruff (lint)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     timeout-minutes: 5
 
     steps:
