@@ -33,9 +33,27 @@ No open-source tool exists for the **responder side** of open records at the mun
 
 ### Requirements
 
-- **Docker Desktop** (Windows 10/11) or **Docker Engine** (Linux). Windows-only currently; macOS support pending lifecycle certification (Docker Desktop on macOS 13+ runs the script path but is not lifecycle-certified).
-- **8+ CPU cores**, **32 GB RAM**, **50 GB free disk space**
-- No internet connection required after initial setup
+CivicSuite is a **server product** — one server per city. Clerks reach the server through any modern browser; there is no clerk-side installation.
+
+#### CivicSuite Server (one per city)
+
+Runs the full Docker Compose stack: postgres, redis, ollama, api, celery worker, celery beat, and frontend.
+
+- **CPU:** 8+ cores recommended.
+- **RAM:** the installer gates on `MIN_RAM_GB` from `scripts/detect_hardware.sh` (32 GB at the time of writing). That value is flagged "needs measurement — arbitrary value pending peak-RAM profile" in its provenance comment; see the comment block at the top of `scripts/detect_hardware.sh` for the rationale and the intended revision path.
+- **Disk:** 50 GB free.
+- **Host OS:** Linux (Ubuntu/Debian) via `install.sh`, Windows 10/11 via `install.ps1`, or macOS via `install.sh` (script path; not lifecycle-certified). Docker Desktop / Docker Engine must already be installed and running.
+- **Network:** No outbound internet connection required after initial setup.
+- **Hardware cost (secondary market):** Refurbished Dell OptiPlex small-form-factor units with 16–32 GB RAM are commonly available and are a plausible hardware-cost target for a city-scale deployment. Confirm against `MIN_RAM_GB` (currently 32 GB) before purchasing on the low end of that range.
+
+#### Clerk Workstation (one per clerk)
+
+Any computer with a modern web browser. Clerks open the server's URL — **`http://<server>:8080`** — sign in, and use the application. **Zero client-side install** is required: no Docker, no helper script, no Python runtime, no model weights downloaded to the clerk machine. The server hosts everything.
+
+- **Browser:** Chromium-based (Chrome, Edge), Firefox, or Safari — current version.
+- **OS:** any (Windows, macOS, Linux, ChromeOS — anything that runs a modern browser).
+- **Network:** LAN access to the server on ports 8080 (web UI) and 8000 (API).
+- **Install:** none.
 
 ### Install
 
