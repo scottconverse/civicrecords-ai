@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "============================================"
+echo "================================================================================"
+echo "  CivicSuite SERVER installation — clerks access via browser at http://<server>:8080"
 echo "  CivicRecords AI — Installation Script"
 echo "  Supports: Linux (Ubuntu/Debian), macOS"
-echo "============================================"
+echo "================================================================================"
 echo ""
 
 OS="$(uname -s)"
@@ -70,21 +71,21 @@ if [ ! -f .env ]; then
         sed -i "s|CHANGE-ME-generate-with-fernet-generate-key|$ENCRYPTION_KEY|" .env
     fi
     echo ""
-    echo "============================================"
+    echo "================================================================================"
     echo "  ADMIN PASSWORD GENERATED — copy this now"
-    echo "============================================"
+    echo "================================================================================"
     echo "  Email:    admin@example.gov  (edit .env to change)"
     echo "  Password: $ADMIN_PASSWORD"
-    echo "============================================"
+    echo "================================================================================"
     echo "  This password is stored in $SECRET_DIR/first_admin_password (0400)."
     echo "  Store it in your password manager; it is not written to .env."
     echo "  Press Enter when you have copied it."
     echo ""
-    echo "============================================"
+    echo "================================================================================"
     echo "  AT-REST ENCRYPTION KEY GENERATED (T6 / ENG-001)"
-    echo "============================================"
+    echo "================================================================================"
     echo "  Key: $ENCRYPTION_KEY"
-    echo "============================================"
+    echo "================================================================================"
     echo "  This key encrypts data_sources.connection_config at rest."
     echo ""
     echo "  *** BACK THIS UP SEPARATELY FROM YOUR DATABASE. ***"
@@ -113,9 +114,9 @@ if [ ! -f .env ]; then
         fi
     elif [ -t 0 ]; then
         echo ""
-        echo "============================================"
+        echo "================================================================================"
         echo "  Portal mode (T5D)"
-        echo "============================================"
+        echo "================================================================================"
         echo "  private (default): staff-only deployment. No public routes. Residents"
         echo "                     cannot self-register. Login screen is the only"
         echo "                     externally reachable page."
@@ -191,13 +192,24 @@ EOF
 # under-spec machine is not a "defaulting to CPU mode" scenario; it's a
 # below-support-floor scenario and the installer must stop.
 echo ""
+# Import MIN_RAM_GB from the canonical source — scripts/detect_hardware.sh —
+# so the RAM-floor literal lives in one file. The early-return guard
+# (HARDWARE_CONSTANTS_ONLY=1) means this just imports the constant; the
+# detector itself runs as a separate subshell call below.
+# shellcheck disable=SC1091
+HARDWARE_CONSTANTS_ONLY=1 source scripts/detect_hardware.sh
 echo "Detecting hardware capabilities..."
 if ! bash scripts/detect_hardware.sh; then
     echo ""
-    echo "[ERROR] Hardware gate failed. The machine does not meet the CivicRecords AI"
-    echo "        target-profile baseline (32 GB RAM minimum). Installation aborted."
-    echo "        Review the hardware-detection output above for the specific failure,"
-    echo "        or rerun scripts/detect_hardware.sh on its own to see the full probe."
+    echo "[ERROR] Hardware gate failed. This machine has less than ${MIN_RAM_GB} GB RAM, the"
+    echo "        CivicSuite SERVER floor (MIN_RAM_GB — see scripts/detect_hardware.sh)."
+    echo "        CivicSuite is a SERVER product: one server per city runs the full stack"
+    echo "        (postgres + redis + ollama + api + worker + beat + frontend) and clerks"
+    echo "        reach it via browser at http://<server>:8080 — this gate checks the"
+    echo "        server box, not a clerk workstation."
+    echo "        Installation aborted. Review the hardware-detection output above for the"
+    echo "        specific failure, or rerun scripts/detect_hardware.sh on its own to see"
+    echo "        the full probe."
     exit 1
 fi
 echo ""
@@ -411,9 +423,11 @@ else
 fi
 
 echo ""
-echo "============================================"
+echo "================================================================================"
+echo "  CivicSuite SERVER installation — clerks access via browser at http://${IP}:8080"
 echo "  Installation complete!"
 echo ""
+echo "  Clerk URL:    http://${IP}:8080   (any modern browser, zero client install)"
 echo "  Admin panel:  http://${IP}:8080"
 echo "  API:          http://${IP}:8000"
 echo "  API docs:     http://${IP}:8000/docs"
@@ -426,4 +440,4 @@ else
 fi
 echo ""
 echo "  Run sovereignty check: bash scripts/verify-sovereignty.sh"
-echo "============================================"
+echo "================================================================================"
