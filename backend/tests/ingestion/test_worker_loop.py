@@ -433,7 +433,7 @@ def test_run_async_does_not_reuse_engine_across_loops(eager_celery, tmp_text_fil
 
         from celery.exceptions import Retry
 
-        result1 = tasks_mod.task_ingest_file.apply(args=[str(p1), source_id])
+        tasks_mod.task_ingest_file.apply(args=[str(p1), source_id])
         # Tolerate a RuntimeError / Retry on the second call — that's the
         # bug, and the OTHER test already asserts against it. This test
         # focuses on the structural invariant.
