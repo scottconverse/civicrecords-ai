@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "============================================"
+echo "================================================================================"
 echo "  CivicSuite SERVER installation — clerks access via browser at http://<server>:8080"
 echo "  CivicRecords AI — Installation Script"
 echo "  Supports: Linux (Ubuntu/Debian), macOS"
-echo "============================================"
+echo "================================================================================"
 echo ""
 
 OS="$(uname -s)"
@@ -71,21 +71,21 @@ if [ ! -f .env ]; then
         sed -i "s|CHANGE-ME-generate-with-fernet-generate-key|$ENCRYPTION_KEY|" .env
     fi
     echo ""
-    echo "============================================"
+    echo "================================================================================"
     echo "  ADMIN PASSWORD GENERATED — copy this now"
-    echo "============================================"
+    echo "================================================================================"
     echo "  Email:    admin@example.gov  (edit .env to change)"
     echo "  Password: $ADMIN_PASSWORD"
-    echo "============================================"
+    echo "================================================================================"
     echo "  This password is stored in $SECRET_DIR/first_admin_password (0400)."
     echo "  Store it in your password manager; it is not written to .env."
     echo "  Press Enter when you have copied it."
     echo ""
-    echo "============================================"
+    echo "================================================================================"
     echo "  AT-REST ENCRYPTION KEY GENERATED (T6 / ENG-001)"
-    echo "============================================"
+    echo "================================================================================"
     echo "  Key: $ENCRYPTION_KEY"
-    echo "============================================"
+    echo "================================================================================"
     echo "  This key encrypts data_sources.connection_config at rest."
     echo ""
     echo "  *** BACK THIS UP SEPARATELY FROM YOUR DATABASE. ***"
@@ -114,9 +114,9 @@ if [ ! -f .env ]; then
         fi
     elif [ -t 0 ]; then
         echo ""
-        echo "============================================"
+        echo "================================================================================"
         echo "  Portal mode (T5D)"
-        echo "============================================"
+        echo "================================================================================"
         echo "  private (default): staff-only deployment. No public routes. Residents"
         echo "                     cannot self-register. Login screen is the only"
         echo "                     externally reachable page."
@@ -423,7 +423,7 @@ else
 fi
 
 echo ""
-echo "============================================"
+echo "================================================================================"
 echo "  CivicSuite SERVER installation — clerks access via browser at http://${IP}:8080"
 echo "  Installation complete!"
 echo ""
@@ -440,4 +440,4 @@ else
 fi
 echo ""
 echo "  Run sovereignty check: bash scripts/verify-sovereignty.sh"
-echo "============================================"
+echo "================================================================================"
