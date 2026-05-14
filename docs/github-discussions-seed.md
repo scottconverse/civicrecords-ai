@@ -67,7 +67,7 @@ CivicRecords AI is an open-source, locally-hosted AI system built for American c
 **Quick links:**
 - [README](../README.md) — quick start and feature overview
 - [User Manual](civicrecords-ai-manual.pdf) — staff operations guide + IT reference + architecture
-- [Installation](https://github.com/CivicSuite/civicrecords-ai#install) — one command on Windows, macOS, or Linux
+- [Installation](https://github.com/CivicSuite/civicrecords-ai#install) — Windows-only currently; macOS support pending lifecycle certification (macOS and Linux operators may use the `install.sh` script path, which is not lifecycle-certified)
 - [v1.4.0 Windows installer](https://github.com/CivicSuite/civicrecords-ai/releases/download/v1.4.0/CivicRecordsAI-1.4.0-Setup.exe) — direct download
 - [CHANGELOG](../CHANGELOG.md) — full history of every release
 
@@ -87,7 +87,7 @@ If you're a city clerk, records officer, IT administrator, or civic technologist
 
 **Minimum requirements:**
 - 8 CPU cores (16 recommended), 32 GB RAM (64 GB recommended), 50 GB free disk space
-- Docker Desktop (Windows 10/11 or macOS 13+) or Docker Engine (Ubuntu 20.04+, Debian 11+)
+- Docker Desktop (Windows 10/11; macOS 13+ supported on the script path but Windows-only currently — macOS support pending lifecycle certification) or Docker Engine (Ubuntu 20.04+, Debian 11+)
 - No internet connection required after initial setup
 
 **Installation — three steps:**
@@ -99,7 +99,7 @@ cd civicrecords-ai
 .\install.ps1
 ```
 
-*Linux / macOS:*
+*Linux / macOS* (script path; not lifecycle-certified — Windows-only currently, macOS support pending lifecycle certification)*:*
 ```bash
 git clone https://github.com/CivicSuite/civicrecords-ai.git
 cd civicrecords-ai

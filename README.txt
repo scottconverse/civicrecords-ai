@@ -33,7 +33,7 @@ No open-source tool exists for the **responder side** of open records at the mun
 
 ### Requirements
 
-- **Docker Desktop** (Windows 10/11, macOS 13+) or **Docker Engine** (Linux)
+- **Docker Desktop** (Windows 10/11) or **Docker Engine** (Linux). Windows-only currently; macOS support pending lifecycle certification (Docker Desktop on macOS 13+ runs the script path but is not lifecycle-certified).
 - **8+ CPU cores**, **32 GB RAM**, **50 GB free disk space**
 - No internet connection required after initial setup
 
@@ -43,7 +43,7 @@ No open-source tool exists for the **responder side** of open records at the mun
 >
 > 1. **Windows double-click installer (T5E, UNSIGNED).** A signed build is a future release — this one is not. The unsigned installer is published on every release tag at `releases/download/<tag>/CivicRecordsAI-<version>-Setup.exe` along with a SHA-256 checksum for independent verification. On first run Windows SmartScreen shows **"Windows protected your PC — Unknown publisher."** This is expected. Click **More info → Run anyway** to proceed. See [installer/windows/README.md](installer/windows/README.md) for the full SmartScreen walkthrough and checksum-verify steps. The installer bundles the repo snapshot, runs a prereq check (Docker Desktop, WSL 2 + Virtual Machine Platform, 32 GB RAM floor, optional host Ollama), then runs `install.ps1` (via `installer\windows\launch-install.ps1`). `install.ps1` **auto-pulls `nomic-embed-text` and auto-pulls the Gemma 4 tag you select in the picker** (default `gemma4:e4b`) — expect several minutes on first run — and seeds the T5B baseline datasets.
 >
-> 2. **Script-based install (Linux / macOS, and Windows if you prefer CLI).** The scripts below configure and start the Docker Compose stack. They do **not** install Docker, WSL, or any other system prerequisites — those must already be present. `install.ps1` / `install.sh` both ship the 4-model Gemma 4 picker, auto-pull the selected LLM plus `nomic-embed-text`, and auto-seed the baseline datasets on first boot.
+> 2. **Script-based install (Linux / macOS — not lifecycle-certified — and Windows if you prefer CLI).** Windows-only currently; macOS support pending lifecycle certification. The scripts below configure and start the Docker Compose stack on macOS and Linux as a non-certified path, and on Windows as a CLI alternative. They do **not** install Docker, WSL, or any other system prerequisites — those must already be present. `install.ps1` / `install.sh` both ship the 4-model Gemma 4 picker, auto-pull the selected LLM plus `nomic-embed-text`, and auto-seed the baseline datasets on first boot.
 >
 > **Two shortcuts, two flows.** The Windows installer creates **separate** Start Menu entries for the two operations — don't confuse them:
 >
@@ -59,7 +59,7 @@ cd civicrecords-ai
 .\install.ps1
 ```
 
-**macOS / Linux:**
+**macOS / Linux** (script path; not lifecycle-certified — see "Supported Platforms" below)**:**
 ```bash
 git clone https://github.com/CivicSuite/civicrecords-ai.git
 cd civicrecords-ai
@@ -176,7 +176,7 @@ Docker deployments; those names are recoverable with `docker exec env`.
 ## Supported Platforms
 
 - Windows 10/11 (Docker Desktop)
-- macOS 13+ (Docker Desktop)
+- macOS 13+ (Docker Desktop) — Windows-only currently; macOS support pending lifecycle certification (script-path install only)
 - Ubuntu 22.04+ / Debian 12+ (Docker Engine)
 
 All platforms use identical Docker containers — the application runs in Linux containers regardless of host OS.
