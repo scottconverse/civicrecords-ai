@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Celery+asyncio ingestion worker event-loop reuse regression in
+  `backend/app/ingestion/tasks.py`. The previous code constructed a
+  module-global `AsyncEngine` inside a `worker_process_init` Celery
+  signal, which bound asyncpg connections to the first task's event
+  loop; every later task on the same prefork worker raised
+  `RuntimeError: Event loop is closed` (or `got Future ... attached to a
+  different loop`), retried twice, and gave up. The fix replaces the
+  module globals + signal hook with an `@asynccontextmanager
+  worker_session_scope()` that builds the engine inside each task's
+  per-task coroutine and disposes it before the loop closes, mirroring
+  the canonical pattern already in `backend/app/ingestion/scheduler.py`.
+  Operator-visible symptom that is removed: documents uploaded after the
+  first ingest on a given worker no longer get stuck in `pending`
+  status; every ingest reaches `completed` and produces chunks.
+
 ## [1.6.0] - 2026-05-11
 
 ### Security

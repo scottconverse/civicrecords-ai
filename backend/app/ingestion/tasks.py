@@ -1,10 +1,10 @@
 import asyncio
 import logging
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from celery.signals import worker_process_init
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 from app.worker import celery_app
@@ -14,29 +14,26 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-_engine = None
-_session_maker = None
 
-
-@worker_process_init.connect
-def init_worker_db(**kwargs):
-    global _engine, _session_maker
-    _engine = create_async_engine(
+@asynccontextmanager
+async def worker_session_scope():
+    # scheduler.py:30 pattern — engine must be built inside the running loop
+    # because asyncpg connections bind their _loop/_waiter to the loop that
+    # first awaits I/O on them; reusing the engine across _run_async's
+    # per-task loops raises "Event loop is closed" on the second task.
+    engine = create_async_engine(
         settings.database_url,
         pool_size=5,
         max_overflow=10,
         pool_pre_ping=True,
         pool_recycle=3600,
     )
-    _session_maker = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
-
-
-def get_worker_session():
-    if _session_maker is None:
-        # Fallback for non-worker contexts (tests, CLI)
-        from app.database import async_session_maker
-        return async_session_maker()
-    return _session_maker()
+    maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    try:
+        async with maker() as session:
+            yield session
+    finally:
+        await engine.dispose()
 
 
 def _run_async(coro):
@@ -58,7 +55,7 @@ def task_ingest_file(
     user_id: str | None = None,
 ):
     async def _ingest():
-        async with get_worker_session() as session:
+        async with worker_session_scope() as session:
             doc = await ingest_file(
                 session=session,
                 file_path=Path(file_path),
@@ -90,7 +87,7 @@ def task_ingest_file(
 @celery_app.task(name="civicrecords.ingest_source", bind=True, soft_time_limit=3600, time_limit=4200)
 def task_ingest_source(self, source_id: str, user_id: str | None = None):
     async def _ingest():
-        async with get_worker_session() as session:
+        async with worker_session_scope() as session:
             from app.models.document import DataSource
             from datetime import datetime, timezone
 
