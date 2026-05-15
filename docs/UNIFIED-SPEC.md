@@ -8,23 +8,23 @@ April 13, 2026
 | Status | Canonical — verified against repository at commit head |
 | Supersedes | All prior spec versions (v2.0, v2.2, v3.0, v3.0.1) |
 | Repository | github.com/CivicSuite/civicrecords-ai |
-| Current release | v1.6.0 (May 11, 2026) - Docker secret-file extraction for QA-002 |
-| Test suite | 633 backend tests collected by WSL Docker audit on 2026-05-07 + 36 frontend Vitest tests passing after dependency refresh |
+| Current release | v1.6.1 (May 15, 2026) - Celery ingestion worker event-loop recovery patch |
+| Test suite | 640 backend tests collected and passing by Docker audit on 2026-05-15 + 36 frontend Vitest tests passing |
 | Method | GitHub API crawl of repo structure, README, CHANGELOG, config files, module directories, and in-repo RECONCILIATION doc |
 
-Status Legend: [IMPLEMENTED] evidenced in code, tests, and routes. [PARTIAL] present but incomplete. [UI SHELL] interface exists without full backend capability. [PLANNED] not implemented. [NEW in v1.1.0] / [NEW in v1.2.0] / [NEW in v1.3.0] / [NEW in v1.4.0] / [UPDATED in v1.4.3] / [UPDATED in v1.4.4] / [UPDATED in v1.4.5] / [UPDATED in v1.4.7] / [UPDATED in v1.4.8] / [UPDATED in v1.4.9] / [UPDATED in v1.4.10] / [UPDATED in v1.5.0] / [UPDATED in v1.6.0] indicate which release introduced or updated a feature.
+Status Legend: [IMPLEMENTED] evidenced in code, tests, and routes. [PARTIAL] present but incomplete. [UI SHELL] interface exists without full backend capability. [PLANNED] not implemented. [NEW in v1.1.0] / [NEW in v1.2.0] / [NEW in v1.3.0] / [NEW in v1.4.0] / [UPDATED in v1.4.3] / [UPDATED in v1.4.4] / [UPDATED in v1.4.5] / [UPDATED in v1.4.7] / [UPDATED in v1.4.8] / [UPDATED in v1.4.9] / [UPDATED in v1.4.10] / [UPDATED in v1.5.0] / [UPDATED in v1.6.0] / [UPDATED in v1.6.1] indicate which release introduced or updated a feature.
 
 ## 1. Purpose of This Document
 This is the single source of truth for CivicRecords AI. It merges comprehensive design detail with implementation status verified directly against the repository at commit head. Every feature is tagged with its actual implementation state.
 When narrative claims and repository evidence disagree, repository evidence wins. This document replaces all prior spec versions.
 
 ### 1.1 Version Alignment (Resolved)
-As of v1.6.0, version numbers are aligned across all four authoritative files and the CivicCore dependency remains aligned to v1.0.1:
-backend/app/config.py: APP_VERSION = "1.6.0"
-backend/pyproject.toml: version = "1.6.0"
-frontend/package.json: version = "1.6.0"
-CHANGELOG.md: [1.6.0] - 2026-05-11
-The version drift documented in prior spec versions has been resolved and remains resolved. The CHANGELOG now covers releases through v1.6.0: 0.1.0 (foundation), 1.0.0 (design system + core features), 1.1.0 (department scoping, compliance, and feature sprint), 1.2.0 (Tier 5 installer/onboarding/seeding/model-picker/portal-mode + Tier 6 at-rest encryption ENG-001 closure), 1.3.0 (release-mechanics pass + civiccore v0.1.x integration), 1.4.0 (Phase 2 LLM integration via civiccore v0.2.0 dependency), 1.4.1 (suite-wide civiccore v0.3.0 dependency alignment), 1.4.3 (shared connector-security extraction aligned to civiccore v0.13.0), 1.4.4 (persisted audit-log hashing/verification aligned to civiccore v0.17.0), 1.4.5 (live connector retry/circuit-breaker primitive extraction aligned to civiccore v0.18.1), 1.4.6 (vendor-delta request planning and reusable mock-city contract suite consumption aligned to civiccore v0.19.0), 1.4.7 (startup config validation consumption aligned to civiccore v0.20.0), 1.4.8 (cron schedule validation and next-run computation aligned to civiccore v0.21.0), 1.4.9 (datasource source-list status projection aligned to civiccore v0.22.0), 1.4.10 (documentation-only release-source/test-count evidence alignment), 1.5.0 (CivicCore v1.0.1 dependency migration closing ENG-002), and 1.6.0 (Docker secret-file extraction closing QA-002).
+As of v1.6.1, version numbers are aligned across all four authoritative files and the CivicCore dependency remains aligned to v1.0.1:
+backend/app/config.py: APP_VERSION = "1.6.1"
+backend/pyproject.toml: version = "1.6.1"
+frontend/package.json: version = "1.6.1"
+CHANGELOG.md: [1.6.1] - 2026-05-15
+The version drift documented in prior spec versions has been resolved and remains resolved. The CHANGELOG now covers releases through v1.6.1: 0.1.0 (foundation), 1.0.0 (design system + core features), 1.1.0 (department scoping, compliance, and feature sprint), 1.2.0 (Tier 5 installer/onboarding/seeding/model-picker/portal-mode + Tier 6 at-rest encryption ENG-001 closure), 1.3.0 (release-mechanics pass + civiccore v0.1.x integration), 1.4.0 (Phase 2 LLM integration via civiccore v0.2.0 dependency), 1.4.1 (suite-wide civiccore v0.3.0 dependency alignment), 1.4.3 (shared connector-security extraction aligned to civiccore v0.13.0), 1.4.4 (persisted audit-log hashing/verification aligned to civiccore v0.17.0), 1.4.5 (live connector retry/circuit-breaker primitive extraction aligned to civiccore v0.18.1), 1.4.6 (vendor-delta request planning and reusable mock-city contract suite consumption aligned to civiccore v0.19.0), 1.4.7 (startup config validation consumption aligned to civiccore v0.20.0), 1.4.8 (cron schedule validation and next-run computation aligned to civiccore v0.21.0), 1.4.9 (datasource source-list status projection aligned to civiccore v0.22.0), 1.4.10 (documentation-only release-source/test-count evidence alignment), 1.5.0 (CivicCore v1.0.1 dependency migration closing ENG-002), 1.6.0 (Docker secret-file extraction closing QA-002), and 1.6.1 (Celery ingestion worker event-loop recovery).
 
 ## 2. Product Summary
 
@@ -51,7 +51,7 @@ Operational calm over case chaos — staff views aid triage, not add clutter.
 Human-in-the-loop always — no auto-redaction, no auto-denial, no auto-release.
 
 ### 2.5 Current Product Scope
-As of the v1.6.0 source tree, the system implements:
+As of the v1.6.1 source tree, the system implements:
 Local deployment on a single-machine Docker stack (7 services)
 Internal authentication with 6-role RBAC hierarchy
 Department-level access controls with staff scoping
@@ -69,7 +69,7 @@ Connector framework (4 shipped: file_system, manual_drop, rest_api, odbc; imap_e
 Central LLM client with context manager, token budgeting, and prompt injection sanitization (Phase 2 LLM integration introduced via civiccore v0.2.0 in v1.4.0; latest published release aligned to civiccore v0.3.0 in v1.4.1; current release line targets civiccore v1.0.1 for shared search, onboarding, connector host-validation, encrypted-config, startup config validation, schedule validation, sync source-list status projection, ingest, persisted audit-log helpers, live connector retry/circuit-breaker state transitions, vendor-delta request planning, and reusable mock-city contract suites)
 Compliance templates (5 documents) and model registry
 Hash-chained audit logging with CSV/JSON export
-633 backend tests collected by WSL Docker audit on 2026-05-07 + 36 frontend Vitest tests passing after WSL dependency refresh
+640 backend tests collected and passing by Docker audit on 2026-05-15 + 36 frontend Vitest tests passing
 Post-v1.1.0 Tier 5 additions (2026-04-22/23): onboarding interview persistence with `has_dedicated_it` + `onboarding_status` lifecycle (T5A `1782573`); first-boot baseline seeding of 175 state-scoped exemption rules across 51 jurisdictions + 5 compliance templates + 12 notification templates, idempotent (T5B `61449c5`); 4-model Gemma 4 installer picker (`gemma4:e2b`, `gemma4:e4b` default, `gemma4:26b`, `gemma4:31b`) purging fake `gemma4:12b` / `gemma4:27b` tags (T5C `7721cf0`); `PORTAL_MODE=public|private` install-time switch + minimal public surface — landing, resident-registration, authenticated records-request submission (T5D `a57a897`); Windows unsigned double-click installer via Inno Setup 6.x with Start-vs-Install flow split and tag-derived version sourcing (T5E `1d5429d`).
 Not yet implemented: published-records search, resident dashboard, track-my-request suite, full active network discovery engine, cross-instance federation workflows, macOS/Linux native installer (script path only), Tier 2/3 redaction, signed Windows installer (α posture locked).
 
@@ -853,7 +853,7 @@ The docs/ directory contains a comprehensive documentation set:
 | Operational analytics and coverage gap dashboard | [IMPLEMENTED] |
 | Compliance templates (5 docs) and model registry | [IMPLEMENTED] |
 | Hash-chained audit logging with export | [IMPLEMENTED] |
-| 633 backend tests collected by WSL Docker audit on 2026-05-07 + 36 frontend Vitest tests passing after WSL dependency refresh | [IMPLEMENTED] |
+| 640 backend tests collected and passing by Docker audit on 2026-05-15 + 36 frontend Vitest tests passing | [IMPLEMENTED] |
 | Version alignment across all files | [IMPLEMENTED] |
 | WCAG: 44px touch targets, skip nav, icon+color badges | [IMPLEMENTED] |
 | Onboarding interview persists answers + `has_dedicated_it` + `onboarding_status` lifecycle + skip-truth | [IMPLEMENTED — T5A, 2026-04-22 at `1782573`. See §5.2 `onboarding`.] |
@@ -991,7 +991,7 @@ Frontend pages (14): AuditLog, CityProfile, Dashboard, DataSources, Discovery, E
 Test modules (45): test_admin, test_analytics, test_audit, test_auth, test_catalog, test_chunker, test_city_profile, test_compliance_templates, test_coverage_gaps, test_datasource_connection, test_datasources, test_department_scoping, test_departments, test_documents, test_embedder, test_exemption_dashboard, test_exemption_features, test_exemption_rules_seed, test_exemptions, test_fee_lifecycle, test_fee_schedules, test_fees, test_health, test_imap_connector, test_ingestion_retry, test_llm_client, test_manual_drop, test_messages, test_model_registry, test_notification_dispatch, test_notifications, test_onboarding_interview, test_parsers, test_pipeline, test_prompt_injection, test_requests, test_response_letter, test_roles, test_search_api, test_search_engine, test_search_features, test_service_accounts, test_smtp_delivery, test_timeline, test_user_management
 
 ## Appendix B: Bottom-Line Summary
-CivicRecords AI at v1.6.0 is a recovery-aligned internal staff platform with a minimal public surface, at-rest-encrypted connector credentials, Docker secret-file handling for JWT/admin bootstrap secrets, a Windows double-click installer path, and Phase 2 LLM integration aligned to the civiccore dependency line. From an 80-test foundation at v0.1.0 the codebase has grown to **633 backend tests collected by WSL Docker audit on 2026-05-07 + 36 frontend Vitest tests passing after dependency refresh** with department-level access control, 50-state exemption coverage, a notification pipeline, a central LLM client with prompt injection sanitization, fee waiver workflows, a rich text editor, macro stripping, search enhancements, coverage gap monitoring, user management improvements, Tier 2 auth/authz hardening across 24 department-scoped handlers, credential redaction, bootstrap hardening, SSRF protection, Tier 6 at-rest encryption (Fernet envelope on `data_sources.connection_config`), shared connector-security extraction onto civiccore v0.13.0, persisted audit-log hashing/verification extraction onto civiccore v0.17.0, live connector retry/circuit-breaker primitive extraction onto civiccore v0.18.1, vendor-delta/mock-city contract consumption onto civiccore v0.19.0, startup config validation consumption onto civiccore v0.20.0, shared cron schedule validation/next-run computation consumption onto civiccore v0.21.0, shared datasource source-list status projection consumption onto civiccore v0.22.0, the v1.4.10 docs-only release alignment patch, the v1.5.0 CivicCore v1.0.1 recovery migration, and the v1.6.0 Docker secret-file extraction closing QA-002.
+CivicRecords AI at v1.6.1 is a recovery-aligned internal staff platform with a minimal public surface, at-rest-encrypted connector credentials, Docker secret-file handling for JWT/admin bootstrap secrets, a Windows double-click installer path, and Phase 2 LLM integration aligned to the civiccore dependency line. From an 80-test foundation at v0.1.0 the codebase has grown to **640 backend tests collected and passing by Docker audit on 2026-05-15 + 36 frontend Vitest tests passing** with department-level access control, 50-state exemption coverage, a notification pipeline, a central LLM client with prompt injection sanitization, fee waiver workflows, a rich text editor, macro stripping, search enhancements, coverage gap monitoring, user management improvements, Tier 2 auth/authz hardening across 24 department-scoped handlers, credential redaction, bootstrap hardening, SSRF protection, Tier 6 at-rest encryption (Fernet envelope on `data_sources.connection_config`), shared connector-security extraction onto civiccore v0.13.0, persisted audit-log hashing/verification extraction onto civiccore v0.17.0, live connector retry/circuit-breaker primitive extraction onto civiccore v0.18.1, vendor-delta/mock-city contract consumption onto civiccore v0.19.0, startup config validation consumption onto civiccore v0.20.0, shared cron schedule validation/next-run computation consumption onto civiccore v0.21.0, shared datasource source-list status projection consumption onto civiccore v0.22.0, the v1.4.10 docs-only release alignment patch, the v1.5.0 CivicCore v1.0.1 recovery migration, the v1.6.0 Docker secret-file extraction closing QA-002, and the v1.6.1 Celery ingestion worker event-loop recovery patch.
 
 The system has meaningful security hardening (ReDoS protection, self-demotion guards, credential redaction, SSRF host validation, FIRST_ADMIN_PASSWORD validation, macro stripping), operational polish (retry, priority indicators, citation rendering, empty states), and accessibility foundations (44px touch targets, skip navigation, icon+color badges, full F1-F6 keyboard/SR audit complete), but release readiness must be re-earned through the recovery gate.
 
@@ -1008,6 +1008,6 @@ The system has meaningful security hardening (ReDoS protection, self-demotion gu
 - **Tier 2/3 redaction** (NER, visual AI).
 - **CI hygiene — GitHub Actions Node 20 deprecation follow-through.** `5dbeed7` landed the workflow action bumps; the runner-side Node 20 → Node 24 default flip on 2026-06-02 must be clean by that date.
 
-**Release state:** Current public tag is **v1.6.0** (May 11, 2026), aligned to CivicCore v1.0.1 and using Docker secret files for JWT/admin bootstrap secrets after the QA-002 recovery. The older `v1.4.10` tag remains historical pre-gate, provisional, and must not be promoted as an attested baseline. The `[Unreleased]` CHANGELOG block above `[1.6.0]` is the collection point for post-v1.6.0 work.
+**Release state:** Current release-prep target is **v1.6.1** (May 15, 2026), aligned to CivicCore v1.0.1, using Docker secret files for JWT/admin bootstrap secrets after the QA-002 recovery, and carrying the Celery ingestion worker event-loop recovery patch. The older `v1.4.10` tag remains historical pre-gate, provisional, and must not be promoted as an attested baseline. The `[Unreleased]` CHANGELOG block above `[1.6.1]` is the collection point for post-v1.6.1 work.
 
 This document (v3.1) is the single source of truth and is now the in-repo `docs/UNIFIED-SPEC.md`.

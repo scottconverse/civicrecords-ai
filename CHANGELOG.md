@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-05-15
+
 ### Fixed
 - Celery+asyncio ingestion worker event-loop reuse regression in
   `backend/app/ingestion/tasks.py`. The previous code constructed a

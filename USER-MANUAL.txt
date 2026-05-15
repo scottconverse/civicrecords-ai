@@ -1,8 +1,8 @@
 # CivicRecords AI — User Manual
 
-**Version 1.1+ · April 2026**
+**Version 1.6.1 - May 2026**
 
-> **Release recovery notice (2026-05-11).** CivicRecords AI v1.6.0 is the Docker secret-file extraction release that closes QA-002 on top of the v1.5.0 CivicCore v1.0.1 recovery alignment. The older `v1.4.10` tag remains available as historical pre-gate, provisional source only and must not be promoted as an attested baseline.
+> **Release recovery notice (2026-05-15).** CivicRecords AI v1.6.1 is the ingestion worker recovery patch on top of the v1.6.0 Docker secret-file extraction release and the v1.5.0 CivicCore v1.0.1 recovery alignment. The older `v1.4.10` tag remains available as historical pre-gate, provisional source only and must not be promoted as an attested baseline.
 
 ---
 
@@ -337,7 +337,7 @@ All configuration lives in `.env` in the repo root. Never commit this file.
 
 ### B.3.1 Secrets Handling
 
-CivicRecords AI v1.6.0 stores the JWT signing secret and first-admin password
+CivicRecords AI v1.6.0 and later stores the JWT signing secret and first-admin password
 in files instead of container environment variables. On Linux and macOS,
 `install.sh` writes `./data/secrets/jwt_secret` and
 `./data/secrets/first_admin_password` with `0400` permissions. Docker Compose

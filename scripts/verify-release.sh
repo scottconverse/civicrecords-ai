@@ -12,16 +12,23 @@ fail() { printf '  \033[0;31m[FAIL]\033[0m %s\n' "$*" >&2; FAILED=1; }
 info() { printf '\n\033[1;34m%s\033[0m\n' "$*"; }
 
 PYTHON_CMD=""
-if command -v python3 >/dev/null 2>&1; then
-    PYTHON_CMD="python3"
-elif command -v python >/dev/null 2>&1; then
-    PYTHON_CMD="python"
-elif command -v py >/dev/null 2>&1; then
-    PYTHON_CMD="py -3"
-fi
+python_supports_runtime_install() {
+    local candidate="$1"
+    $candidate - <<'PY' >/dev/null 2>&1
+import ensurepip
+import venv
+PY
+}
+
+for candidate in "python" "py -3" "python3"; do
+    if python_supports_runtime_install "$candidate"; then
+        PYTHON_CMD="$candidate"
+        break
+    fi
+done
 
 if [ -z "$PYTHON_CMD" ]; then
-    fail "python: no python3/python/py executable found on PATH"
+    fail "python: no python/python3/py executable with venv+ensurepip support found on PATH"
 fi
 
 info "1. recovery gates"
