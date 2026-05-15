@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import subprocess
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(os.environ.get("CIVICRECORDS_REPO_ROOT", Path(__file__).resolve().parents[2]))
 
 
 def _write_umbrella_fixture(root: Path) -> None:
