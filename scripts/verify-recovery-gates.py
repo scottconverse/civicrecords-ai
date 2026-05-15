@@ -18,6 +18,8 @@ REQUIRED_FILES = [
     "frontend/e2e/civicrecords-user-flows.spec.ts",
     "scripts/verify-secret-scan.py",
     "scripts/verify-runtime-install.py",
+    "scripts/check_starter_set_integration.py",
+    "docs/ops/starter-set-integration.md",
 ]
 
 OVERCLAIM_PATTERNS = [

@@ -70,6 +70,8 @@ Any computer with a modern web browser. Clerks open the server's URL — **`http
 >
 > **Docker Desktop and WSL 2** must be installed and running before either path; the installer detects their absence and prints concrete remediation, but does not install them for you.
 
+For the CivicSuite starter-set package, run `python scripts/check_starter_set_integration.py --umbrella-root ..\civicsuite --require-archives` from this repo to verify that CivicCore installs first, CivicRecords AI and CivicClerk are selectable, package workflow proof is required, and Linux/Windows starter-set archives exist.
+
 **Windows:**
 ```powershell
 git clone https://github.com/CivicSuite/civicrecords-ai.git
