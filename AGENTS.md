@@ -1,28 +1,27 @@
 # CivicRecords AI — Development Standards
 
-## Hard Rule 0 — CODER-UI-QA-TEST SKILL (load on every coding session, no exceptions)
+## Current Governance Override - Agent Pipeline For Codex
 
-**This rule fires before all others.** Any session — auditor, implementer, reviewer, or planner — that touches code, tests, documentation, or deployment MUST load the `coder-ui-qa-test` skill as its first action. The skill defines the Principal Engineer / Senior UI Designer / Senior QA Engineer standards, the Verification Log template, and **Hard Rule 9 — Mandatory Deliverables Gate** which blocks pushes when required artifacts are missing.
+The retired `coder-ui-qa-test` skill is no longer authoritative for this
+repository. Productization work must use Agent Pipeline for Codex, following
+the active `.agent-runs/<run-id>/` manifest, scope lock, run log, and policy
+gates when a run is active.
 
-**Mandatory pre-push verification (Rule 9 summary — full text in the skill):** Before ANY `git push`, `gh release create`, `npm publish`, or `python -m build`, verify each of these exists on disk and present the checklist to the human:
+Before any push, release, or tag, run the relevant repository gates directly
+and record the evidence in the active pipeline run when one exists. For
+CivicRecords AI, that normally includes recovery gates, release gates,
+secret-scan/provenance checks, backend tests, frontend tests, Docker/runtime
+proofs for install surfaces, and docs truth checks that match the changed
+surface.
 
-- Professional UML architecture diagrams (class / component / sequence / deployment / activity, as appropriate)
-- README.md, README.txt, README.docx (with UML embedded), README.pdf (with UML embedded) — all four in sync
-- USER-MANUAL.md, USER-MANUAL.docx, USER-MANUAL.pdf with three sections (End-User / Technical / Architectural)
-- docs/index.html landing page with four required action buttons: Repo / Download Installer (direct-from-Releases) / User Manual / README
-- GitHub Discussions seeded with starter posts across every enabled category
+Do not stop at a report, recommendation, or PR opening during an authorized
+pipeline run. Push, monitor CI for the pushed head, inspect failures, fix within
+scope, and repeat until checks are green or a verified blocker is recorded by
+the pipeline stop controls.
 
-**Refusal template (apply exactly when asked to push with missing deliverables):**
-> I can't push this yet. The following mandatory Cowork/Codex deliverables are missing from this repo:
-> - [list each missing item]
->
-> These are required by the coder-ui-qa-test skill (Hard Rule 9). I'll produce them now unless you explicitly override this rule with the words "override rule 9" — in which case I'll note the override in the Verification Log and proceed.
+## Historical Retired Rule 0 — CODER-UI-QA-TEST SKILL (superseded)
 
-**Override phrase:** Only the literal phrase `"override rule 9"` from the human in chat bypasses the deliverables gate. No implied authorization, no "just push it," no inferred consent.
-
-**Verification Log required at task completion.** Every coding task closes with the full Verification Log from the skill — not a summary of work performed, but evidence of what was verified. Terminal output pasted unedited, files read listed, tests run with counts, runtime behavior described, documentation artifacts accounted for.
-
-**Auditor role also bound by this rule.** If the auditor approves a push without verifying Rule 9 deliverables, the auditor has failed the task. The audit loop exists to catch this, not to rubber-stamp it.
+This retained historical section is superseded by Agent Pipeline for Codex above. Do not load or require the retired `coder-ui-qa-test` skill for current CivicRecords AI work.
 
 ## Hard Rule 1 — AUDITOR PROTOCOL (non-negotiable, no exceptions)
 

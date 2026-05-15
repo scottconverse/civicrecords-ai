@@ -77,8 +77,12 @@ jobs:
       - name: Create isolated test database
         # Tests run against civicrecords_test, not the default civicrecords DB,
         # so a future integration test that touches data never contaminates
-        # a hypothetical dev DB that shares the same volume.
+        # a hypothetical dev DB that shares the same volume. Self-hosted
+        # runners can retain a database from an interrupted prior run, so drop
+        # the isolated test DB before recreating it.
         run: |
+          docker compose exec -T postgres \
+            dropdb -U civicrecords --if-exists civicrecords_test
           docker compose exec -T postgres \
             createdb -U civicrecords civicrecords_test
 
