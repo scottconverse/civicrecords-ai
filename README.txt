@@ -2,7 +2,7 @@
 
 **Open-source, locally-hosted AI that helps American cities respond to open records requests.**
 
-> **Release recovery notice (2026-05-11).** CivicRecords AI v1.6.0 is the Docker secret-file extraction release that closes QA-002 on top of the v1.5.0 CivicCore v1.0.1 recovery alignment. The older `v1.4.10` tag remains available as historical source only and must not be promoted as an attested baseline.
+> **Release recovery notice (2026-05-15).** CivicRecords AI v1.6.1 is the ingestion worker recovery patch on top of the v1.6.0 Docker secret-file extraction release and the v1.5.0 CivicCore v1.0.1 recovery alignment. The older `v1.4.10` tag remains available as historical source only and must not be promoted as an attested baseline.
 
 CivicRecords AI runs entirely on a single machine inside your city's network — no cloud subscriptions, no vendor lock-in, no resident data leaving the building. It ingests your city's documents, makes them searchable with AI-powered natural language queries, detects potential exemptions, and manages the full request lifecycle from intake to response.
 
@@ -33,9 +33,27 @@ No open-source tool exists for the **responder side** of open records at the mun
 
 ### Requirements
 
-- **Docker Desktop** (Windows 10/11) or **Docker Engine** (Linux). Windows-only currently; macOS support pending lifecycle certification (Docker Desktop on macOS 13+ runs the script path but is not lifecycle-certified).
-- **8+ CPU cores**, **32 GB RAM**, **50 GB free disk space**
-- No internet connection required after initial setup
+CivicSuite is a **server product** — one server per city. Clerks reach the server through any modern browser; there is no clerk-side installation.
+
+#### CivicSuite Server (one per city)
+
+Runs the full Docker Compose stack: postgres, redis, ollama, api, celery worker, celery beat, and frontend.
+
+- **CPU:** 8+ cores recommended.
+- **RAM:** the installer gates on `MIN_RAM_GB` from `scripts/detect_hardware.sh` (32 GB at the time of writing). That value is flagged "needs measurement — arbitrary value pending peak-RAM profile" in its provenance comment; see the comment block at the top of `scripts/detect_hardware.sh` for the rationale and the intended revision path.
+- **Disk:** 50 GB free.
+- **Host OS:** Linux (Ubuntu/Debian) via `install.sh`, Windows 10/11 via `install.ps1`, or macOS via `install.sh` (script path; not lifecycle-certified). Docker Desktop / Docker Engine must already be installed and running.
+- **Network:** No outbound internet connection required after initial setup.
+- **Hardware cost (secondary market):** Refurbished Dell OptiPlex small-form-factor units with 16–32 GB RAM are commonly available and are a plausible hardware-cost target for a city-scale deployment. Confirm against `MIN_RAM_GB` (currently 32 GB) before purchasing on the low end of that range.
+
+#### Clerk Workstation (one per clerk)
+
+Any computer with a modern web browser. Clerks open the server's URL — **`http://<server>:8080`** — sign in, and use the application. **Zero client-side install** is required: no Docker, no helper script, no Python runtime, no model weights downloaded to the clerk machine. The server hosts everything.
+
+- **Browser:** Chromium-based (Chrome, Edge), Firefox, or Safari — current version.
+- **OS:** any (Windows, macOS, Linux, ChromeOS — anything that runs a modern browser).
+- **Network:** LAN access to the server on ports 8080 (web UI) and 8000 (API).
+- **Install:** none.
 
 ### Install
 
@@ -242,6 +260,8 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 
 ## Status
 
+**v1.6.1 (May 15, 2026)** — Celery ingestion worker event-loop recovery patch. Worker tasks now create and dispose their async SQLAlchemy engine inside each task coroutine instead of reusing a module-global engine across Celery prefork task event loops. This removes the `RuntimeError: Event loop is closed` / `Future attached to a different loop` failure mode that could leave later ingests stuck in `pending` after the first successful worker task. Release-prep evidence collected 640 backend tests and 36 frontend Vitest tests.
+
 **v1.5.0 (May 10, 2026)** — CivicCore recovery alignment release. Records-AI now consumes civiccore v1.0.1, matching the active CivicSuite platform baseline and closing ENG-002. The imported CivicCore symbols remained compatible, so this release changes the dependency baseline and release evidence without changing API URL paths, roles, permissions, or records-side database migrations.
 
 **v1.6.0 (May 11, 2026)** — Docker secret-file extraction release. `JWT_SECRET` and `FIRST_ADMIN_PASSWORD` move out of container env vars and into Docker-mounted secret files. Existing v1.5.x installs must re-run `install.sh` or `install.ps1` so `./data/secrets/*` is created and `.env` keeps only non-secret operator settings; `_FILE` pointer env names are intentionally absent from the container env.
@@ -320,4 +340,4 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 | **Phase 3** | Public portal | Public homepage, search, guided request wizard, request tracker, help pages | Partial — T5D minimal surface shipped (landing + resident-registration + authenticated submission); published-records search, resident dashboard, and track-my-request remain Planned |
 | **Phase 4** | Transparency layer | Open records library, reporting dashboards, public archive, federation | Planned (v2.0) |
 
-*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.6.0) includes backend work from Phases 0-2 and partial Phase 3 (T5D minimal public portal surface), but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*
+*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.6.1) includes backend work from Phases 0-2 and partial Phase 3 (T5D minimal public portal surface), but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*

@@ -4,9 +4,9 @@
 
 | Version | Status |
 |---|---|
-| 1.4.x | Supported (current release) |
-| 1.3.x | Best-effort fixes for one minor cycle |
-| < 1.3 | No longer supported |
+| 1.6.x | Supported (current release line) |
+| 1.5.x | Best-effort fixes for one minor cycle |
+| < 1.5 | No longer supported |
 
 ## Reporting
 

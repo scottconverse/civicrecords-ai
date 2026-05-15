@@ -2,7 +2,7 @@
 
 **Open-source, locally-hosted AI that helps American cities respond to open records requests.**
 
-> **Release recovery notice (2026-05-11).** CivicRecords AI v1.6.0 is the Docker secret-file extraction release that closes QA-002 on top of the v1.5.0 CivicCore v1.0.1 recovery alignment. The older `v1.4.10` tag remains available as historical source only and must not be promoted as an attested baseline.
+> **Release recovery notice (2026-05-15).** CivicRecords AI v1.6.1 is the ingestion worker recovery patch on top of the v1.6.0 Docker secret-file extraction release and the v1.5.0 CivicCore v1.0.1 recovery alignment. The older `v1.4.10` tag remains available as historical source only and must not be promoted as an attested baseline.
 
 CivicRecords AI runs entirely on a single machine inside your city's network — no cloud subscriptions, no vendor lock-in, no resident data leaving the building. It ingests your city's documents, makes them searchable with AI-powered natural language queries, detects potential exemptions, and manages the full request lifecycle from intake to response.
 
@@ -260,6 +260,8 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 
 ## Status
 
+**v1.6.1 (May 15, 2026)** — Celery ingestion worker event-loop recovery patch. Worker tasks now create and dispose their async SQLAlchemy engine inside each task coroutine instead of reusing a module-global engine across Celery prefork task event loops. This removes the `RuntimeError: Event loop is closed` / `Future attached to a different loop` failure mode that could leave later ingests stuck in `pending` after the first successful worker task. Release-prep evidence collected 640 backend tests and 36 frontend Vitest tests.
+
 **v1.5.0 (May 10, 2026)** — CivicCore recovery alignment release. Records-AI now consumes civiccore v1.0.1, matching the active CivicSuite platform baseline and closing ENG-002. The imported CivicCore symbols remained compatible, so this release changes the dependency baseline and release evidence without changing API URL paths, roles, permissions, or records-side database migrations.
 
 **v1.6.0 (May 11, 2026)** — Docker secret-file extraction release. `JWT_SECRET` and `FIRST_ADMIN_PASSWORD` move out of container env vars and into Docker-mounted secret files. Existing v1.5.x installs must re-run `install.sh` or `install.ps1` so `./data/secrets/*` is created and `.env` keeps only non-secret operator settings; `_FILE` pointer env names are intentionally absent from the container env.
@@ -338,4 +340,4 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 | **Phase 3** | Public portal | Public homepage, search, guided request wizard, request tracker, help pages | Partial — T5D minimal surface shipped (landing + resident-registration + authenticated submission); published-records search, resident dashboard, and track-my-request remain Planned |
 | **Phase 4** | Transparency layer | Open records library, reporting dashboards, public archive, federation | Planned (v2.0) |
 
-*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.6.0) includes backend work from Phases 0-2 and partial Phase 3 (T5D minimal public portal surface), but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*
+*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.6.1) includes backend work from Phases 0-2 and partial Phase 3 (T5D minimal public portal surface), but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*
