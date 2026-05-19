@@ -32,6 +32,22 @@ from app.security.at_rest import (
     is_encrypted,
 )
 
+_VALID_JWT = "a" * 64
+_VALID_PASSWORD = "CivicDev2026!xZ"
+
+
+def _secret_file_kwargs(tmp_path):
+    secret_dir = tmp_path / "secrets"
+    secret_dir.mkdir()
+    jwt_path = secret_dir / "jwt_secret"
+    password_path = secret_dir / "first_admin_password"
+    jwt_path.write_text(_VALID_JWT, encoding="utf-8")
+    password_path.write_text(_VALID_PASSWORD, encoding="utf-8")
+    return {
+        "jwt_secret_file": str(jwt_path),
+        "first_admin_password_file": str(password_path),
+    }
+
 
 # --------------------------------------------------------------------------
 # 1. Helper-module unit tests (no DB, no HTTP)
@@ -116,40 +132,37 @@ def test_is_encrypted_false_for_non_envelope(value):
 # 2. Settings.check_encryption_key validator
 # --------------------------------------------------------------------------
 
-def test_encryption_key_rejects_insecure_defaults(monkeypatch):
+def test_encryption_key_rejects_insecure_defaults(tmp_path, monkeypatch):
     """Non-testing-mode Settings must reject placeholder keys."""
     monkeypatch.setenv("ENCRYPTION_KEY", "CHANGE-ME")
     with pytest.raises(ValidationError) as exc:
         # testing=False reads ENCRYPTION_KEY as the real
         # runtime value and runs the full validator chain.
         Settings(
-            jwt_secret="a" * 64,
-            first_admin_password="CivicDev2026!xZ",
+            **_secret_file_kwargs(tmp_path),
             testing=False,
         )
     assert "insecure default" in str(exc.value)
 
 
-def test_encryption_key_rejects_malformed_key(monkeypatch):
+def test_encryption_key_rejects_malformed_key(tmp_path, monkeypatch):
     """Any value Fernet can't ingest must raise at startup."""
     monkeypatch.setenv("ENCRYPTION_KEY", "not-a-valid-fernet-key")
     with pytest.raises(ValidationError) as exc:
         Settings(
-            jwt_secret="a" * 64,
-            first_admin_password="CivicDev2026!xZ",
+            **_secret_file_kwargs(tmp_path),
             testing=False,
         )
     msg = str(exc.value)
     assert "not a valid Fernet key" in msg or "Fernet" in msg
 
 
-def test_encryption_key_accepts_real_fernet_key(monkeypatch):
+def test_encryption_key_accepts_real_fernet_key(tmp_path, monkeypatch):
     """A real Fernet.generate_key() output passes validation."""
     real_key = Fernet.generate_key().decode()
     monkeypatch.setenv("ENCRYPTION_KEY", real_key)
     s = Settings(
-        jwt_secret="a" * 64,
-        first_admin_password="CivicDev2026!xZ",
+        **_secret_file_kwargs(tmp_path),
         testing=False,
     )
     assert s.encryption_key == real_key

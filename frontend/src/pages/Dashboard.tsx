@@ -44,12 +44,16 @@ interface OperationalMetrics {
 }
 
 interface AuditLogEntry {
-  id: string;
+  id: string | number;
   action: string;
   actor_email?: string;
+  user_id?: string | null;
   target_type?: string;
+  resource_type?: string | null;
   target_id?: string;
+  resource_id?: string | null;
   created_at: string;
+  timestamp?: string;
   details?: string;
 }
 
@@ -102,9 +106,19 @@ export default function Dashboard({ token }: { token: string }) {
         setAnalytics(null);
       });
 
-    // Recent activity: fetch last 10 audit log entries
-    apiFetch<AuditLogEntry[]>("/admin/audit-log?limit=10", { token })
-      .then(setAuditLog)
+    // Recent activity: fetch last 10 audit log entries from the backend audit router.
+    apiFetch<AuditLogEntry[]>("/audit/logs?limit=10", { token })
+      .then((entries) =>
+        setAuditLog(
+          entries.map((entry) => ({
+            ...entry,
+            created_at: entry.created_at ?? entry.timestamp ?? new Date(0).toISOString(),
+            actor_email: entry.actor_email ?? entry.user_id ?? undefined,
+            target_type: entry.target_type ?? entry.resource_type ?? undefined,
+            target_id: entry.target_id ?? entry.resource_id ?? undefined,
+          })),
+        ),
+      )
       .catch(() => setAuditLog([]));
 
     // Coverage gaps

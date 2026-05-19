@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Fixed the dashboard Recent Activity fetch to use the shipped `/audit/logs`
+  backend route instead of the stale `/admin/audit-log` path, removing a
+  browser-visible 404 after staff sign-in.
+- Made Docker Compose host ports configurable through
+  `CIVICRECORDS_API_PORT` and `CIVICRECORDS_WEB_PORT` while preserving the
+  default `8000` and `8080` bindings.
+- Rebuild the API image during release verification before trusting Compose
+  runtime and backend-test evidence, preventing stale local images from
+  masking current checkout state.
+- Strip Windows carriage returns when the release verifier derives the
+  Compose database name from `.env`, so clean runtime checks create the same
+  database name the API uses.
+
 ## [1.6.1] - 2026-05-15
 
 ### Fixed

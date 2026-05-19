@@ -39,7 +39,7 @@ function stubFetch(systemStatus: Record<string, unknown>) {
       if (url.includes("/analytics/operational")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(null) });
       }
-      if (url.includes("/admin/audit-log")) {
+      if (url.includes("/audit/logs")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       if (url.includes("/admin/coverage-gaps")) {

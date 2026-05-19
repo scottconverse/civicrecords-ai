@@ -42,7 +42,7 @@ services:
       - jwt_secret
       - first_admin_password
     ports:
-      - "8000:8000"
+      - "${CIVICRECORDS_API_PORT:-8000}:8000"
     volumes:
       - uploads:/tmp/civicrecords-uploads
       - cache:/data/cache
@@ -103,7 +103,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "8080:80"
+      - "${CIVICRECORDS_WEB_PORT:-8080}:80"
     depends_on:
       api:
         condition: service_healthy
