@@ -54,8 +54,13 @@ else
     if grep -qE 'JWT_SECRET|FIRST_ADMIN_PASSWORD' .env; then
         fail ".env exposes a JWT_SECRET* or FIRST_ADMIN_PASSWORD* name; run install.sh/install.ps1 to migrate B2 secrets into Docker secret files"
     fi
+    if docker compose build api; then
+        pass "api image rebuilt from current checkout"
+    else
+        fail "api image rebuild failed"
+    fi
     if docker compose up -d --wait postgres redis ollama; then
-        database_name=$(grep -E '^DATABASE_URL=' .env | head -1 | sed -E 's#^DATABASE_URL=[^:]+://[^/]+/([^?]+).*$#\1#' || true)
+        database_name=$(grep -E '^DATABASE_URL=' .env | head -1 | tr -d '\r' | sed -E 's#^DATABASE_URL=[^:]+://[^/]+/([^?]+).*$#\1#' || true)
         if [ -n "${database_name:-}" ] && [ "$database_name" != "DATABASE_URL" ]; then
             docker compose exec -T postgres createdb -U civicrecords "$database_name" >/dev/null 2>&1 || true
         fi
