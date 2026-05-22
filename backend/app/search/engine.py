@@ -1,11 +1,11 @@
 import uuid
 from dataclasses import dataclass
 
+from civiccore.ingest.embedder import embed_text
 from civiccore.search import reciprocal_rank_fusion
 from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ingestion.embedder import embed_text
 from app.models.document import Document, DocumentChunk
 
 

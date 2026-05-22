@@ -1,64 +1,39 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from app.ingestion.embedder import embed_text, embed_batch, check_model_available
+
+from civiccore.ingest import embedder
+
+
+class _FakeProvider:
+    async def embed(self, text, *, model):
+        return [float(len(text))] * 768
+
+    async def embed_batch(self, texts, *, model):
+        return [[float(index)] * 768 for index, _text in enumerate(texts)]
 
 
 @pytest.mark.asyncio
-async def test_embed_text_calls_ollama():
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.raise_for_status = MagicMock()
-    mock_response.json.return_value = {"embeddings": [[0.1, 0.2, 0.3] * 256]}
+async def test_records_ai_uses_civiccore_embed_text(monkeypatch):
+    monkeypatch.setattr(embedder, "_get_provider", lambda base_url="http://localhost:11434": _FakeProvider())
 
-    with patch("app.ingestion.embedder.httpx.AsyncClient") as mock_client:
-        instance = AsyncMock()
-        instance.post.return_value = mock_response
-        instance.__aenter__ = AsyncMock(return_value=instance)
-        instance.__aexit__ = AsyncMock(return_value=False)
-        mock_client.return_value = instance
+    result = await embedder.embed_text("test text")
 
-        result = await embed_text("test text")
-        assert len(result) == 768
-        instance.post.assert_called_once()
+    assert len(result) == 768
+    assert result[0] == 9.0
 
 
 @pytest.mark.asyncio
-async def test_embed_batch_calls_ollama():
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.raise_for_status = MagicMock()
-    mock_response.json.return_value = {"embeddings": [[0.1] * 768, [0.2] * 768]}
+async def test_records_ai_uses_civiccore_embed_batch(monkeypatch):
+    monkeypatch.setattr(embedder, "_get_provider", lambda base_url="http://localhost:11434": _FakeProvider())
 
-    with patch("app.ingestion.embedder.httpx.AsyncClient") as mock_client:
-        instance = AsyncMock()
-        instance.post.return_value = mock_response
-        instance.__aenter__ = AsyncMock(return_value=instance)
-        instance.__aexit__ = AsyncMock(return_value=False)
-        mock_client.return_value = instance
+    result = await embedder.embed_batch(["text 1", "text 2"])
 
-        result = await embed_batch(["text 1", "text 2"])
-        assert len(result) == 2
-        assert len(result[0]) == 768
+    assert len(result) == 2
+    assert len(result[0]) == 768
+    assert result[1][0] == 1.0
 
 
 @pytest.mark.asyncio
-async def test_embed_batch_empty():
-    result = await embed_batch([])
+async def test_records_ai_civiccore_embed_batch_empty():
+    result = await embedder.embed_batch([])
+
     assert result == []
-
-
-@pytest.mark.asyncio
-async def test_check_model_available():
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"models": [{"name": "nomic-embed-text:latest"}]}
-
-    with patch("app.ingestion.embedder.httpx.AsyncClient") as mock_client:
-        instance = AsyncMock()
-        instance.get.return_value = mock_response
-        instance.__aenter__ = AsyncMock(return_value=instance)
-        instance.__aexit__ = AsyncMock(return_value=False)
-        mock_client.return_value = instance
-
-        result = await check_model_available("nomic-embed-text")
-        assert result is True

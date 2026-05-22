@@ -1,8 +1,9 @@
 """Records-ai LLM generation shim — delegates to civiccore.llm OllamaProvider.
 
 Phase 2 Step 5c: the records-ai-specific ``generate(...)`` entry point is
-preserved so existing callers (``app.exemptions.llm_reviewer``,
-``app.ingestion.llm_extractor``) keep working unchanged. The body now:
+preserved so existing Records-specific callers such as
+``app.exemptions.llm_reviewer`` keep working unchanged. Shared document OCR now
+lives in ``civiccore.ingest.llm_extractor``. The body now:
 
 1. Builds context blocks via the records-ai context_manager shim
    (token-budgeted, sanitized) — same pre-flight as before.

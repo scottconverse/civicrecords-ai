@@ -6,12 +6,12 @@ from datetime import datetime, timezone, timedelta
 from typing import Any
 
 from civiccore.connectors import SyncCircuitState, SyncRunResult, apply_sync_run_result
+from civiccore.ingest import ingest_structured_record
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import DataSource
 from app.models.sync_failure import SyncFailure, SyncRunLog
-from app.ingestion.pipeline import ingest_structured_record
 
 logger = logging.getLogger(__name__)
 

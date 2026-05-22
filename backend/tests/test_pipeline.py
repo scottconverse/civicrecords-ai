@@ -8,7 +8,7 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_compute_file_hash():
-    from app.ingestion.pipeline import compute_file_hash
+    from civiccore.ingest.pipeline import compute_file_hash
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
         f.write("test content")
@@ -27,13 +27,13 @@ async def test_compute_file_hash():
 async def test_ingest_file_txt(client, admin_token):
     """Integration test: ingest a text file through the full pipeline."""
     from tests.conftest import test_session_maker
-    from app.ingestion.pipeline import ingest_file
+    from civiccore.ingest.pipeline import ingest_file
     from app.models.document import DataSource, IngestionStatus, SourceType
     from app.models.user import User
     from sqlalchemy import select
 
     mock_embeddings = [[0.1] * 768]
-    with patch("app.ingestion.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
+    with patch("civiccore.ingest.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
         mock_embed.return_value = mock_embeddings
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as f:
             f.write("This is a test document for ingestion.")
@@ -52,7 +52,7 @@ async def test_ingest_file_txt(client, admin_token):
             session.add(source)
             await session.flush()
             doc = await ingest_file(session=session, file_path=file_path, source_id=source.id)
-            assert doc.ingestion_status == IngestionStatus.COMPLETED
+            assert doc.ingestion_status.value == IngestionStatus.COMPLETED.value
             assert doc.chunk_count >= 1
             assert doc.filename == file_path.name
             assert doc.file_type == "txt"

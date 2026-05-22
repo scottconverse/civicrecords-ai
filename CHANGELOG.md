@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Repointed document parsing, chunking, embeddings, and pgvector ingest writes
+  to the shared `civiccore.ingest` pipeline at CivicCore commit
+  `80799976d1b50a76f549400afebeb994b935ff0c`.
+- Removed the duplicated Records-AI parser/chunker/embedder/pipeline modules
+  under `backend/app/ingestion`; the remaining package now contains only
+  Records-specific Celery tasks, scheduling, sync orchestration, and cron
+  compatibility helpers.
+
 ### Fixed
 - Fixed the dashboard Recent Activity fetch to use the shipped `/audit/logs`
   backend route instead of the stale `/admin/audit-log` path, removing a
