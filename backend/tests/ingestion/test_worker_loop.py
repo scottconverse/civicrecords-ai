@@ -176,7 +176,7 @@ def _patched_ingestion_runtime(monkeypatch_target_session):
        so the fallback path in ``get_worker_session()`` also goes through
        the fake (covers the eager-mode case where ``worker_process_init``
        did not fire).
-    - ``app.ingestion.pipeline.ingest_file`` → returns a fake Document.
+    - ``civiccore.ingest.pipeline.ingest_file`` → returns a fake Document.
     - ``app.audit.logger.write_audit_log`` → no-op.
     - ``app.ingestion.tasks._engine`` / ``_session_maker`` → reset to None
        between tests so each test starts in the prefork-pristine state.
@@ -213,7 +213,7 @@ def _patched_ingestion_runtime(monkeypatch_target_session):
 
     # Snapshot the originals so we can restore them on exit. We patch the
     # *bindings inside ``app.ingestion.tasks``* — that module did
-    # ``from app.ingestion.pipeline import ingest_file`` and
+    # ``from civiccore.ingest.pipeline import ingest_file`` and
     # ``from app.audit.logger import write_audit_log``, so the names
     # ``tasks_mod.ingest_file`` / ``tasks_mod.write_audit_log`` are what
     # the ``_ingest()`` closures actually resolve. Patching the source

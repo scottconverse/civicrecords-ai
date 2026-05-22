@@ -45,7 +45,7 @@ async def test_source_path_max_length_rejected():
     """
     import uuid
     from unittest.mock import MagicMock
-    from app.ingestion.pipeline import ingest_structured_record
+    from civiccore.ingest.pipeline import ingest_structured_record
 
     oversized_path = "https://api.example.com/records/" + "x" * 2030
     assert len(oversized_path) > 2048, "Test setup: path must exceed 2048 chars"
@@ -151,12 +151,12 @@ class TestIngestStructuredRecord:
     async def test_structured_record_same_hash_is_noop(self, db_session):
         """Same source_path, same content hash → document unchanged, updated_at not set."""
         from unittest.mock import patch, AsyncMock
-        from app.ingestion.pipeline import ingest_structured_record
+        from civiccore.ingest.pipeline import ingest_structured_record
         source_id = _make_source_id()
         await _seed_data_source(db_session, source_id)
         content = b'{"id": 1, "title": "Budget"}'
 
-        with patch("app.ingestion.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
+        with patch("civiccore.ingest.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
             mock_embed.return_value = [[0.1] * 768]
             doc1 = await ingest_structured_record(
                 session=db_session,
@@ -183,13 +183,13 @@ class TestIngestStructuredRecord:
     async def test_structured_record_content_change_updates_document(self, db_session):
         """Same source_path, different content → document updated, updated_at set, no dup row."""
         from unittest.mock import patch, AsyncMock
-        from app.ingestion.pipeline import ingest_structured_record
+        from civiccore.ingest.pipeline import ingest_structured_record
         from sqlalchemy import select, func
         from app.models.document import Document
         source_id = _make_source_id()
         await _seed_data_source(db_session, source_id)
 
-        with patch("app.ingestion.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
+        with patch("civiccore.ingest.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
             mock_embed.return_value = [[0.1] * 768]
             doc1 = await ingest_structured_record(
                 session=db_session,
@@ -225,14 +225,14 @@ class TestIngestStructuredRecord:
     async def test_update_deletes_old_chunks_before_reembed(self, db_session):
         """Same source_path, content changes → old DocumentChunk rows deleted before re-chunk."""
         from unittest.mock import patch, AsyncMock
-        from app.ingestion.pipeline import ingest_structured_record
+        from civiccore.ingest.pipeline import ingest_structured_record
         from sqlalchemy import select, func
         from app.models.document import DocumentChunk
         source_id = _make_source_id()
         await _seed_data_source(db_session, source_id)
         path = "https://api.example.com/records/3"
 
-        with patch("app.ingestion.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
+        with patch("civiccore.ingest.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
             mock_embed.return_value = [[0.1] * 768]
             doc = await ingest_structured_record(
                 session=db_session, source_id=source_id, source_path=path,
@@ -279,7 +279,7 @@ class TestConcurrency:
         from unittest.mock import patch, AsyncMock
         from sqlalchemy.exc import IntegrityError
         from sqlalchemy import select, func, text
-        from app.ingestion.pipeline import ingest_structured_record
+        from civiccore.ingest.pipeline import ingest_structured_record
         from app.models.document import Document
 
         source_id = uuid.uuid4()
@@ -312,7 +312,7 @@ class TestConcurrency:
             except IntegrityError:
                 await session.rollback()
 
-        with patch("app.ingestion.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
+        with patch("civiccore.ingest.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
             mock_embed.return_value = [[0.1] * 768]
             async with db_session_factory() as s1, db_session_factory() as s2:
                 await asyncio.gather(worker(s1), worker(s2))
@@ -334,7 +334,7 @@ class TestConcurrency:
         from unittest.mock import patch, AsyncMock
         from sqlalchemy.exc import IntegrityError
         from sqlalchemy import select, func, text
-        from app.ingestion.pipeline import ingest_file
+        from civiccore.ingest.pipeline import ingest_file
         from app.models.document import Document
 
         source_id = uuid.uuid4()
@@ -366,7 +366,7 @@ class TestConcurrency:
                 await session.rollback()
 
         try:
-            with patch("app.ingestion.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
+            with patch("civiccore.ingest.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
                 mock_embed.return_value = [[0.1] * 768]
                 async with db_session_factory() as s1, db_session_factory() as s2:
                     await asyncio.gather(worker(s1), worker(s2))
@@ -383,7 +383,7 @@ class TestConcurrency:
         import asyncio
         from unittest.mock import patch, AsyncMock
         from sqlalchemy import select, func, text
-        from app.ingestion.pipeline import ingest_structured_record
+        from civiccore.ingest.pipeline import ingest_structured_record
         from app.models.document import Document, DocumentChunk
 
         source_id = uuid.uuid4()
@@ -406,7 +406,7 @@ class TestConcurrency:
         path = "https://api.example.com/concurrent/update"
         original = b'{"id": 99, "v": 1}'
 
-        with patch("app.ingestion.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
+        with patch("civiccore.ingest.pipeline.embed_batch", new_callable=AsyncMock) as mock_embed:
             mock_embed.return_value = [[0.1] * 768]
             await ingest_structured_record(
                 session=db_session, source_id=source_id, source_path=path,

@@ -6,9 +6,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from civiccore.ingest import ingest_bytes, ingest_directory, ingest_file
 
 from app.worker import celery_app
-from app.ingestion.pipeline import ingest_file, ingest_directory
 from app.audit.logger import write_audit_log
 from app.config import settings
 
@@ -224,32 +224,19 @@ async def ingest_file_from_bytes(
     file_type: str,
     source_id: uuid.UUID,
 ) -> object | None:
-    """Ingest a document from raw bytes (used for email attachments).
-
-    Writes content to a temp file and delegates to ingest_file().
-    Returns the Document object or None on failure.
-    """
-    import tempfile
+    """Ingest a document from raw bytes through the CivicCore pipeline."""
     import logging
 
     logger = logging.getLogger(__name__)
 
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_type}") as tmp:
-            tmp.write(content)
-            tmp_path = Path(tmp.name)
-
-        doc = await ingest_file(
+        return await ingest_bytes(
             session=session,
-            file_path=tmp_path,
+            content=content,
+            filename=filename,
             source_id=source_id,
+            source_path=filename,
         )
-        return doc
     except Exception as exc:
         logger.error("Failed to ingest %s: %s", filename, exc)
         return None
-    finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except Exception:
-            pass
