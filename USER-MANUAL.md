@@ -1,8 +1,8 @@
 # CivicRecords AI — User Manual
 
-**Version 1.6.1 - May 2026**
+**Version 1.7.0 - May 2026**
 
-> **Release recovery notice (2026-05-15).** CivicRecords AI v1.6.1 is the ingestion worker recovery patch on top of the v1.6.0 Docker secret-file extraction release and the v1.5.0 CivicCore v1.0.1 recovery alignment. The older `v1.4.10` tag remains available as historical pre-gate, provisional source only and must not be promoted as an attested baseline.
+> **Release train notice (2026-05-22).** CivicRecords AI v1.7.0 consumes the published CivicCore v1.2.0 shared-ingestion release wheel, replacing the temporary commit-archive dependency used while CivicCore extraction work was awaiting a release artifact. The older `v1.4.10` tag remains available as historical pre-gate, provisional source only and must not be promoted as an attested baseline.
 
 ---
 

@@ -62,7 +62,7 @@ echo ""
 echo "3. Checking data storage locations..."
 VOLUMES=$(docker compose config --volumes 2>/dev/null)
 for vol in $VOLUMES; do
-    DRIVER=$(docker volume inspect "$(docker compose config --format json | python3 -c "import sys,json; c=json.load(sys.stdin); print(c.get('name','civicrecords-ai') + '_$vol')" 2>/dev/null)" --format '{{.Driver}}' 2>/dev/null || echo "local")
+    DRIVER=$(docker volume inspect "$(docker compose config --format json | python3 -c "import sys,json; c=json.load(sys.stdin); print(c.get('name','civicrecords-ai') + '_$vol')" 2>/dev/null)" --format '{{.Driver}}' 2>/dev/null | tr -d '\r' || echo "local")
     if [ "$DRIVER" = "local" ]; then
         check "Volume '$vol' uses local storage driver" "PASS"
     else

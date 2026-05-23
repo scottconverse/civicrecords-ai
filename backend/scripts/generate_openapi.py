@@ -41,6 +41,11 @@ if str(_backend_root) not in sys.path:
 # at import time without live infrastructure. The validators only reject
 # the documented insecure defaults; these values are not used beyond import.
 # ---------------------------------------------------------------------------
+for _secret_file_var in ("JWT_SECRET_FILE", "FIRST_ADMIN_PASSWORD_FILE"):
+    _secret_file = os.environ.get(_secret_file_var)
+    if _secret_file and not Path(_secret_file).is_file():
+        os.environ.pop(_secret_file_var, None)
+
 os.environ.setdefault(
     "DATABASE_URL",
     "postgresql+asyncpg://x:x@localhost:5432/x",
@@ -51,6 +56,7 @@ os.environ.setdefault(
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 )
 os.environ.setdefault("FIRST_ADMIN_EMAIL", "admin@localhost")
+os.environ.setdefault("TESTING", "1")
 os.environ.setdefault(
     "FIRST_ADMIN_PASSWORD",
     # ≥ 12 chars, not in _INSECURE_PASSWORDS
