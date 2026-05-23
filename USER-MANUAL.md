@@ -1,8 +1,8 @@
 # CivicRecords AI — User Manual
 
-**Version 1.7.1 - May 2026**
+**Version 1.7.2 - May 2026**
 
-> **Release train notice (2026-05-23).** CivicRecords AI v1.7.1 consumes the published CivicCore v1.2.0 shared-ingestion release wheel, replacing the temporary commit-archive dependency used while CivicCore extraction work was awaiting a release artifact. The older `v1.4.10` tag remains available as historical pre-gate, provisional source only and must not be promoted as an attested baseline.
+> **Release train notice (2026-05-23).** CivicRecords AI v1.7.2 consumes the published CivicCore v1.2.0 shared-ingestion release wheel, replacing the temporary commit-archive dependency used while CivicCore extraction work was awaiting a release artifact. The older `v1.4.10` tag remains available as historical pre-gate, provisional source only and must not be promoted as an attested baseline.
 
 ---
 

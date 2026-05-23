@@ -80,6 +80,7 @@ def main() -> int:
         has_current_recovery_label = (
             ("v1.5.0" in lower and "civiccore v1.0.1" in lower)
             or ("v1.6.0" in lower and "qa-002" in lower)
+            or ("v1.7.2" in lower and "civiccore v1.2.0" in lower)
             or ("v1.7.1" in lower and "civiccore v1.2.0" in lower)
         )
         if not (has_legacy_warning and has_current_recovery_label):

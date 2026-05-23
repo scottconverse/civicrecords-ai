@@ -2,7 +2,7 @@
 
 **Open-source, locally-hosted AI that helps American cities respond to open records requests.**
 
-> **Release train notice (2026-05-23).** CivicRecords AI v1.7.1 consumes the published CivicCore v1.2.0 shared-ingestion release wheel, replacing the temporary commit-archive dependency used while CivicCore extraction work was awaiting a release artifact. The older `v1.4.10` tag remains available as historical source only and must not be promoted as an attested baseline.
+> **Release train notice (2026-05-23).** CivicRecords AI v1.7.2 consumes the published CivicCore v1.2.0 shared-ingestion release wheel, replacing the temporary commit-archive dependency used while CivicCore extraction work was awaiting a release artifact. The older `v1.4.10` tag remains available as historical source only and must not be promoted as an attested baseline.
 
 CivicRecords AI runs entirely on a single machine inside your city's network — no cloud subscriptions, no vendor lock-in, no resident data leaving the building. It ingests your city's documents, makes them searchable with AI-powered natural language queries, detects potential exemptions, and manages the full request lifecycle from intake to response.
 
@@ -96,7 +96,7 @@ bash install.sh
 
 ### Phase 1 migration layer
 
-CivicRecords AI backend installs `civiccore` (the shared CivicSuite schema + migration runtime) as a dependency. The current release line is pinned to the published CivicCore v1.2.0 wheel so Records-AI consumes the shared document-ingestion pipeline from a release artifact. Records-specific Celery tasks, scheduler wiring, connector sync, and datasource routes remain local; parsing, chunking, local Ollama embeddings, and pgvector document/chunk writes come from `civiccore.ingest`. Earlier interim branches used a commit archive while CivicCore v1.2.0 was unreleased; v1.7.1 returns to the versioned release-asset dependency pattern.
+CivicRecords AI backend installs `civiccore` (the shared CivicSuite schema + migration runtime) as a dependency. The current release line is pinned to the published CivicCore v1.2.0 wheel so Records-AI consumes the shared document-ingestion pipeline from a release artifact. Records-specific Celery tasks, scheduler wiring, connector sync, and datasource routes remain local; parsing, chunking, local Ollama embeddings, and pgvector document/chunk writes come from `civiccore.ingest`. Earlier interim branches used a commit archive while CivicCore v1.2.0 was unreleased; v1.7.2 returns to the versioned release-asset dependency pattern.
 
 Migrations run in two layers: `civiccore` first (creates/updates the 16 shared tables), then this repo's Alembic chain on top. See [ADR-0003](https://github.com/CivicSuite/civicsuite/blob/main/docs/architecture/ADR-0003-civiccore-alembic-baseline-strategy.md) for the full gate contract.
 
@@ -262,7 +262,7 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 
 ## Status
 
-**v1.7.1 (May 23, 2026)** — CivicCore v1.2.0 shared-ingestion release-asset alignment. Records-AI now consumes the published CivicCore v1.2.0 wheel for parsing, chunking, local Ollama embeddings, and pgvector document/chunk writes instead of the temporary commit archive used before the CivicCore release artifact existed.
+**v1.7.2 (May 23, 2026)** — CivicCore v1.2.0 shared-ingestion release-asset alignment. Records-AI now consumes the published CivicCore v1.2.0 wheel for parsing, chunking, local Ollama embeddings, and pgvector document/chunk writes instead of the temporary commit archive used before the CivicCore release artifact existed.
 
 **v1.5.0 (May 10, 2026)** — CivicCore recovery alignment release. Records-AI now consumes civiccore v1.0.1, matching the active CivicSuite platform baseline and closing ENG-002. The imported CivicCore symbols remained compatible, so this release changes the dependency baseline and release evidence without changing API URL paths, roles, permissions, or records-side database migrations.
 
@@ -342,4 +342,4 @@ Service accounts with hashed API keys enable instance-to-instance federation acc
 | **Phase 3** | Public portal | Public homepage, search, guided request wizard, request tracker, help pages | Partial — T5D minimal surface shipped (landing + resident-registration + authenticated submission); published-records search, resident dashboard, and track-my-request remain Planned |
 | **Phase 4** | Transparency layer | Open records library, reporting dashboards, public archive, federation | Planned (v2.0) |
 
-*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.7.1) includes backend work from Phases 0-2, partial Phase 3, and the CivicCore v1.2.0 shared-ingestion dependency update (T5D minimal public portal surface), but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*
+*Note: Version numbers (semver) track release history. Phase numbers track design completeness per the canonical spec. They are separate systems. Current build (v1.7.2) includes backend work from Phases 0-2, partial Phase 3, and the CivicCore v1.2.0 shared-ingestion dependency update (T5D minimal public portal surface), but has not completed the full scope of any phase. See [canonical spec](docs/UNIFIED-SPEC.md) for complete requirements and [reconciliation](docs/RECONCILIATION-2026-04-13.md) for current gap analysis.*
