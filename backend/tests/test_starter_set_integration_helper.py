@@ -28,7 +28,7 @@ def _write_umbrella_fixture(root: Path) -> None:
                     {"id": "civiccore", "current_version": "1.2.0", "selectable": False},
                     {
                         "id": "civicrecords-ai",
-                        "current_version": "1.7.1",
+                        "current_version": "1.7.2",
                         "selectable": True,
                         "civiccore_requirement": "1.2.0",
                         "dependencies": ["civiccore"],
@@ -47,7 +47,7 @@ def _write_umbrella_fixture(root: Path) -> None:
     (docs / "starter-set-release-contract.md").write_text(
         "\n".join(
             [
-                "CivicRecords AI reports v1.7.1",
+                "CivicRecords AI reports v1.7.2",
                 "CivicClerk reports v1.0.1 with CivicCore v1.2.0",
                 "--staff-mode bearer --workflow-proof",
                 "Package Cleanroom Contract",

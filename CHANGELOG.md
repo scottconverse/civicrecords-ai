@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-05-23
+
+### Fixed
+- Repaired the frontend clean-install lockfile by pinning Vitest to `3.2.3`,
+  whose `vite-node` dependency resolves the published `es-module-lexer@1.7.0`
+  package. The v1.7.1 lockfile resolved `es-module-lexer@1.7.1`, which is not
+  published on npm and broke clean Docker installer builds without a warm cache.
+
 ## [1.7.1] - 2026-05-23
 
 ### Changed
