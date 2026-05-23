@@ -7,11 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.7.0] - 2026-05-22
+## [1.7.1] - 2026-05-23
 
 ### Changed
 - Repointed document parsing, chunking, embeddings, and pgvector ingest writes
   to the shared `civiccore.ingest` pipeline at the published CivicCore v1.2.0 release wheel.
+- Supersedes the failed, unpublished v1.7.0 tag attempt without rewriting the
+  v1.7.0 tag.
 - Removed the duplicated Records-AI parser/chunker/embedder/pipeline modules
   under `backend/app/ingestion`; the remaining package now contains only
   Records-specific Celery tasks, scheduling, sync orchestration, and cron
