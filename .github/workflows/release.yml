@@ -96,7 +96,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
+          ref: ${{ github.ref }}
 
       - name: Set up Python for release provenance preflight
         uses: actions/setup-python@v6
