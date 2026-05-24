@@ -15,3 +15,8 @@ python scripts/verify-release-provenance.py "${TAG}" \
   --bundle release-attestation.json.bundle \
   --artifacts-dir .
 ```
+
+## Cleanroom rehearsal
+
+Cleanroom rehearsal: PASSED in workflow run ${WORKFLOW_RUN_ID}.
+Verified clean install of ${WHEEL_URL} from cold caches at ${CLEANROOM_TIMESTAMP}.

@@ -17,14 +17,87 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Published release tag to rehearse from cold caches"
+        required: true
+        default: "v1.7.3"
 
 permissions:
   contents: write
   id-token: write
 
 jobs:
+  cleanroom-rehearsal:
+    name: cleanroom-rehearsal
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python for direct-pip cleanroom
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node for frontend cleanroom
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Clean inherited package caches
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib
+          import shutil
+
+          for rel in (".npm", ".cache/pip", ".cache/yarn"):
+              shutil.rmtree(pathlib.Path.home() / rel, ignore_errors=True)
+          PY
+
+      - name: Install published wheel from release URL
+        shell: bash
+        run: |
+          TAG="${{ inputs.release_tag }}"
+          VERSION="${TAG#v}"
+          WHEEL_URL="https://github.com/CivicSuite/civicrecords-ai/releases/download/${TAG}/civicrecords_ai-${VERSION}-py3-none-any.whl"
+          echo "Cleanroom wheel URL: ${WHEEL_URL}"
+          python -m venv .cleanroom-venv
+          . .cleanroom-venv/bin/activate
+          python -m pip \
+            install --upgrade pip
+          python -m pip \
+            install --no-cache-dir --force-reinstall "${WHEEL_URL}"
+          python - <<PY
+          from app.config import APP_VERSION
+          from civiccore.ingest import ingest_file
+          from civiccore.llm.providers import OllamaProvider
+
+          expected = "${VERSION}"
+          print(f"app.config.APP_VERSION={APP_VERSION}")
+          if APP_VERSION != expected:
+              raise SystemExit(f"Expected CivicRecords AI {expected}, got {APP_VERSION}")
+          print(f"civiccore dependency import ok: {ingest_file.__name__}, {OllamaProvider.__name__}")
+          PY
+
+      - name: Frontend clean install and build
+        shell: bash
+        working-directory: frontend
+        run: |
+          python - <<'PY'
+          import shutil
+          shutil.rmtree("node_modules", ignore_errors=True)
+          PY
+          npm \
+            ci --prefer-online --no-cache --no-audit --no-fund
+          npm run build
+
   preflight:
     name: Preflight release provenance fixtures
+    if: github.event_name == 'push'
     runs-on: [self-hosted, linux, x64]
     steps:
       - uses: actions/checkout@v6
@@ -51,6 +124,7 @@ jobs:
 
   verify-release-linux:
     name: Verify release on Linux (compose + tests)
+    if: github.event_name == 'push'
     runs-on: [self-hosted, linux, x64]
     needs: preflight
     steps:
@@ -91,6 +165,7 @@ jobs:
 
   build-windows-installer:
     name: Build Windows installer (unsigned)
+    if: github.event_name == 'push'
     runs-on: windows-latest
     needs: [preflight, verify-release-linux]
     steps:
@@ -250,8 +325,9 @@ jobs:
             release-attestation.json
             release-attestation.json.bundle
 
-  create-release:
-    name: Create GitHub Release
+  create-draft-release:
+    name: Create draft GitHub Release
+    if: github.event_name == 'push'
     needs: [build-windows-installer]
     runs-on: [self-hosted, linux, x64]
     steps:
@@ -264,9 +340,12 @@ jobs:
       - name: Write release notes with exact provenance command
         shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          REPO="${GITHUB_REPOSITORY}"
-          TAG="${GITHUB_REF_NAME}"
+          export VERSION="${GITHUB_REF_NAME#v}"
+          export REPO="${GITHUB_REPOSITORY}"
+          export TAG="${GITHUB_REF_NAME}"
+          export WORKFLOW_RUN_ID="${GITHUB_RUN_ID}"
+          export WHEEL_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/civicrecords_ai-${VERSION}-py3-none-any.whl"
+          export CLEANROOM_TIMESTAMP="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           cp .github/release-notes-preamble.md release-notes.md
           envsubst < .github/release-notes-v15-template.md >> release-notes.md
 
@@ -323,7 +402,95 @@ jobs:
           echo "Uploading bundle:      $BUNDLE"
           gh release upload "${{ github.ref_name }}" "$EXE" "$SHA" "$WHEEL" "$SDIST" "$SUMS" "$ATTEST" "$BUNDLE" --clobber
 
-      - name: Publish release
+  release-cleanroom-rehearsal:
+    name: cleanroom-rehearsal (release asset)
+    if: github.event_name == 'push'
+    needs: [create-draft-release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python for release-asset cleanroom
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node for frontend cleanroom
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Clean inherited package caches
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib
+          import shutil
+
+          for rel in (".npm", ".cache/pip", ".cache/yarn"):
+              shutil.rmtree(pathlib.Path.home() / rel, ignore_errors=True)
+          PY
+
+      - name: Download uploaded wheel from draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p .cleanroom-assets
+          gh release download "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --pattern 'civicrecords_ai-*-py3-none-any.whl' \
+            --dir .cleanroom-assets
+          find .cleanroom-assets -maxdepth 1 -type f -print
+
+      - name: Install uploaded wheel in cleanroom venv
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          WHEEL="$(find .cleanroom-assets -name 'civicrecords_ai-*-py3-none-any.whl' -type f | head -1)"
+          if [ -z "$WHEEL" ]; then
+            echo "::error::No CivicRecords AI wheel downloaded from draft release."
+            exit 1
+          fi
+          echo "Cleanroom wheel asset: ${WHEEL}"
+          python -m venv .cleanroom-venv
+          . .cleanroom-venv/bin/activate
+          python -m pip \
+            install --upgrade pip
+          python -m pip \
+            install --no-cache-dir --force-reinstall "${WHEEL}"
+          python - <<PY
+          from app.config import APP_VERSION
+          from civiccore.ingest import ingest_file
+          from civiccore.llm.providers import OllamaProvider
+
+          expected = "${VERSION}"
+          print(f"app.config.APP_VERSION={APP_VERSION}")
+          if APP_VERSION != expected:
+              raise SystemExit(f"Expected CivicRecords AI {expected}, got {APP_VERSION}")
+          print(f"civiccore dependency import ok: {ingest_file.__name__}, {OllamaProvider.__name__}")
+          PY
+
+      - name: Frontend clean install and build
+        shell: bash
+        working-directory: frontend
+        run: |
+          python - <<'PY'
+          import shutil
+          shutil.rmtree("node_modules", ignore_errors=True)
+          PY
+          npm \
+            ci --prefer-online --no-cache --no-audit --no-fund
+          npm run build
+
+  publish-release:
+    name: Publish GitHub Release
+    if: github.event_name == 'push'
+    needs: [release-cleanroom-rehearsal]
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - name: Publish release after cleanroom rehearsal
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release edit "${{ github.ref_name }}" --draft=false
