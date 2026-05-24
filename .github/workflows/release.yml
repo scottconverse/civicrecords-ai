@@ -34,6 +34,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    concurrency:
+      group: scott-desktop-cleanroom-${{ github.repository }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v6
 
@@ -47,16 +50,22 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Clean inherited package caches
+      - name: Cleanroom cache strip (scoped, CivicSuite-only)
         shell: bash
         run: |
           python - <<'PY'
-          import pathlib
+          import os
           import shutil
 
-          for rel in (".npm", ".cache/pip", ".cache/yarn"):
-              shutil.rmtree(pathlib.Path.home() / rel, ignore_errors=True)
+          runner_temp = os.environ["RUNNER_TEMP"]
+          for rel in (".npm", ".cache/pip"):
+              shutil.rmtree(os.path.join(runner_temp, rel), ignore_errors=True)
           PY
+          docker builder prune --all --force --filter "label=civicsuite-cleanroom=1" || true
+          docker network ls --filter "label=civicsuite-cleanroom=1" -q \
+            | xargs -r docker network rm || true
+          docker volume ls --filter "label=civicsuite-cleanroom=1" -q \
+            | xargs -r docker volume rm || true
 
       - name: Install published wheel from release URL
         shell: bash
@@ -93,8 +102,19 @@ jobs:
           shutil.rmtree("node_modules", ignore_errors=True)
           PY
           npm \
-            ci --prefer-online --no-cache --no-audit --no-fund
+            ci --prefer-online --no-cache --no-audit --no-fund \
+              --cache "${RUNNER_TEMP}/.npm"
           npm run build
+
+      - name: Always-run cleanup
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p civicsuite-cleanroom-${{ github.run_id }} down -v --remove-orphans || true
+          docker ps -a --filter "label=civicsuite-cleanroom=1" -q \
+            | xargs -r docker container rm --force || true
+          docker network ls --filter "label=civicsuite-cleanroom=1" -q \
+            | xargs -r docker network rm || true
 
   preflight:
     name: Preflight release provenance fixtures
@@ -409,6 +429,9 @@ jobs:
     needs: [create-draft-release]
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    concurrency:
+      group: scott-desktop-cleanroom-${{ github.repository }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v6
 
@@ -422,16 +445,22 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Clean inherited package caches
+      - name: Cleanroom cache strip (scoped, CivicSuite-only)
         shell: bash
         run: |
           python - <<'PY'
-          import pathlib
+          import os
           import shutil
 
-          for rel in (".npm", ".cache/pip", ".cache/yarn"):
-              shutil.rmtree(pathlib.Path.home() / rel, ignore_errors=True)
+          runner_temp = os.environ["RUNNER_TEMP"]
+          for rel in (".npm", ".cache/pip"):
+              shutil.rmtree(os.path.join(runner_temp, rel), ignore_errors=True)
           PY
+          docker builder prune --all --force --filter "label=civicsuite-cleanroom=1" || true
+          docker network ls --filter "label=civicsuite-cleanroom=1" -q \
+            | xargs -r docker network rm || true
+          docker volume ls --filter "label=civicsuite-cleanroom=1" -q \
+            | xargs -r docker volume rm || true
 
       - name: Download uploaded wheel from draft release
         env:
@@ -483,8 +512,19 @@ jobs:
           shutil.rmtree("node_modules", ignore_errors=True)
           PY
           npm \
-            ci --prefer-online --no-cache --no-audit --no-fund
+            ci --prefer-online --no-cache --no-audit --no-fund \
+              --cache "${RUNNER_TEMP}/.npm"
           npm run build
+
+      - name: Always-run cleanup
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p civicsuite-cleanroom-${{ github.run_id }} down -v --remove-orphans || true
+          docker ps -a --filter "label=civicsuite-cleanroom=1" -q \
+            | xargs -r docker container rm --force || true
+          docker network ls --filter "label=civicsuite-cleanroom=1" -q \
+            | xargs -r docker network rm || true
 
   publish-release:
     name: Publish GitHub Release
