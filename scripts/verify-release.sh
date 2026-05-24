@@ -6,6 +6,13 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+cleanup_compose_runtime() {
+    if command -v docker >/dev/null 2>&1 && [ -f docker-compose.yml ]; then
+        docker compose down -v --remove-orphans >/dev/null 2>&1 || true
+    fi
+}
+trap cleanup_compose_runtime EXIT INT TERM
+
 FAILED=0
 pass() { printf '  \033[0;32m[PASS]\033[0m %s\n' "$*"; }
 fail() { printf '  \033[0;31m[FAIL]\033[0m %s\n' "$*" >&2; FAILED=1; }
