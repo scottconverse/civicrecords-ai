@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_UMBRELLA_ROOT = ROOT.parent / "civicsuite"
-EXPECTED_RECORDS_VERSION = "1.7.2"
+EXPECTED_RECORDS_VERSION = "1.7.3"
 EXPECTED_CLERK_VERSION = "1.0.1"
 EXPECTED_CIVICCORE_RUNTIME = "1.2.0"
 
@@ -150,7 +150,7 @@ def build_checks(*, umbrella_root: Path, require_archives: bool) -> list[Check]:
     if contract_path.is_file():
         text = contract_path.read_text(encoding="utf-8")
         required_phrases = (
-            "CivicRecords AI reports v1.7.2",
+            "CivicRecords AI reports v1.7.3",
             "CivicClerk reports v1.0.1 with CivicCore v1.2.0",
             "--staff-mode bearer --workflow-proof",
             "Package Cleanroom Contract",

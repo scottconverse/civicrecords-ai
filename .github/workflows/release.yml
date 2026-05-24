@@ -182,6 +182,10 @@ jobs:
           cp "$ART" "release-assets/$BASENAME"
           cp "build/${BASENAME}.sha256" "release-assets/${BASENAME}.sha256"
 
+      - name: Package Python artifacts
+        shell: bash
+        run: python scripts/package-release-assets.py release-assets
+
       - name: Resolve release ref
         id: release_ref
         shell: bash
@@ -281,7 +285,7 @@ jobs:
             --title "CivicRecords AI ${{ github.ref_name }}" \
             --notes-file release-notes.md
 
-      - name: Upload Windows installer + checksum
+      - name: Upload release assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -293,14 +297,20 @@ jobs:
           # layout and produces an actionable error if nothing matches.
           EXE=$(find artifacts -name 'CivicRecordsAI-*-Setup.exe' -type f | head -1)
           SHA=$(find artifacts -name 'CivicRecordsAI-*-Setup.exe.sha256' -type f | head -1)
-          if [ -z "$EXE" ] || [ -z "$SHA" ]; then
-            echo "::error::Could not locate installer + checksum in artifacts/"
+          WHEEL=$(find artifacts -name 'civicrecords_ai-*-py3-none-any.whl' -type f | head -1)
+          SDIST=$(find artifacts -name 'civicrecords_ai-*.tar.gz' -type f | head -1)
+          SUMS=$(find artifacts -name 'SHA256SUMS.txt' -type f | head -1)
+          if [ -z "$EXE" ] || [ -z "$SHA" ] || [ -z "$WHEEL" ] || [ -z "$SDIST" ] || [ -z "$SUMS" ]; then
+            echo "::error::Could not locate installer, package, and checksum assets in artifacts/"
             echo "Contents of artifacts/:"
             find artifacts -type f || true
             exit 1
           fi
           echo "Uploading installer: $EXE"
           echo "Uploading checksum:  $SHA"
+          echo "Uploading wheel:     $WHEEL"
+          echo "Uploading sdist:     $SDIST"
+          echo "Uploading sums:      $SUMS"
           ATTEST=$(find artifacts -name 'release-attestation.json' -type f | head -1)
           BUNDLE=$(find artifacts -name 'release-attestation.json.bundle' -type f | head -1)
           if [ -z "$ATTEST" ] || [ -z "$BUNDLE" ]; then
@@ -311,7 +321,7 @@ jobs:
           fi
           echo "Uploading attestation: $ATTEST"
           echo "Uploading bundle:      $BUNDLE"
-          gh release upload "${{ github.ref_name }}" "$EXE" "$SHA" "$ATTEST" "$BUNDLE" --clobber
+          gh release upload "${{ github.ref_name }}" "$EXE" "$SHA" "$WHEEL" "$SDIST" "$SUMS" "$ATTEST" "$BUNDLE" --clobber
 
       - name: Publish release
         env:

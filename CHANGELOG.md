@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.3] - 2026-05-24
+
+### Changed
+- v1.7.3 — release-asset convention bring-up. Adds wheel and sdist
+  as published assets so direct-pip consumers can install from
+  release URLs. No functional change. City-core installer continues
+  to vendor source as before.
+
 ## [1.7.2] - 2026-05-23
 
 ### Fixed
