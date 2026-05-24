@@ -8,6 +8,7 @@ cosign verify-blob release-attestation.json \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
 sha256sum -c CivicRecordsAI-${VERSION}-Setup.exe.sha256
+sha256sum -c SHA256SUMS.txt
 python scripts/verify-release-provenance.py "${TAG}" \
   --repo "${REPO}" \
   --attestation release-attestation.json \
