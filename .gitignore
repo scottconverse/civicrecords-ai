@@ -37,6 +37,7 @@ Thumbs.db
 
 # Temp files
 temp_*.tsx
+.tmp-browser-qa-*/
 
 # Hardware detection output
 .env.hardware
