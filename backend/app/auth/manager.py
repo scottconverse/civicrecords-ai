@@ -31,6 +31,18 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         )
         await self._session.commit()
 
+    async def on_after_update(
+        self,
+        user: User,
+        update_dict: dict,
+        request: Request | None = None,
+    ):
+        if "password" in update_dict and user.must_change_password:
+            await self._session.execute(
+                update(User).where(User.id == user.id).values(must_change_password=False)
+            )
+            await self._session.commit()
+
 
 async def get_user_manager(session: AsyncSession = Depends(get_async_session)):
     from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase

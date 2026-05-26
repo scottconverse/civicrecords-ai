@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Settings from "./Settings";
 
@@ -101,5 +101,56 @@ describe("Settings — System Info truth surface (QA-001)", () => {
     const titles = container.querySelectorAll('[data-slot="card-title"]');
     expect(titles.length).toBe(1);
     expect(titles[0].textContent).toBe("System Info");
+  });
+
+  it("shows a password-rotation screen without calling locked admin status", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: "user-1", must_change_password: false }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<Settings token="test-token" forcePasswordRotation />);
+
+    expect(await screen.findByRole("heading", { name: /change initial password/i })).toBeInTheDocument();
+    expect(screen.getByText(/staff tools stay locked/i)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining("/admin/status"), expect.anything());
+  });
+
+  it("submits matching new passwords to /users/me and reports success", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: "user-1", must_change_password: false }),
+    });
+    const onPasswordRotated = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <Settings
+        token="test-token"
+        forcePasswordRotation
+        onPasswordRotated={onPasswordRotated}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/^new password$/i), {
+      target: { value: "new-admin-pass-2026" },
+    });
+    fireEvent.change(screen.getByLabelText(/^confirm new password$/i), {
+      target: { value: "new-admin-pass-2026" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /change password/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/users/me",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify({ password: "new-admin-pass-2026" }),
+        })
+      );
+    });
+    expect(await screen.findByText(/staff tools are now unlocked/i)).toBeInTheDocument();
+    expect(onPasswordRotated).toHaveBeenCalled();
   });
 });

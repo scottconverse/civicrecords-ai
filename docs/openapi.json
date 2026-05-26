@@ -10412,6 +10412,11 @@
             ],
             "title": "Last Login"
           },
+          "must_change_password": {
+            "type": "boolean",
+            "title": "Must Change Password",
+            "default": false
+          },
           "department_id": {
             "anyOf": [
               {

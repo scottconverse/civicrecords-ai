@@ -39,6 +39,8 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promi
     const message =
       typeof detail === "string"
         ? detail
+        : detail && typeof detail.message === "string"
+          ? detail.message
         : Array.isArray(detail)
           ? detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join("; ")
           : resp.statusText;

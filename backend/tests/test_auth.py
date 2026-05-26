@@ -1,10 +1,11 @@
 import uuid
 
 import pytest
+from sqlalchemy import select
 from httpx import AsyncClient
 
-from tests.conftest import _create_test_user
-from app.models.user import UserRole
+from tests.conftest import _create_test_user, test_session_maker
+from app.models.user import User, UserRole
 
 
 @pytest.mark.asyncio
@@ -82,3 +83,58 @@ async def test_public_registration_disabled(client: AsyncClient):
         },
     )
     assert resp.status_code in (404, 405)
+
+
+@pytest.mark.asyncio
+async def test_initial_admin_must_rotate_password_before_staff_routes(client: AsyncClient):
+    email = f"rotate-{uuid.uuid4().hex[:8]}@example.com"
+    old_password = "initialpass123"
+    new_password = "rotatedpass123"
+    await _create_test_user(email, old_password, "Initial Admin", UserRole.ADMIN)
+
+    async with test_session_maker() as session:
+        user = (await session.execute(select(User).where(User.email == email))).scalar_one()
+        user.must_change_password = True
+        await session.commit()
+
+    login = await client.post(
+        "/auth/jwt/login",
+        data={"username": email, "password": old_password},
+    )
+    assert login.status_code == 200
+    token = login.json()["access_token"]
+
+    blocked = await client.get(
+        "/admin/status",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert blocked.status_code == 403
+    assert blocked.json()["detail"]["message"] == "Password rotation required before continuing."
+
+    me = await client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.status_code == 200
+    assert me.json()["must_change_password"] is True
+
+    rotated = await client.patch(
+        "/users/me",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"password": new_password},
+    )
+    assert rotated.status_code == 200
+
+    relogin = await client.post(
+        "/auth/jwt/login",
+        data={"username": email, "password": new_password},
+    )
+    assert relogin.status_code == 200
+    rotated_token = relogin.json()["access_token"]
+
+    allowed = await client.get(
+        "/admin/status",
+        headers={"Authorization": f"Bearer {rotated_token}"},
+    )
+    assert allowed.status_code == 200
+
+    after = await client.get("/users/me", headers={"Authorization": f"Bearer {rotated_token}"})
+    assert after.status_code == 200
+    assert after.json()["must_change_password"] is False

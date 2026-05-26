@@ -25,12 +25,13 @@ the pattern already used by ``conftest.setup_db`` and avoids
 docker-in-docker complexity.
 
 For **Gate 2** we seed the v1.3.x state by stamping ``alembic_version`` to
-``019_encrypt_connection_config`` on a freshly-created (but otherwise empty)
+  ``019_encrypt_connection_config`` on a freshly-created (but otherwise empty)
 DB **without** the civiccore wiring active. This is semantically equivalent
 to "ran records v1.3.x migrations to head" for the purpose of the gate
 assertion (the gate proves: civiccore baseline runs against a DB whose
-records head is already 019, no-ops the table creates, and stamps its own
-version table). We intentionally do *not* run the records chain a second
+records head is already 019, applies later records migrations, no-ops the
+table creates, and stamps its own version table). We intentionally do *not*
+run the records chain a second
 time before the test action; doing so would require either a separate
 records-only env.py or a pre-civiccore tag of the records source — both
 materially more complex than a stamp, with no additional coverage. If the
@@ -104,9 +105,10 @@ CIVICCORE_BASELINE_REV: Final[str] = "civiccore_0002_llm"
 # alembic_version_civiccore so the upgrade path runs from a properly stamped
 # starting point — a real v1.3.0 operator's DB always has this row.
 CIVICCORE_V1_3_0_STARTING_REV: Final[str] = "civiccore_0001_baseline_v1"
-# Phase 2 added 020_phase2_consumer_app_backfill on top of 019. The records-side
-# head moves to 020; v1.3.0 fixture starts at 019 (see V1_3_0_HEAD_REVISION).
-RECORDS_HEAD_REV: Final[str] = "020_phase2_consumer_app_backfill"
+# City-core first-login hardening added 021_first_admin_rotate on top of the
+# Phase 2 020 backfill. The records-side head moves to 021; v1.3.0 fixture
+# starts at 019 (see V1_3_0_HEAD_REVISION).
+RECORDS_HEAD_REV: Final[str] = "021_first_admin_rotate"
 
 # v1.3.0 tag's records-side alembic head, captured 2026-04-25 from the v1.3.0
 # git worktree using a Postgres testcontainer + pg_dump --schema-only. Source of
@@ -471,7 +473,9 @@ def test_gate2_upgrade_from_v1_3(v1_3_0_real_schema_db: str) -> None:
 
         # Schema-diff fidelity — every shared table's column set must be unchanged
         # EXCEPT prompt_templates, which civiccore_0002_llm intentionally evolves
-        # (rename name→template_name, add consumer_app, add is_override).
+        # (rename name→template_name, add consumer_app, add is_override), and
+        # users, where 021_first_admin_rotate intentionally adds
+        # must_change_password for first-login hardening.
         # If an idempotency guard misfired and re-created a table, we'd see drift here.
         PHASE2_PROMPT_TEMPLATES_DELTA = {
             "added": {"consumer_app", "is_override", "template_name"},
@@ -480,6 +484,19 @@ def test_gate2_upgrade_from_v1_3(v1_3_0_real_schema_db: str) -> None:
         for tbl in sorted(SHARED_TABLES):
             post_cols = _column_set(post, tbl)
             pre_cols = pre_columns[tbl]
+            if tbl == "users":
+                actual_added = post_cols - pre_cols
+                actual_removed = pre_cols - post_cols
+                assert actual_added == {"must_change_password"}, (
+                    f"Gate 2: users added unexpected columns. "
+                    f"expected_added=['must_change_password'] "
+                    f"actual_added={sorted(actual_added)}"
+                )
+                assert not actual_removed, (
+                    f"Gate 2: users removed unexpected columns. "
+                    f"actual_removed={sorted(actual_removed)}"
+                )
+                continue
             if tbl == "prompt_templates":
                 # Phase 2 expected delta: +consumer_app, +is_override, +template_name, -name.
                 # All other prompt_templates columns must be identical pre/post.

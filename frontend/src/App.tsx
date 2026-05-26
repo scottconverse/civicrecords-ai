@@ -39,6 +39,7 @@ export default function App() {
 
   const [userEmail, setUserEmail] = useState("");
   const [userRole, setUserRole] = useState<string>("");
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   // T5D — track whether the `/users/me` round-trip has settled. While a token
   // is present but this is false, we do NOT decide public-vs-staff routing —
   // otherwise a freshly-authenticated resident would briefly fall through
@@ -70,6 +71,7 @@ export default function App() {
     setToken(null);
     setUserEmail("");
     setUserRole("");
+    setMustChangePassword(false);
     setUserInfoLoaded(false);
   }, []);
 
@@ -93,10 +95,11 @@ export default function App() {
   useEffect(() => {
     if (token) {
       setUserInfoLoaded(false);
-      apiFetch<{ email: string; full_name: string | null; role: string }>("/users/me", { token })
+      apiFetch<{ email: string; full_name: string | null; role: string; must_change_password?: boolean }>("/users/me", { token })
         .then(data => {
           setUserEmail(data.full_name || data.email);
           setUserRole(data.role);
+          setMustChangePassword(data.must_change_password === true);
         })
         .catch(() => {
           // Fallback to JWT decode
@@ -105,11 +108,13 @@ export default function App() {
             setUserEmail(payload.email || payload.sub || "");
           } catch { setUserEmail(""); }
           setUserRole("");
+          setMustChangePassword(false);
         })
         .finally(() => setUserInfoLoaded(true));
     } else {
       setUserEmail("");
       setUserRole("");
+      setMustChangePassword(false);
       setUserInfoLoaded(false);
     }
   }, [token]);
@@ -213,6 +218,26 @@ export default function App() {
       >
         Signing out…
       </div>
+    );
+  }
+
+  if (mustChangePassword) {
+    return (
+      <AppShell onSignOut={logout} userEmail={userEmail} userRole={userRole}>
+        <Routes>
+          <Route
+            path="/settings"
+            element={(
+              <Settings
+                token={token}
+                forcePasswordRotation
+                onPasswordRotated={() => setMustChangePassword(false)}
+              />
+            )}
+          />
+          <Route path="*" element={<Navigate to="/settings" replace />} />
+        </Routes>
+      </AppShell>
     );
   }
 
