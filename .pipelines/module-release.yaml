@@ -1,0 +1,175 @@
+# module-release pipeline - the 4-phase pattern that prevents the
+# "cascading CI bug discovery" failure mode from civicrecords-ai v1.5.0.
+#
+# Use when:
+#   - Bumping a module to a new version
+#   - Releasing a downstream-dependency change (e.g. civiccore pin sweep)
+#   - Any work whose end-state is a published release artifact
+#
+# DO NOT use for:
+#   - Pure feature work that doesn't ship a release (use feature.yaml)
+#   - Bug fixes that don't require a tag (use bugfix.yaml)
+#   - Documentation-only changes
+#
+# Why this exists:
+#   The CivicSuite recovery sweep of 2026-05-10 burned 8 hours on a single
+#   module migration because three latent release-workflow bugs surfaced
+#   one at a time during Phase 3 (remote release). Each surface required
+#   a PR + merge + tag-move + 4-minute CI cycle. This pipeline forces all
+#   three classes of bug to surface in Phase 0/2 (local, free, fast)
+#   instead of Phase 3 (remote, slow, requires tag-move plumbing).
+
+pipeline:
+  id: module-release
+  version: 0.1.0
+  description: >
+    Module version bump or dependency migration ending in a published
+    release. Forces infrastructure pre-flight and local release rehearsal
+    before any tag push.
+
+stages:
+
+  - id: phase0-preflight-infrastructure
+    role: preflight-auditor
+    blocking: true
+    description: >
+      Audit the module's release workflow and supporting CI before
+      touching product code. Identify and fix ALL latent infrastructure
+      bugs in ONE bundled PR. Exits successfully only when:
+        - All workflows YAML-parse cleanly
+        - bash scripts/verify-release.sh succeeds locally on fresh state
+        - All scripts referenced by workflows exist and are executable
+        - No "known-broken" patterns from the audit punchlist remain
+      Output: phase0-report.md with the file list audited, bugs found,
+      and the merge SHA of the bundled fix PR (if any was needed).
+
+  - id: phase1-scoped-product-work
+    role: executor
+    blocking: true
+    needs: [phase0-preflight-infrastructure]
+    description: >
+      The actual product change. Uses the standard manifest + allowed_paths
+      gate plus self-classification rules so the agent doesn't halt-and-ask
+      on routine cases (URL/version-string updates, frozen-evidence skips,
+      shape-guard skips, own-module-version skips).
+      See pipelines/roles/executor.md for the classification rules.
+
+  - id: phase2-local-release-rehearsal
+    role: local-rehearsal
+    blocking: true
+    needs: [phase1-scoped-product-work]
+    description: >
+      Run the EXACT release sequence locally before pushing the tag.
+      For Docker-based modules: docker compose up on fresh volumes,
+      bash scripts/verify-release.sh, simulate the build steps
+      (Inno Setup mock or actual if local Windows VM available).
+      Must succeed end-to-end. If it fails, fix and re-run.
+      DO NOT push the tag until this passes. Tag pushes are not the
+      diagnostic mechanism for release-side bugs.
+
+  - id: phase3-remote-release
+    role: executor
+    blocking: true
+    needs: [phase2-local-release-rehearsal]
+    description: >
+      Push the tag. Watch the release workflow run. It SHOULD pass first
+      try because Phase 2 already proved it. If a remote-only failure
+      surfaces (truly CI-environment-specific), halt and report - that's
+      the kind of thing Phase 2 can't catch.
+
+  - id: phase3b-umbrella-reconciliation
+    role: executor
+    blocking: true
+    needs: [phase3-remote-release]
+    description: >
+      Open the release-tag-labeled umbrella PR with all truth artifacts
+      moving together: spec, verifier, modules.json, CHANGELOG,
+      release-recovery-status, downstream-pins. Wait for
+      release-lockstep-gate green. Merge.
+
+  - id: phase4-verify
+    role: verifier
+    blocking: true
+    needs: [phase3b-umbrella-reconciliation]
+    description: >
+      Independent fresh-context verification:
+        - All declared release artifacts exist with expected SHA256s
+        - verify-suite-state.py --remote-only passes for all modules
+        - PCP + queue + handoff durable docs all agree with chat report
+          and live state
+        - All four document classes (CHANGELOG, browser-QA, handoff,
+          control-plane) substantively match what shipped
+      Verifier must emit the Section 0 criteria count line per v0.5 schema so
+      the auto-promote stage can parse it.
+
+  - id: phase4b-drift-detect
+    role: drift-detector
+    blocking: true
+    needs: [phase4-verify]
+    description: >
+      Compare what the manifest promised against what the run actually
+      produced. Catches the gap class neither the judge (per-action)
+      nor the verifier (per-criterion) can see - durable doc drift,
+      cross-file inconsistencies, status-word abuse, CHANGELOG stale
+      relative to code, ledger top-totals vs row counts. Emits
+      drift-report.md with the Section 2 count line for auto-promote parsing.
+
+  - id: phase4c-critique
+    role: critic
+    blocking: true
+    needs: [phase4b-drift-detect]
+    description: >
+      Hostile cold read of every artifact in this release run. Reads
+      the manifest, plan, implementation report, verifier report,
+      drift report, judge log (if active), and the actual diff. Produces
+      critic-report.md with Section 2 count line and Section 10 recommended verdict.
+      Structural substitute for dual-AI cross-family verification in
+      single-AI runs.
+
+  - id: phase4d-auto-promote
+    role: pipeline
+    blocking: true
+    needs: [phase4c-critique]
+    command: python scripts/policy/auto_promote.py --run {run_id}
+    description: >
+      Machine-checkable promote eligibility. Reads verifier, critic,
+      drift, policy, judge-metrics, and implementation reports.
+      If every condition is green, writes manager-decision.md with
+      Decision: PROMOTE and exits 0. Otherwise writes
+      auto-promote-report.md naming the failing conditions and exits 1.
+      The manager stage detects the preset and short-circuits the
+      human-approval gate when present.
+
+  - id: phase5-manager
+    role: manager
+    blocking: true
+    needs: [phase4d-auto-promote]
+    auto_promote_aware: true
+    description: >
+      Final PROMOTE/BLOCK/REPLAN decision citing verifier and critic
+      evidence verbatim. Updates PCP "Completed Target" + queue. Writes
+      the completion handoff. Supersedes any PAUSED handoff from prior
+      runs. When the auto-promote stage has already written
+      manager-decision.md, this stage validates the preset, appends any
+      release-specific completion notes (PCP update, handoff write),
+      and the human-approval gate is skipped.
+
+human_gates:
+  - after: phase0-preflight-infrastructure
+    label: "phase0-results"
+    purpose: >
+      Human reviews the infrastructure audit findings + fix PR before
+      product work begins. Catches "we should have skipped this module
+      entirely" or "the bugs found are too deep - escalate."
+
+  - after: phase2-local-release-rehearsal
+    label: "rehearsal-ok"
+    purpose: >
+      Human reviews the local rehearsal output before tag push. The
+      tag push is the only non-reversible step in the pipeline (tag-move
+      is allowed but discouraged); humans gate it.
+
+  - after: phase5-manager
+    label: "release-ok"
+    purpose: >
+      Final human approval before the next module sprint starts.

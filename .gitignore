@@ -45,3 +45,5 @@ temp_*.tsx
 # Claude Code
 .claude/
 .pipeline-cw/
+
+.agent-runs/
