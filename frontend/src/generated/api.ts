@@ -3350,6 +3350,11 @@ export interface components {
             created_at: string;
             /** Last Login */
             last_login: string | null;
+            /**
+             * Must Change Password
+             * @default false
+             */
+            must_change_password: boolean;
             /** Department Id */
             department_id?: string | null;
         };

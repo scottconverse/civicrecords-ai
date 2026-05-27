@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Enforced first-login password rotation for the initial administrator account:
+  the startup-created admin is marked `must_change_password`, staff/admin
+  routes return a plain-language 403 until the password is changed through
+  `/users/me`, and the flag clears after the successful password update.
+
 ## [1.7.3] - 2026-05-24
 
 ### Changed

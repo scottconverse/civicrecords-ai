@@ -193,6 +193,13 @@ only non-secret operator settings such as `CIVICRECORDS_SECRET_DIR`. Do not set
 `JWT_SECRET*`, `FIRST_ADMIN_PASSWORD*`, or matching `_FILE` pointer env vars in
 Docker deployments; those names are recoverable with `docker exec env`.
 
+The initial administrator password is bootstrap-only. On a fresh install the
+startup-created admin account is marked `must_change_password`; staff and admin
+surfaces stay locked with a plain-language remediation message until that
+operator changes the password from the account screen. The `/users/me` response
+includes `must_change_password` so the frontend can route the operator directly
+to password rotation without exposing the generated password again.
+
 ## Supported Platforms
 
 - Windows 10/11 (Docker Desktop)

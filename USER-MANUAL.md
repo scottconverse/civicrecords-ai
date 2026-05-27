@@ -353,6 +353,12 @@ docker exec <records-api-container> env | grep -E "JWT_SECRET|FIRST_ADMIN_PASSWO
 
 The command should return no lines.
 
+The first administrator password is for first login only. After a fresh
+install, CivicRecords AI allows the administrator to open the account endpoint
+needed to change the password, but staff/admin screens remain locked until the
+password has been rotated. The screen message tells the operator to open account
+settings and change the initial administrator password before continuing.
+
 **Upgrade from v1.5.x:** if your `.env` still contains `JWT_SECRET=` or
 `FIRST_ADMIN_PASSWORD=`, re-run `install.sh` or `install.ps1`. The runtime no
 longer treats those env vars, or matching `_FILE` pointer env vars, as the

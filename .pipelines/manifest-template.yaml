@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: Apache-2.0
+# Pipeline run manifest - copy to .agent-runs/<run-id>/manifest.yaml
+# and fill in every field. Empty strings and empty lists are NOT defaults;
+# they cause the run to refuse to start.
+#
+# This manifest is the contract every downstream agent (researcher,
+# planner, test-writer, executor, verifier, manager) reads. If a field
+# is wrong here, the wrong work gets done.
+
+pipeline_run:
+  # Run id: ISO date + task slug, e.g. "2026-05-08-portal-darkmode-toggle".
+  # Becomes the directory name under .agent-runs/. Must be lowercase,
+  # ASCII, kebab-case after the date.
+  id: ""
+
+  # Pipeline type: must match a YAML in .pipelines/. Default plugin ships
+  # with 'feature' and 'bugfix'. Add your own pipelines as YAMLs there.
+  type: feature
+
+  # Branch the run will commit to. Conventionally feature/<name>,
+  # rung/<name>, fix/<name>, etc. Match your project's branch convention.
+  branch: ""
+
+  # One sentence, user-facing. The thing a release-notes reader will see.
+  # Not "implement Foo" - say what Foo does for the user.
+  goal: ""
+
+  # Path prefixes this run is allowed to touch. Anything outside is
+  # blocked by scripts/policy/check_allowed_paths.py at the policy stage.
+  # Be specific: "src/auth/" not "src/". Use directory-level granularity
+  # for same-module test paths to avoid mid-run amendments.
+  allowed_paths: []
+
+  # Path prefixes this run must NOT touch even if listed under
+  # allowed_paths via a parent. Common entries: "docs/adr/" (use a new
+  # ADR file instead), version files (release-engineer only), CI configs.
+  forbidden_paths: []
+
+  # Things explicitly out of scope. Each item is one short sentence.
+  # If an executor finds itself reaching toward a non-goal, REPLAN.
+  non_goals: []
+
+  # What artifacts and behaviors must exist when the run completes.
+  # Each item is testable: a file path, a passing test name, an HTTP
+  # endpoint that returns 200, an axe rule that passes.
+  expected_outputs: []
+
+  # Required gates - flipped to satisfied as the pipeline advances.
+  # Do not remove any of these from a real run; if a gate is genuinely
+  # not applicable, write the reason in non_goals and let the verifier
+  # mark it NOT APPLICABLE.
+  required_gates:
+    - human_approval_manifest
+    - human_approval_plan
+    - policy_passed
+    - tests_passed
+    - human_approval_merge
+
+  # Risk: low | medium | high. Drives how aggressively the verifier and
+  # manager scrutinize cross-cutting concerns.
+  risk: low
+
+  # If this work is reverted, what's the procedure? Concrete commands
+  # if possible (e.g., "git revert <merge-commit>; redeploy"). For
+  # database migrations: name the down-migration. For ADRs: name the
+  # superseding ADR or "no rollback needed - additive only."
+  rollback_plan: ""
+
+  # One paragraph naming the precise bar the work clears. Cited by
+  # verifier-report.md Section 1 line by line. If you can't write this in
+  # one paragraph, the manifest is too large; split the work.
+  definition_of_done: ""
+
+  # Optional: director-flagged research focuses. Used to give the
+  # researcher explicit pre-work instructions. Each item is one
+  # sentence telling the researcher what to surface or pay extra
+  # attention to. Example:
+  #
+  # director_notes:
+  #   - "researcher: explicitly check tests/ for sync vs async assumptions"
+  #   - "researcher: surface whether to extend Protocol X or create Y"
+  director_notes: []
+
+  # Control-loop contract - enforced by run-pipeline before every final
+  # response during an authorized run.
+  control_loop:
+    active_control_state: ".agent-runs/<run-id>/active-control-state.md"
+    stop_condition_required_for_final_response: true
+    open_caveats_block_completion: true
+    post_push_ci_follow_through_required: true
+    execute_recommended_next_action_when_authorized: true
+    final_response_allowed_without_stop_condition: false

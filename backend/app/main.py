@@ -71,7 +71,9 @@ async def lifespan(app: FastAPI):
             )
             from sqlalchemy.exc import IntegrityError
             try:
-                await manager.create(user_create)
+                user = await manager.create(user_create)
+                user.must_change_password = True
+                await session.commit()
             except IntegrityError:
                 await session.rollback()  # Already created by another instance
 

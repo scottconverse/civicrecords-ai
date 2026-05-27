@@ -12,6 +12,7 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
     role: UserRole
     created_at: datetime
     last_login: datetime | None
+    must_change_password: bool = False
     department_id: uuid.UUID | None = None
 
 
