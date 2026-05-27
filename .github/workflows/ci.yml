@@ -8,13 +8,29 @@ name: CI
 on:
   push:
     branches: [master]
+    paths:
+      - ".github/workflows/ci.yml"
+      - "Dockerfile.*"
+      - "docker-compose.yml"
+      - "backend/**"
+      - "frontend/**"
+      - "docs/openapi.json"
+      - "scripts/**"
   pull_request:
     branches: [master]
+    paths:
+      - ".github/workflows/ci.yml"
+      - "Dockerfile.*"
+      - "docker-compose.yml"
+      - "backend/**"
+      - "frontend/**"
+      - "docs/openapi.json"
+      - "scripts/**"
   workflow_dispatch: {}
 
 # Cancel outdated runs on the same branch so the queue stays fresh.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 # The workflow has no secrets. Everything sensitive (JWT_SECRET, admin password) is
@@ -180,7 +196,7 @@ jobs:
             collect.log
             run.log
             compose.log
-          retention-days: 14
+          retention-days: 7
           if-no-files-found: warn
 
       - name: Teardown
@@ -293,7 +309,7 @@ jobs:
             bootstrap.err
             bootstrap-ok.out
             bootstrap-ok.err
-          retention-days: 14
+          retention-days: 7
           if-no-files-found: warn
 
       - name: Teardown
@@ -322,14 +338,19 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies (frozen lockfile)
         run: npm ci
 
       - name: Dependency security audit
-        run: npm audit --audit-level=moderate
+        run: |
+          for attempt in 1 2 3; do
+            npm audit --audit-level=moderate && break
+            if [ "$attempt" = "3" ]; then exit 1; fi
+            sleep 10
+          done
 
       - name: Verify src/generated/api.ts not stale (T3D)
         # Re-run openapi-typescript against the committed docs/openapi.json and
