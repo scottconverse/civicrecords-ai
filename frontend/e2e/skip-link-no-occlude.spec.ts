@@ -54,19 +54,24 @@ test("skip link does not occlude the password-rotation heading", async ({ page }
 
     const skipLink = page.getByRole("link", { name: "Skip to main content" });
     const heading = page.getByRole("heading", { name: "Change Initial Password" });
+    const mobileNavTrigger = page.getByRole("button", { name: "Open navigation" });
 
     await expect(heading).toBeVisible();
     await page.keyboard.press("Tab");
     await expect(skipLink).toBeFocused();
 
-    const [skipBox, headingBox] = await Promise.all([
+    const [skipBox, headingBox, navBox] = await Promise.all([
       skipLink.boundingBox(),
       heading.boundingBox(),
+      viewport.name === "mobile" ? mobileNavTrigger.boundingBox() : Promise.resolve(null),
     ]);
 
     expect(skipBox, `${viewport.name} skip link bounding box`).not.toBeNull();
     expect(headingBox, `${viewport.name} rotation heading bounding box`).not.toBeNull();
     expect(boxesOverlap(skipBox!, headingBox!), `${viewport.name} boxes overlap`).toBe(false);
+    if (navBox) {
+      expect(boxesOverlap(skipBox!, navBox), "mobile skip link overlaps nav trigger").toBe(false);
+    }
 
     const screenshotPath = process.env.CRIT1_SCREENSHOT_PATH;
     if (viewport.name === "mobile" && screenshotPath) {
