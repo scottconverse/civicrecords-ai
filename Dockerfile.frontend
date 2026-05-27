@@ -3,7 +3,11 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm install
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-factor 2 \
+    && npm config set fetch-retry-mintimeout 20000 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm ci --no-audit --fund=false
 COPY frontend/ .
 RUN npm run build
 
