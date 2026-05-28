@@ -3231,6 +3231,10 @@ export interface components {
             user_count: number;
             /** Audit Log Count */
             audit_log_count: number;
+            /** Suite Session */
+            suite_session?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * TestConnectionRequest
