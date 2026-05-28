@@ -40,18 +40,17 @@ except ModuleNotFoundError:
     _REVOCATION_FILE_ENV_VAR = "CIVICCORE_SUITE_SESSION_REVOCATION_FILE"
     _REVOKED_SESSION_IDS: dict[str, int] = {}
 
-    def _suite_session_key_env() -> str:
-        return "CIVICCORE_SUITE_SESSION_" + "".join(chr(c) for c in (83, 69, 67, 82, 69, 84))
+    _SUITE_SESSION_KEY_ENV_VAR = "CIVICCORE_SUITE_SESSION_SECRET"
 
     def _b64url_decode(raw: str) -> bytes:
         padding = "=" * (-len(raw) % 4)
         return base64.urlsafe_b64decode((raw + padding).encode("ascii"))
 
-    def _signing_key() -> bytes:
-        value = os.getenv(_suite_session_key_env(), "").strip()
+    def _signing_key() -> str:
+        value = os.getenv(_SUITE_SESSION_KEY_ENV_VAR, "").strip()
         if not value:
             raise PermissionError("Suite session signing key is not configured.")
-        return value.encode("utf-8")
+        return value
 
     def validate_suite_session_token(token: str):  # type: ignore[no-redef]
         try:
@@ -59,7 +58,11 @@ except ModuleNotFoundError:
         except ValueError as exc:
             raise PermissionError("suite session token is invalid") from exc
         signing_input = f"{encoded_header}.{encoded_payload}"
-        expected_signature = hmac.new(_signing_key(), signing_input.encode("ascii"), hashlib.sha256).digest()
+        expected_signature = hmac.new(
+            _signing_key().encode("utf-8"),
+            signing_input.encode("ascii"),
+            hashlib.sha256,
+        ).digest()
         if not hmac.compare_digest(_b64url_decode(encoded_signature), expected_signature):
             raise PermissionError("suite session signature is invalid")
         header = json.loads(_b64url_decode(encoded_header))
@@ -115,7 +118,11 @@ except ModuleNotFoundError:
         encoded_header = _b64url_encode(_json_bytes({"alg": "HS256", "typ": "JWT"}))
         encoded_payload = _b64url_encode(_json_bytes(payload))
         signing_input = f"{encoded_header}.{encoded_payload}"
-        signature = hmac.new(_signing_key(), signing_input.encode("ascii"), hashlib.sha256).digest()
+        signature = hmac.new(
+            _signing_key().encode("utf-8"),
+            signing_input.encode("ascii"),
+            hashlib.sha256,
+        ).digest()
         return f"{signing_input}.{_b64url_encode(signature)}"
 
     def revoke_suite_session(session_id: str) -> None:  # type: ignore[no-redef]
