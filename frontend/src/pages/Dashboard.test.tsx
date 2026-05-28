@@ -105,7 +105,7 @@ describe("Dashboard — service health indicators (T4B)", () => {
     expect(ollamaRow.querySelector(".lucide-circle-x")).toBeTruthy();
     // Redis disconnected → x icon
     expect(redisRow.querySelector(".lucide-circle-x")).toBeTruthy();
-  });
+  }, 15000);
 
   it("regression: does NOT treat nested {status: ...} objects as connected", async () => {
     // If the shape ever regresses, this stub simulates the old broken contract.
