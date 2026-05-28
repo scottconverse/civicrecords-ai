@@ -246,8 +246,8 @@ export default function Exemptions({ token }: { token: string }) {
           {rules.length === 0 ? (
             <EmptyState
               icon={Shield}
-              title="No exemption rules configured"
-              description="Add rules to automatically flag sensitive content in ingested documents."
+              title="No exemption rules set up yet"
+              description="Add rules for state statutes, city policy terms, or common confidential content before reviewing documents for redaction."
               action={<Button onClick={() => setShowForm(true)}><Plus className="h-4 w-4 mr-2" /> Add First Rule</Button>}
             />
           ) : (
@@ -265,8 +265,19 @@ export default function Exemptions({ token }: { token: string }) {
         <TabsContent value="flags" className="mt-4">
           <EmptyState
             icon={AlertTriangle}
-            title={acceptanceDisplay === "No flags reviewed yet" ? "No flags reviewed yet" : "Flag review"}
-            description="Exemption flags from ingested documents will appear here for review. Accept or reject each flag to build your review record."
+            title={acceptanceDisplay === "No flags reviewed yet" ? "No flags ready for review" : "Flag review"}
+            description="Flags appear after documents are ingested and exemption rules run. Add rules or ingest documents if you expected review work here."
+            action={
+              <div className="flex flex-wrap justify-center gap-3">
+                <Button variant="outline" onClick={() => setShowForm(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Rule
+                </Button>
+                <Button variant="outline" onClick={() => (window.location.href = "/ingestion")}>
+                  View Ingestion
+                </Button>
+              </div>
+            }
           />
         </TabsContent>
       </Tabs>

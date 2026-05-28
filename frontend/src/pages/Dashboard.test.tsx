@@ -28,7 +28,7 @@ const DEGRADED_STATUS = {
   redis: "disconnected",
 };
 
-function stubFetch(systemStatus: Record<string, unknown>) {
+function stubFetch(systemStatus: Record<string, unknown>, analytics: Record<string, unknown> | null = null) {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockImplementation((url: string) => {
@@ -37,7 +37,7 @@ function stubFetch(systemStatus: Record<string, unknown>) {
       }
       // All other dashboard fetches return empty / null so we focus on services.
       if (url.includes("/analytics/operational")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(null) });
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(analytics) });
       }
       if (url.includes("/audit/logs")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
@@ -131,5 +131,30 @@ describe("Dashboard — service health indicators (T4B)", () => {
     // and this test will fail.
     const dbRow = screen.getByText("Database (PostgreSQL)").parentElement!;
     expect(dbRow.querySelector(".lucide-circle-x")).toBeTruthy();
+  });
+
+  it("does not show 100.0% deadline compliance when no requests exist", async () => {
+    stubFetch(HEALTHY_STATUS, {
+      average_response_time_days: null,
+      median_response_time_days: null,
+      requests_by_status: {},
+      requests_by_department: {},
+      deadline_compliance_rate: 100,
+      total_open: 0,
+      total_closed: 0,
+      total_overdue: 0,
+      clarification_frequency: 0,
+      top_request_topics: [],
+    });
+
+    render(<Dashboard token="test-token" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Deadline Compliance")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("100.0%")).not.toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByText(/No requests yet. Compliance will calculate once request work is tracked./i)).toBeInTheDocument();
   });
 });

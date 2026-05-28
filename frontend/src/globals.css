@@ -4,6 +4,9 @@
 
 @layer base {
   :root {
+    --paper: 42 46% 96%;
+    --navy: 211 48% 22%;
+    --gold: 41 78% 47%;
     --background: 0 0% 100%;
     --foreground: 210 18% 16%;
     --card: 207 33% 97%;
@@ -63,6 +66,13 @@
     @apply bg-background text-foreground antialiased;
     font-family: "Geist Variable", -apple-system, BlinkMacSystemFont, "Segoe UI",
       Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  code,
+  kbd,
+  pre,
+  .font-mono {
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   }
 
   h1, h2, h3, h4, h5, h6 {

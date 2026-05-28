@@ -295,8 +295,8 @@ export default function Users({ token }: { token: string }) {
       {users.length === 0 ? (
         <EmptyState
           icon={UsersIcon}
-          title="No users found"
-          description="Create user accounts for staff members who need access to the system."
+          title="No staff accounts yet"
+          description="Create accounts for records staff, reviewers, and liaisons before routing request work through the system."
           action={<Button onClick={() => setShowForm(true)}><Plus className="h-4 w-4 mr-2" /> Create First User</Button>}
         />
       ) : (

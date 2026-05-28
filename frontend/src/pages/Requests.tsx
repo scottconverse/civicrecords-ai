@@ -170,6 +170,22 @@ export default function Requests({ token }: { token: string }) {
     }
     return true;
   });
+  const hasActiveFilters =
+    statusFilter !== "all" ||
+    departmentFilter !== "all" ||
+    priorityFilter !== "all" ||
+    assignedToFilter !== "all" ||
+    Boolean(dateFrom) ||
+    Boolean(dateTo);
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setDepartmentFilter("all");
+    setPriorityFilter("all");
+    setAssignedToFilter("all");
+    setDateFrom("");
+    setDateTo("");
+    setPage(0);
+  };
 
   const columns: Column<Request & Record<string, unknown>>[] = [
     { key: "requester_name", header: "Requester" },
@@ -384,13 +400,23 @@ export default function Requests({ token }: { token: string }) {
       {filtered.length === 0 && !loading ? (
         <EmptyState
           icon={FileText}
-          title="No requests found"
-          description={statusFilter !== "all" ? "No requests match the selected filter." : "No records requests have been submitted yet."}
+          title={hasActiveFilters ? "No requests match these filters" : "No requests are being tracked yet"}
+          description={
+            hasActiveFilters
+              ? "Clear filters or broaden the date range to return to the full request queue."
+              : "New public records requests will appear here. Create a request for walk-in, phone, or emailed requests that need tracking."
+          }
           action={
-            <Button onClick={() => setShowForm(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Request
-            </Button>
+            hasActiveFilters ? (
+              <Button variant="outline" onClick={clearFilters}>
+                Clear Filters
+              </Button>
+            ) : (
+              <Button onClick={() => setShowForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create First Request
+              </Button>
+            )
           }
         />
       ) : (
@@ -401,7 +427,7 @@ export default function Requests({ token }: { token: string }) {
             rowKey={(r) => r.id}
             onRowClick={(r) => navigate(`/requests/${r.id}`)}
             ariaLabel="Records requests"
-            emptyMessage="No requests found."
+            emptyMessage="No requests match the current table view."
           />
         </LoadingRegion>
       )}
