@@ -9,6 +9,10 @@ import { Separator } from "@/components/ui/separator";
 import { VersionFooter } from "@/components/version-footer";
 import { FileSearch, HelpCircle, Keyboard, LogOut, Menu, PanelsTopLeft, X } from "lucide-react";
 
+const suiteLauncherUrl =
+  (import.meta.env.VITE_CIVICSUITE_LAUNCHER_URL as string | undefined)?.trim() ||
+  "http://127.0.0.1:18082/";
+
 interface AppShellProps {
   children: React.ReactNode;
   onSignOut: () => void;
@@ -40,7 +44,7 @@ function SidebarContents({
         style={{ height: "var(--header-height)" }}
       >
         <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-sm font-bold text-primary-foreground">CR</span>
+          <span className="text-sm font-bold text-primary-foreground">CS</span>
         </div>
         <div>
           <p className="text-sm font-semibold text-foreground leading-tight">CivicRecords</p>
@@ -160,14 +164,14 @@ export function AppShell({ children, onSignOut, userEmail, userRole }: AppShellP
           </Button>
           <div className="md:hidden flex items-center gap-2">
             <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-xs font-bold text-primary-foreground">CR</span>
+              <span className="text-xs font-bold text-primary-foreground">CS</span>
             </div>
             <span className="text-sm font-semibold text-foreground">CivicRecords AI</span>
           </div>
 
           <div className="ml-auto flex items-center gap-1">
             <a
-              href="/"
+              href={suiteLauncherUrl}
               aria-label="Suite launcher"
               className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
             >

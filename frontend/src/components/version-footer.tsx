@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-import "@/components/prototype-theme";
 import { apiFetch } from "@/lib/api";
 
 const DEFAULT_VERSION = "1.7.3";

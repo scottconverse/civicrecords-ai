@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import tempfile
 import time
 from typing import Any
 
@@ -34,7 +35,10 @@ try:
         validate_suite_session_token,
     )
 except ModuleNotFoundError:
-    _REVOKED_SESSION_IDS: set[str] = set()
+    _DEFAULT_TOKEN_TTL = timedelta(minutes=15)
+    _MAX_LOCAL_REVOCATIONS = 4096
+    _REVOCATION_FILE_ENV_VAR = "CIVICCORE_SUITE_SESSION_REVOCATION_FILE"
+    _REVOKED_SESSION_IDS: dict[str, int] = {}
 
     def _suite_session_key_env() -> str:
         return "CIVICCORE_SUITE_SESSION_" + "".join(chr(c) for c in (83, 69, 67, 82, 69, 84))
@@ -58,7 +62,10 @@ except ModuleNotFoundError:
         expected_signature = hmac.new(_signing_key(), signing_input.encode("ascii"), hashlib.sha256).digest()
         if not hmac.compare_digest(_b64url_decode(encoded_signature), expected_signature):
             raise PermissionError("suite session signature is invalid")
+        header = json.loads(_b64url_decode(encoded_header))
         payload = json.loads(_b64url_decode(encoded_payload))
+        if header != {"alg": "HS256", "typ": "JWT"}:
+            raise PermissionError("suite session token has an unsupported header")
         subject = str(payload.get("sub") or "").strip()
         session_id = str(payload.get("sid") or "").strip()
         roles = frozenset(str(role).strip().lower() for role in payload.get("roles", []) if str(role).strip())
@@ -66,6 +73,8 @@ except ModuleNotFoundError:
             raise PermissionError("suite session token is missing required claims")
         if int(payload.get("exp") or 0) <= int(time.time()):
             raise PermissionError("suite session token expired")
+        _load_shared_revocations()
+        _prune_revocations()
         if session_id in _REVOKED_SESSION_IDS:
             raise PermissionError("suite session was revoked")
 
@@ -95,7 +104,7 @@ except ModuleNotFoundError:
         if not normalized_subject or not normalized_roles or not normalized_session_id:
             raise ValueError("Suite session token requires subject, roles, and session_id.")
         now = datetime.now(UTC)
-        expires = expires_at.astimezone(UTC) if expires_at else now + timedelta(minutes=15)
+        expires = expires_at.astimezone(UTC) if expires_at else now + _DEFAULT_TOKEN_TTL
         payload = {
             "sub": normalized_subject,
             "roles": normalized_roles,
@@ -110,7 +119,54 @@ except ModuleNotFoundError:
         return f"{signing_input}.{_b64url_encode(signature)}"
 
     def revoke_suite_session(session_id: str) -> None:  # type: ignore[no-redef]
-        _REVOKED_SESSION_IDS.add(session_id)
+        normalized = session_id.strip()
+        if normalized:
+            _REVOKED_SESSION_IDS[normalized] = int((datetime.now(UTC) + _DEFAULT_TOKEN_TTL).timestamp())
+            _prune_revocations()
+            _persist_shared_revocations()
+
+    def _revocation_file() -> Path | None:
+        raw = os.getenv(_REVOCATION_FILE_ENV_VAR, "").strip()
+        if not raw:
+            return None
+        return Path(raw)
+
+    def _load_shared_revocations() -> None:
+        path = _revocation_file()
+        if path is None or not path.exists():
+            return
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+        if not isinstance(data, dict):
+            return
+        for session_id, expires_at in data.items():
+            if isinstance(session_id, str) and isinstance(expires_at, int):
+                _REVOKED_SESSION_IDS[session_id] = expires_at
+        _prune_revocations()
+
+    def _persist_shared_revocations() -> None:
+        path = _revocation_file()
+        if path is None:
+            return
+        _prune_revocations()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as handle:
+            json.dump(_REVOKED_SESSION_IDS, handle, sort_keys=True)
+            temp_path = Path(handle.name)
+        temp_path.replace(path)
+
+    def _prune_revocations() -> None:
+        now = int(datetime.now(UTC).timestamp())
+        expired = [session_id for session_id, expires_at in _REVOKED_SESSION_IDS.items() if expires_at <= now]
+        for session_id in expired:
+            _REVOKED_SESSION_IDS.pop(session_id, None)
+        if len(_REVOKED_SESSION_IDS) <= _MAX_LOCAL_REVOCATIONS:
+            return
+        by_expiry = sorted(_REVOKED_SESSION_IDS.items(), key=lambda item: item[1])
+        for session_id, _expires_at in by_expiry[: len(_REVOKED_SESSION_IDS) - _MAX_LOCAL_REVOCATIONS]:
+            _REVOKED_SESSION_IDS.pop(session_id, None)
 
 
 @dataclass(frozen=True)
