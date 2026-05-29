@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -170,6 +171,14 @@ export default function Dashboard({ token }: { token: string }) {
 
   if (!status) return null;
 
+  const requestStatusTotal = analytics
+    ? Object.values(analytics.requests_by_status ?? {}).reduce((sum, count) => sum + count, 0)
+    : 0;
+  const complianceRequestTotal = analytics
+    ? Math.max(requestStatusTotal, analytics.total_open + analytics.total_closed)
+    : 0;
+  const hasComplianceSample = complianceRequestTotal > 0;
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -207,11 +216,33 @@ export default function Dashboard({ token }: { token: string }) {
             }
             icon={Clock}
           />
-          <StatCard
-            label="Deadline Compliance"
-            value={`${analytics.deadline_compliance_rate.toFixed(1)}%`}
-            icon={CalendarCheck}
-          />
+          <Card
+            className="shadow-none"
+            title={
+              hasComplianceSample
+                ? "Share of tracked requests completed within their statutory deadline."
+                : "No requests have been opened or closed yet, so there is no deadline compliance rate to calculate."
+            }
+          >
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-label uppercase text-muted-foreground">Deadline Compliance</p>
+                  <p className="text-page-title mt-1 text-foreground">
+                    {hasComplianceSample ? `${analytics.deadline_compliance_rate.toFixed(1)}%` : "—"}
+                  </p>
+                  {!hasComplianceSample && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      No requests yet. Compliance will calculate once request work is tracked.
+                    </p>
+                  )}
+                </div>
+                <div className="rounded-lg bg-muted p-3">
+                  <CalendarCheck className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -268,7 +299,17 @@ export default function Dashboard({ token }: { token: string }) {
         </CardHeader>
         <CardContent>
           {approachingDeadlines.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No requests with upcoming deadlines.</p>
+            <EmptyState
+              icon={CalendarCheck}
+              title="No deadlines in the next 3 days"
+              description="Open requests with near-term statutory dates will appear here. Review the request queue to confirm assignments and due dates are current."
+              className="py-8"
+              action={
+                <Button variant="outline" onClick={() => (window.location.href = "/requests")}>
+                  View Requests
+                </Button>
+              }
+            />
           ) : (
             <div className="space-y-3">
               {approachingDeadlines.map((r: DeadlineRequest) => {
@@ -309,7 +350,17 @@ export default function Dashboard({ token }: { token: string }) {
         </CardHeader>
         <CardContent>
           {auditLog.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No recent activity recorded.</p>
+            <EmptyState
+              icon={Activity}
+              title="No recent activity yet"
+              description="Staff actions, searches, exports, and request updates will appear here. Open the audit log when you need the complete activity trail."
+              className="py-8"
+              action={
+                <Button variant="outline" onClick={() => (window.location.href = "/audit-log")}>
+                  Open Audit Log
+                </Button>
+              }
+            />
           ) : (
             <div className="relative">
               <div className="absolute left-3 top-0 bottom-0 w-px bg-border" />

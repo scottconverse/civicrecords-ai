@@ -2,20 +2,33 @@ import uuid
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi_users import FastAPIUsers
+from jwt import InvalidTokenError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.backend import auth_backend
 from app.auth.manager import get_user_manager
+from app.auth.suite_session import (
+    SuiteSessionUser,
+    validate_suite_session,
+    validate_suite_session_for_user,
+)
+from app.database import get_async_session
 from app.models.user import User, UserRole
 
 fastapi_users = FastAPIUsers[User, uuid.UUID](get_user_manager, [auth_backend])
 
-_current_active_user = fastapi_users.current_user(active=True)
+_optional_current_active_user = fastapi_users.current_user(active=True, optional=True)
 
 
 async def current_active_user(
     request: Request,
-    user: User = Depends(_current_active_user),
+    user: User | None = Depends(_optional_current_active_user),
+    session: AsyncSession = Depends(get_async_session),
 ) -> User:
+    if user is None:
+        user = await _suite_session_user_from_request(request, session)
+
     if user.must_change_password and not request.url.path.startswith("/users/me"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -27,6 +40,63 @@ async def current_active_user(
                 ),
             },
         )
+    return user
+
+
+async def _suite_session_user_from_request(request: Request, session: AsyncSession) -> User:
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    token = auth_header.removeprefix("Bearer ").strip()
+    try:
+        suite_session = validate_suite_session(token)
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "message": str(exc),
+                "fix": "Return to the CivicSuite launcher and sign in again.",
+            },
+        ) from exc
+    except (InvalidTokenError, ValueError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    result = await session.execute(select(User).where(User.email == suite_session.subject))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    try:
+        validate_suite_session_for_user(
+            token,
+            user=SuiteSessionUser(
+                email=user.email,
+                roles=suite_session.roles,
+                must_change_password=user.must_change_password
+                and not request.url.path.startswith("/users/me"),
+            ),
+        )
+    except PermissionError as exc:
+        status_code = (
+            status.HTTP_403_FORBIDDEN
+            if "Password rotation required" in str(exc)
+            else status.HTTP_401_UNAUTHORIZED
+        )
+        raise HTTPException(
+            status_code=status_code,
+            detail={
+                "message": str(exc),
+                "fix": (
+                    "Open your account settings and change the initial "
+                    "administrator password before using staff features."
+                    if status_code == status.HTTP_403_FORBIDDEN
+                    else "Return to the CivicSuite launcher and sign in again."
+                ),
+            },
+        ) from exc
+
+    request.state.suite_session = suite_session.as_response()
     return user
 
 # Role hierarchy: admin > reviewer > staff > liaison > read_only > public

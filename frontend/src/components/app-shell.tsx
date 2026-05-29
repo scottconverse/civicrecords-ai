@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { AuditDrawer } from "@/components/audit-drawer";
+import { CommandPalette } from "@/components/command-palette";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, HelpCircle, Menu, X } from "lucide-react";
+import { VersionFooter } from "@/components/version-footer";
+import { FileSearch, HelpCircle, Keyboard, LogOut, Menu, PanelsTopLeft, X } from "lucide-react";
+
+const suiteLauncherUrl =
+  (import.meta.env.VITE_CIVICSUITE_LAUNCHER_URL as string | undefined)?.trim() ||
+  "http://127.0.0.1:18082/";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -37,7 +44,7 @@ function SidebarContents({
         style={{ height: "var(--header-height)" }}
       >
         <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-sm font-bold text-primary-foreground">CR</span>
+          <span className="text-sm font-bold text-primary-foreground">CS</span>
         </div>
         <div>
           <p className="text-sm font-semibold text-foreground leading-tight">CivicRecords</p>
@@ -73,10 +80,22 @@ export function AppShell({ children, onSignOut, userEmail, userRole }: AppShellP
   // Mobile drawer open state. Always closed on route change so users aren't
   // stuck with a drawer covering the content they just navigated to.
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
   const location = useLocation();
   useEffect(() => {
     setMobileNavOpen(false);
   }, [location.pathname]);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -145,13 +164,46 @@ export function AppShell({ children, onSignOut, userEmail, userRole }: AppShellP
           </Button>
           <div className="md:hidden flex items-center gap-2">
             <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-xs font-bold text-primary-foreground">CR</span>
+              <span className="text-xs font-bold text-primary-foreground">CS</span>
             </div>
             <span className="text-sm font-semibold text-foreground">CivicRecords AI</span>
           </div>
 
-          <div className="ml-auto">
-            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
+          <div className="ml-auto flex items-center gap-1">
+            <a
+              href={suiteLauncherUrl}
+              aria-label="Suite launcher"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <PanelsTopLeft className="h-4 w-4" aria-hidden="true" />
+              <span className="ml-1 hidden lg:inline">Suite launcher</span>
+            </a>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              aria-label="Show audit"
+              onClick={() => setAuditOpen(true)}
+            >
+              <FileSearch className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Audit</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              aria-label="Open command palette"
+              onClick={() => setCommandOpen(true)}
+            >
+              <Keyboard className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Command</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              aria-label="Help"
+            >
               <HelpCircle className="h-4 w-4" aria-hidden="true" />
               <span className="hidden sm:inline">Help</span>
             </Button>
@@ -167,10 +219,12 @@ export function AppShell({ children, onSignOut, userEmail, userRole }: AppShellP
 
         {/* Footer */}
         <footer className="border-t px-4 md:px-6 py-2 text-xs text-muted-foreground flex items-center justify-between gap-2">
-          <span className="truncate">CivicRecords AI v1.4.1 &middot; Apache 2.0</span>
+          <VersionFooter />
           <span className="whitespace-nowrap hidden sm:inline">Help &middot; Audit Log</span>
         </footer>
       </div>
+      <AuditDrawer open={auditOpen} onOpenChange={setAuditOpen} />
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </div>
   );
 }

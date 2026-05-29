@@ -201,8 +201,13 @@ export default function Ingestion({ token }: { token: string }) {
       {docs.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="No documents ingested"
-          description="Connect a data source or upload documents from the Sources page to begin ingestion."
+          title="No documents have been ingested yet"
+          description="Upload documents or connect a source, then return here to check processing status, chunks, and failed records."
+          action={
+            <Button variant="outline" onClick={() => (window.location.href = "/sources")}>
+              Go to Sources
+            </Button>
+          }
         />
       ) : (
         <div>

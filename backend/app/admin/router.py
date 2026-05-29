@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +35,7 @@ class SystemStatus(BaseModel):
     redis: str
     user_count: int
     audit_log_count: int
+    suite_session: dict | None = None
 
 
 class OllamaModelInfo(BaseModel):
@@ -50,6 +51,7 @@ class OllamaStatus(BaseModel):
 
 @router.get("/status", response_model=SystemStatus)
 async def system_status(
+    request: Request,
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(require_role(UserRole.ADMIN)),
 ):
@@ -90,6 +92,7 @@ async def system_status(
         redis=redis_status,
         user_count=user_count,
         audit_log_count=audit_count,
+        suite_session=getattr(request.state, "suite_session", None),
     )
 
 

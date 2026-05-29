@@ -109,6 +109,17 @@ export default function Search({ token }: { token: string }) {
       setLoading(false);
     }
   };
+  const hasActiveSearchFilters = selectedFileType !== "all" || selectedDepartment !== "all";
+  const resetSearch = () => {
+    setQuery("");
+    setResults(null);
+    setHasSearched(false);
+    setError("");
+  };
+  const clearSearchFilters = () => {
+    setSelectedFileType("all");
+    setSelectedDepartment("all");
+  };
 
   return (
     <div className="space-y-6">
@@ -183,8 +194,8 @@ export default function Search({ token }: { token: string }) {
       {!hasSearched && !loading && (
         <EmptyState
           icon={SearchIcon}
-          title="Search across all ingested documents"
-          description="Enter a query above to search. Try: 'water quality 2025' or 'police incident reports' or 'council budget'"
+          title="Search ingested city records"
+          description="Enter plain-language terms like water quality reports, council budget, or police incident logs. Filters can narrow by file type or department after records are ingested."
         />
       )}
 
@@ -268,8 +279,23 @@ export default function Search({ token }: { token: string }) {
           {results.results.length === 0 && hasSearched && (
             <EmptyState
               icon={FileText}
-              title="No results found"
-              description="Try different keywords or broaden your search terms."
+              title="No records matched this search"
+              description={
+                hasActiveSearchFilters
+                  ? "Remove filters or search a broader term to check the full record set."
+                  : "Try a broader municipal term, a department name, or a document type such as agenda, permit, or report."
+              }
+              action={
+                hasActiveSearchFilters ? (
+                  <Button variant="outline" onClick={clearSearchFilters}>
+                    Remove Filters
+                  </Button>
+                ) : (
+                  <Button variant="outline" onClick={resetSearch}>
+                    Start New Search
+                  </Button>
+                )
+              }
             />
           )}
 

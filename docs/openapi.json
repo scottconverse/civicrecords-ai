@@ -10088,6 +10088,18 @@
           "audit_log_count": {
             "type": "integer",
             "title": "Audit Log Count"
+          },
+          "suite_session": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suite Session"
           }
         },
         "type": "object",

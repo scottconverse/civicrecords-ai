@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -956,11 +957,20 @@ export default function DataSources({ token }: { token: string }) {
             />
           ))}
           {sources.length === 0 && (
-            <Card className="shadow-none md:col-span-2 xl:col-span-3">
-              <CardContent className="p-8 text-center">
-                <p className="text-muted-foreground">No sources configured yet. Upload documents above or add a directory source.</p>
-              </CardContent>
-            </Card>
+            <div className="md:col-span-2 xl:col-span-3">
+              <EmptyState
+                icon={FolderOpen}
+                title="No connected sources yet"
+                description="Upload one-time records above, or add a source for folders, APIs, or databases that should stay in sync."
+                className="border rounded-md py-10"
+                action={
+                  <Button onClick={() => setShowForm(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Connect First Source
+                  </Button>
+                }
+              />
+            </div>
           )}
         </div>
       </div>

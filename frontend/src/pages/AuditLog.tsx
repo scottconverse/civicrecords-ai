@@ -150,8 +150,13 @@ export default function AuditLog({ token }: { token: string }) {
       {entries.length === 0 ? (
         <EmptyState
           icon={ScrollText}
-          title="No audit entries"
-          description="Audit log entries will appear here as system activity occurs."
+          title="No audit activity has been recorded yet"
+          description="Staff sign-ins, searches, request updates, exports, and AI-assisted actions will appear here once work begins."
+          action={
+            <Button variant="outline" onClick={() => (window.location.href = "/requests")}>
+              Open Requests
+            </Button>
+          }
         />
       ) : (
         <LoadingRegion loading={loading} label="Audit log entries">

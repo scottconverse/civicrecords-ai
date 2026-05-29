@@ -374,6 +374,9 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install chromium
 
+      - name: Accessibility gate (axe critical/serious)
+        run: npm run a11y:ci
+
       - name: Playwright user-flow tests
         run: npm run test:e2e
 
