@@ -1048,7 +1048,7 @@ async def _try_llm_generation(
         )
         prompt = blocks_to_prompt(blocks)
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=settings.response_letter_llm_timeout_seconds) as client:
             resp = await client.post(
                 f"{settings.ollama_base_url}/api/generate",
                 json={
