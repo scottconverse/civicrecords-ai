@@ -1055,6 +1055,7 @@ async def _try_llm_generation(
                     "model": settings.chat_model,
                     "prompt": prompt,
                     "stream": False,
+                    "keep_alive": settings.ollama_keep_alive,
                 },
             )
             if resp.status_code == 200:

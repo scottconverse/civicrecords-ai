@@ -42,7 +42,8 @@ class Settings(BaseSettings):
     # matching installer picker default. Tier 5 Blocker 1 resolution 2026-04-21.
     chat_model: str = "gemma4:e4b"
     vision_model: str = "gemma4:e4b"
-    response_letter_llm_timeout_seconds: float = 8.0
+    response_letter_llm_timeout_seconds: float = 120.0
+    ollama_keep_alive: str = "30m"
     # SMTP settings for notification email delivery.
     smtp_host: str = ""
     smtp_port: int = 587

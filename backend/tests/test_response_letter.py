@@ -116,6 +116,7 @@ async def test_response_letter_llm_success_reports_generation_source(monkeypatch
 
         async def post(self, url, json):
             assert json["model"] == settings.chat_model
+            assert json["keep_alive"] == settings.ollama_keep_alive
             return FakeResponse()
 
     class FakeRequest:
