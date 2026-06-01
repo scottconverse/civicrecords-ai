@@ -91,3 +91,51 @@ async def test_response_letter_llm_timeout_falls_back_to_template(monkeypatch):
     monkeypatch.setattr(httpx, "AsyncClient", FakeTimeoutClient)
 
     assert await requests_router._try_llm_generation(FakeRequest(), []) is None
+
+
+@pytest.mark.asyncio
+async def test_response_letter_llm_success_reports_generation_source(monkeypatch):
+    """Successful Ollama generation must be distinguishable from template fallback."""
+
+    class FakeResponse:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {"response": "Dear requester, here is the model-generated draft."}
+
+    class FakeClient:
+        def __init__(self, timeout):
+            self.timeout = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def post(self, url, json):
+            assert json["model"] == settings.chat_model
+            return FakeResponse()
+
+    class FakeRequest:
+        requester_name = "Warm CPU"
+        id = "REQ-AI"
+        description = "Request for budget records"
+
+        class _DateReceived:
+            @staticmethod
+            def strftime(_fmt):
+                return "2026-06-01"
+
+        date_received = _DateReceived()
+
+    monkeypatch.setattr(httpx, "AsyncClient", FakeClient)
+
+    generated = await requests_router._try_llm_generation(FakeRequest(), [])
+
+    assert generated is not None
+    content, source, model = generated
+    assert "model-generated draft" in content
+    assert source == "ollama"
+    assert model == settings.chat_model

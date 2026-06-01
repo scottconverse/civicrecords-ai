@@ -992,8 +992,8 @@ def _generate_template_letter(
 async def _try_llm_generation(
     req: "RecordsRequest",
     docs: list[tuple["RequestDocument", "Document"]],
-) -> str | None:
-    """Attempt to generate a letter via Ollama. Returns None on failure."""
+) -> tuple[str, str, str] | None:
+    """Attempt to generate a letter via Ollama. Returns content/source/model on success."""
     try:
         import httpx
         from app.llm.context_manager import (
@@ -1061,7 +1061,7 @@ async def _try_llm_generation(
                 data = resp.json()
                 generated = data.get("response", "")
                 if generated.strip():
-                    return generated.strip() + _LETTER_DISCLAIMER
+                    return generated.strip() + _LETTER_DISCLAIMER, "ollama", settings.chat_model
     except Exception as exc:
         logger.warning("LLM generation failed, falling back to template: %s", exc)
 
@@ -1098,10 +1098,16 @@ async def generate_response_letter(
     )
     doc_pairs = [(rd, d) for rd, d in result.all()]
 
-    # Try LLM first, fall back to template
-    content = await _try_llm_generation(req, doc_pairs)
-    if content is None:
+    # Try LLM first, fall back to template. The source/model fields are
+    # returned with the create response so installer proofs cannot pass on a
+    # masked local-template fallback.
+    generated = await _try_llm_generation(req, doc_pairs)
+    if generated is None:
         content = _generate_template_letter(req, doc_pairs)
+        generation_source = "local-template"
+        generation_model = None
+    else:
+        content, generation_source, generation_model = generated
 
     letter = ResponseLetter(
         request_id=request_id,
@@ -1119,6 +1125,8 @@ async def generate_response_letter(
 
     await session.commit()
     await session.refresh(letter)
+    letter.generation_source = generation_source
+    letter.generation_model = generation_model
 
     await write_audit_log(
         session=session,
@@ -1127,7 +1135,12 @@ async def generate_response_letter(
         resource_id=str(letter.id),
         user_id=user.id,
         ai_generated=True,
-        details={"request_id": str(request_id), "template_id": str(data.template_id) if data and data.template_id else None},
+        details={
+            "request_id": str(request_id),
+            "template_id": str(data.template_id) if data and data.template_id else None,
+            "generation_source": generation_source,
+            "generation_model": generation_model,
+        },
     )
     return letter
 

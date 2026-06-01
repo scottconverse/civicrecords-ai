@@ -145,6 +145,8 @@ class ResponseLetterRead(BaseModel):
     request_id: uuid.UUID
     template_id: uuid.UUID | None
     generated_content: str
+    generation_source: str = "unknown"
+    generation_model: str | None = None
     edited_content: str | None
     status: str
     generated_by: uuid.UUID | None
